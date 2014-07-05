@@ -1,6 +1,6 @@
 import sys
 from PyQt4 import QtCore, QtGui
-from ezc_ui.py import Ui_Form
+from ezc_ui import Ui_Form
 
 class MyForm(QtGui.QMainWindow):
 
