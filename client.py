@@ -1,44 +1,63 @@
+#==============================================================================#
+#                                 class client                                 #
+#==============================================================================#
+
 import socket, sys, select
 
-# 1. Create a socket
-# 2. Connect to remote server
-# 3. Send some data
-# 4. Receive a reply
+class client(object):
 
-try:
-  client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-except socket.eror, msg:
-  print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-  sys.exit()
+  """
+  1. Create a socket
+  2. Connect to remote server
+  3. Send some data
+  4. Receive a reply
+  """
 
-print "Socket Created"
+  def __init__(self, user = " ", port = 2468, buffersize = 1024):
+    """@todo: to be defined1. """
+    self.user = user
+    self.port = port
+    self.host = "localhost"
 
-#Get host and port info to connect
-host = "192.168.1.6"
-port = 2468
-try:
-  client.connect((host, port))
-except:
-  print "Host unavailable"
-  sys.exit()
+    try:
+      self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    except socket.eror, msg:
+      print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+      sys.exit()
 
-while True:
-  #Send some data to the remote server
+    print "Socket Created"
+    try:
+      self.client.connect((self.host, self.port))
+    except:
+      print "Host unavailable"
+      sys.exit()
 
-  clients = [sys.stdin, client]
-  readable, writeable, errors = select.select(clients, [], [])
-  for user in readable:
-    if user == client:
-      reply = client.recv(1024)
-      if reply:
-        print reply
-      else:
-        print "Disconnected"
-        sys.exit()
-    else:
-      message = raw_input(">>>  ")
+    print "Connected to host"
+    self.prompt()
 
-      #set the whole string
-      client.sendall(message)
-      reply = client.recv(1024)
-      print reply
+    while True:
+      #Send some data to the remote server
+
+      clients = [sys.stdin, self.client]
+      readable, writeable, errors = select.select(clients, [], [])
+      for user in readable:
+        if user == self.client:
+          print "receiving data"
+          reply = self.client.recv(1024)
+          if reply:
+            print reply
+            self.prompt()
+          else:
+            print "Disconnected"
+            sys.exit()
+        else:
+          message = sys.stdin.readline()
+          self.client.send(message)
+          self.prompt()
+
+
+  def prompt(self) :
+    sys.stdout.write('>> ')
+    sys.stdout.flush()
+
+user = client()

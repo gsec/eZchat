@@ -1,111 +1,117 @@
-import socket
-import select
+#==============================================================================#
+#                                 class server                                 #
+#==============================================================================#
 
-from thread import *
+import socket, select, sys
 
-# Server
-# 1. Open a socket: socket.socket
-# 2. Bind to a address(and port): socket.bind
-# 3. Listen for incoming connections: socket.listen
-# 4. Accept connections: socket.accept
-# 5. Read/Send: socket.sendall/socket.recv
+class server(object):
 
-HOST = ''   # Symbolic name meaning all available interfaces
-PORT = 2468 # Arbitrary non-privileged port
-clients = []
-server = None
+  """
+  Server
+  1. Open a socket: socket.socket
+  2. Bind to a address(and port): socket.bind
+  3. Listen for incoming connections: socket.listen
+  4. Accept connections: socket.accept
+  5. Read/Send: socket.sendall/socket.recv
+  """
 
-#Function to broadcast chat messages to all connected clients
-def broadcast_data (user, message):
-  #Do not send the message to master socket and the client who has send us the message
-  for socket in clients:
-    if socket != server and socket != user :
-      try :
-        print "da"
-        socket.send(message)
-      except :
-        # broken socket connection may be, chat client pressed ctrl+c for example
-        socket.close()
-        clients.remove(socket)
+  def __init__( self, id = "myserver", port = 2468,
+                max_connections = 10, buffersize = 1024):
+    self.id = id
+    self.port = port # Arbitrary non-privileged port
+    #self.host = ''   # Symbolic name meaning all available interfaces
+    self.host = "localhost"
+    self.max_connections = max_connections
+    self.buffersize = buffersize
+    self.clients = []
 
-#Function for handling connections. This will be used to create threads
-def clientthread(conn):
-  #Sending message to connected client
+    try:
+      #create an AF_INET, STREAM socket (TCP)
+      # AF_INET IP4
+      self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM )
+    except socket.error, msg:
+      print 'Failed to create socket. Error code: ' + str(msg[0]) +            \
+            ' , Error message : ' + msg[1]
+      sys.exit();
 
-  #infinite loop so that function do not terminate and thread do not end.
-  while True:
+    print "Socket Created"
+    self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    #Receiving from client
-    data = conn.recv(1024)
-    reply = 'OK...' + data
-    if not data:
-        break
-    conn.sendall(reply)
-    print reply
-    break
-    #conn.close()
-  #came out of loop
-  conn.close()
+    try:
+      self.server_socket.bind((self.host, self.port))
+    except socket.error , msg:
+      print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+      sys.exit()
+    print "Socket Bind Complete"
+
+    self.clients.append(self.server_socket)
+
+  # Function to broadcast chat messages to all connected clients
+  def broadcast_data (self, user, message):
+    # Do not send the message to master socket and the client who has send us the
+    # message
+    for socket in self.clients:
+      if socket != self.server_socket and socket != user :
+        try :
+          socket.send(message)
+        except :
+          # broken socket connection may be,
+          # chat client pressed ctrl+c for example
+          socket.close()
+          self.clients.remove(socket)
+
+  def listen(self):
+    """@todo: Docstring for listen.
+    :returns: @todo
+
+    """
+    print "Socket now listening"
+    self.server_socket.listen(10)
+    while 1:
+      # The select function monitors all the client sockets and the master
+      # socket for readable activity. If any of the client socket is readable
+      # then it means that one of the chat client has send a message.
+
+      # Get the list sockets which are ready to be read through select
+      readable, writeable, errors = select.select(self.clients, [], [])
+      #readable = self.clients
+
+      for user in readable:
+        #New connection
+        if user == self.server_socket:
+          # Handle the case in which there is a new connection recieved through
+          # server_socket
+          new_user, addr = self.server_socket.accept()
+          self.clients.append(new_user)
+
+          print "Client (%s, %s) connected" % addr
+          self.broadcast_data(new_user, "[%s:%s] entered room\n" % addr)
+
+        #Some incoming message from a client
+        else:
+          # Data recieved from client, process it
+          #A TCP program might close abruptly throwing the exception
+          # "Connection reset by peer"
+          try:
+            data = user.recv(self.buffersize)
+            if data:
+              self.broadcast_data( user, "\r" + '<' + str(user.getpeername()) +     \
+                              '> ' + data)
+            else:
+              self.broadcast_data(user, "Client (%s, %s) is offline" % addr)
+              print "Client (%s, %s) is offline" % addr
+              user.close()
+              self.clients.remove(user)
 
 
-try:
-  #create an AF_INET, STREAM socket (TCP)
-  # AF_INET IP4
-  server = socket.socket(socket.AF_INET, socket.SOCK_STREAM )
-except socket.error, msg:
-  print 'Failed to create socket. Error code: ' + str(msg[0]) +                \
-        ' , Error message : ' + msg[1]
-  sys.exit();
+          except:
+            self.broadcast_data(user, "Client (%s, %s) is offline" % addr)
+            print "Client (%s, %s) is offline" % addr
+            user.close()
+            self.clients.remove(user)
+            continue
 
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-print "Socket Created"
+    self.server_socket.close()
 
-try:
-  server.bind((HOST, PORT))
-except socket.error , msg:
-  print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-  sys.exit()
-print "Socket Bind Complete"
-
-server.listen(10)
-print "Socket now listening"
-
-
-
-while True:
-  # The select function monitors all the client sockets and the master socket for
-  # readable activity. If any of the client socket is readable then it means that
-  # one of the chat client has send a message.
-  readable, writeable, errors = select.select([server], clients, [server])
-  for user in readable:
-    # server ready to establish new connection
-    if user == server:
-      connection, addr = server.accept()
-      clients.append(connection)
-      broadcast_data(connection, "[%s:%s] entered room\n" % addr)
-      #connection.send("Welcome to the server. Type something and hit enter\n")
-      print 'Connected with ' + addr[0] + ':' + str(addr[1])
-    # Some incoming messages from clients
-    else:
-      try:
-        data = server.recv(1024)
-        if data:
-          broadcast_data(user, "\r" + '<' + str(user.getpeername()) + '> ' + data)
-      except:
-        broadcast_data(user, "Client (%s, %s) is offline" % addr)
-        print "Client (%s, %s) is offline" % addr
-        user.close()
-        clients.remove(user)
-        continue
-
-  # display client information
-  #start_new_thread(clientthread, (connection,))
-
-  #while True:
-    #data = connection.recv(1024)
-    #if not data:
-      #break
-    #connection.sendall(data)
-    #print data
-    #connection.close()
-server.close()
+myserver = server()
+myserver.listen()
