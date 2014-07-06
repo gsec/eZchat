@@ -8,16 +8,18 @@ from datetime import datetime
 
 class Message(object):
 
-  def __init__(self, sender, recipient, content, datatype='text'):
-    _time           = datetime.now()
-    self.time       = _time.ctime()
+  def __init__(self, sender, recipient, content, datatype = 'text',
+      timestamp = datetime.now()):
+    # TODO: (bcn 2014-07-06) Isoformat is at least localization independent but
+    # timezone information is still missing !
+    self.time       = timestamp.isoformat(' ')
     self.sender     = sender
     self.recipient  = recipient
     self.content    = content
     self.datatype   = datatype
 
     _hash      = SHA.new()
-    _hash.update(self.sender + self.recipient + str(_time))
+    _hash.update(self.sender + self.recipient + self.time)
     self.id_        = _hash.hexdigest()
 
   def __str__(self):

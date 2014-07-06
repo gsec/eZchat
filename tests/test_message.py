@@ -1,6 +1,7 @@
 from test_tools import *
 
 import ezc_message as em
+from datetime import datetime
 
 def test_Message():
   msg = """ If your public attribute name collides with a reserved keyword,
@@ -11,9 +12,10 @@ def test_Message():
       argument to a class method.)"""
   author = 'derEine'
   reader = 'derAndere'
-  mx = em.Message(author, reader, msg)
-  print(mx)
+  mx = em.Message(author, reader, msg, timestamp = datetime(2014, 07, 06, 17,
+    41, 05))
+  print("Testing the basic message object: \n" + str(mx))
   eq_ (mx.sender, author)
   eq_ (mx.recipient, reader)
-  # TODO: (bcn 2014-07-06) We can't check the hash as the time keeps changing.
-  # Maybe allow for optional argument in constructor to specify time?
+  eq_ (mx.id_, 'd22a9cb0b7f87ffc1905944a754fdc5a326b5f53')
+  eq_ (mx.time, '2014-07-06 17:41:05')

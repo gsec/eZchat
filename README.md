@@ -45,4 +45,6 @@ Developer Guidelines
   function that is more complex than `__str__` or `__init__`
 - Every module has its own file. Use a lot of modules to improve parallel
   programming and overall structure
+- Do not add a `main` in a module. You can test and try out as much as you like
+  in the corresponding test and improve thereby even the stability of the code
 - Namespace: `ezc_modulename`, `tests/test_modulename`
