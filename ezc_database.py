@@ -25,5 +25,5 @@ class Database(object):
         return 'Already in ezc_db'
     return ''
 
-# I guess this global object is necessary
+# bcn: I guess this global object is necessary
 database = Database()
