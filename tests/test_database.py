@@ -9,7 +9,7 @@ def test_database():
   msg = """ Hallo"""
   author = 'derEine'
   reader = 'derAndere'
-  mx = em.Message(author, reader, msg, 
+  mx = em.Message(author, reader, msg,
        timestamp = datetime(2014, 07, 06, 17, 41, 05))
 
   database = ed.Database(localdb = 'sqlite:///:memory:')
