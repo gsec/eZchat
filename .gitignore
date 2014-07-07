@@ -60,3 +60,6 @@ docs/_build/
 *.pyc
 *.swp
 *.swo
+
+# misc files, documentation, examples etc.
+misc/

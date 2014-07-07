@@ -16,7 +16,7 @@ class Database(object):
 
   def add_msg(self, msg, out = False):
     """ Add a message without creating duplicates in self.messages """
-    if (self.messages.find_one(id_ = msg.id_) == None):
+    if (self.messages.find_one(msg_id = msg.msg_id) == None):
       self.messages.insert(msg.__dict__)
       if (out):
         return 'Added entry'
