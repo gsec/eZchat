@@ -2,6 +2,10 @@
 history.json
 ezchat.db
 
+# rsa keys
+*.priv
+*.pub
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
