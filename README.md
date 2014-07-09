@@ -48,3 +48,8 @@ Developer Guidelines
 - Do not add a `main` in a module. You can test and try out as much as you like
   in the corresponding test and improve thereby even the stability of the code
 - Namespace: `ezc_modulename`, `tests/test_modulename`
+
+Dependencies
+--------------------------------------------------------------------------------
+- To run the tests: `pip install nose`, `pip install mock`
+- For the database: `pip install dataset`
