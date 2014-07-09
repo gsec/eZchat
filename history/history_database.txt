@@ -1,0 +1,12 @@
+bijancn: 
+As discussed, the text windows don't rescale with the main window as they should
+
+gsec: 
+Gui ist ausgewachsen, und bleibt jetzt so gross (sry^^)
+
+JNicL: 
+dafuq? Uli worked with QT too, he might fix this!
+
+Ul][: 
+challenge accepted
+

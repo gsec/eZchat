@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui02.ui'
 #
-# Created: Mon Jul 07 08:38:32 2014
+# Created: Tue Jul 08 16:50:22 2014
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -93,7 +93,8 @@ class Ui_Form(object):
         self.horizontalLayout.addWidget(self.groupBox_2)
 
         self.retranslateUi(Form)
-        # QtCore.QObject.connect(self.Send_Button, QtCore.SIGNAL(_fromUtf8("released()")), message_send())
+        QtCore.QObject.connect(self.Send_Button, QtCore.SIGNAL(_fromUtf8("released()")), self.textEdit.clear)
+        QtCore.QObject.connect(self.Send_Button, QtCore.SIGNAL(_fromUtf8("released()")), self.listView.reset)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
