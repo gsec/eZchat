@@ -1,12 +1,8 @@
-bijancn: 
+person1:
 As discussed, the text windows don't rescale with the main window as they should
 
-gsec: 
-Gui ist ausgewachsen, und bleibt jetzt so gross (sry^^)
+person2:
+a very long sentence to test how the programm handels very long sentences with a length of over 80 characters
 
-JNicL: 
-dafuq? Uli worked with QT too, he might fix this!
-
-Ul][: 
-challenge accepted
-
+person3:
+does it work?
