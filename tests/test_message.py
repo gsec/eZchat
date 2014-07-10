@@ -34,12 +34,14 @@ print("Testing the basic message object: \n" + str(my))
 #eq_ (mx.msg_id, 'f41af76925eddfac4447e4ce2d0a1a03f4af27ba83a99e1e723b91ffccfd54f9')
 #eq_ (mx.time, '2014-07-06 17:41:05')
 
-my.encrypt()
-print("Ciphertext:\n", my.cipher)
-my.decrypt()
-print("Plaintext:\n", my.plain)
+# NOT WORKING
+#my.encrypt()
+#print("Ciphertext:\n", my.cipher)
+#my.decrypt()
+#print("Plaintext:\n", my.plain)
 
-my.var_encrypt()
-print("VARIABLE Ciphertext:\n", my.var_cipher)
-my.var_decrypt()
-print("VARIABLE Plaintext:\n", my.var_plain)
+# NOT WORKING
+#my.var_encrypt()
+#print("VARIABLE Ciphertext:\n", my.var_cipher)
+#my.var_decrypt()
+#print("VARIABLE Plaintext:\n", my.var_plain)

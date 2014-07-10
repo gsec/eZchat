@@ -29,6 +29,9 @@ whether the `sender` is also the `author` of the message.
 
 Developer Guidelines
 --------------------------------------------------------------------------------
+- _ALWAYS RUN nosetests before committing any code! It is not optional but
+  mandatory!_ If you don't, you risk to push non-compiling code which has
+  happened in most comits in the last time.
 - 2 spaces for indentation. No tabs. No whitespace at the end of a line
 - Surround operators like `+`, `-`, `=`, .. with a single space
 - Never write more than 80 characters in a line. Try to avoid `&` by abusing

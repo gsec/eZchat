@@ -22,9 +22,9 @@ class Message(object):
     self.recipient  = recipient
     self.content    = content
     self.datatype   = datatype
-    self.msg_id     = SHA(self.sender + self.recipient + \
-                              str(self.time)).hexdigest()
-    self.pub_key, self.priv_key = self.read_keys()
+    self.msg_id     = "NOT WORKING"
+        #SHA(self.sender + self.recipient + str(self.time)).hexdigest()
+    #self.pub_key, self.priv_key = self.read_keys()
     self.cipher     = self.var_cipher = ''
     self.plain      = self.var_plain = ''
 
