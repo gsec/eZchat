@@ -41,9 +41,11 @@ Developer Guidelines
 - Write a test for every function you write
     - Our tools are `nose` and `mock`. Look at written tests to see how it
     works.
-    - Just run `nosetests` in the main directory and it will find and check
-    all tests and assertions you add in `tests` automagically. Run `nosetests
-    -s` to see stdout
+    - Enter the main directory with a `bash` or `terminal`, enter into your
+    command line `nosetests` and press `ENTER`. It will find and check all tests
+    and assertions you add in `tests` automagically. At least if the test
+    functions start with `test_`. Run `nosetests -s` to see stdout that is
+    otherwise captured. It is not necessary to add a main in the test module.
 - Add at least a line of docstring with `"""some meaningful words"""` to each
   function that is more complex than `__str__` or `__init__`
 - Every module has its own file. Use a lot of modules to improve parallel
