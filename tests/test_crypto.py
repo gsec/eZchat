@@ -30,6 +30,4 @@ def test_AES():
   eq_(msg.add_padding(text03), "123456\1\0\0\0\0\0\0\0\0\0")
   text04 = "123456\1\0\0\0\0\0\0\0\0\0\1\1\1\0\0\0"
   eq_(msg.remove_padding(msg.add_padding(text04)), text04)
-  # kinda fishy, dont know if eq is right here
 
-test_AES()
