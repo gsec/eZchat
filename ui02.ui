@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1065</width>
-    <height>698</height>
+    <width>1186</width>
+    <height>852</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -195,16 +195,16 @@
   <connection>
    <sender>Send_Button</sender>
    <signal>released()</signal>
-   <receiver>textEdit</receiver>
-   <slot>clear()</slot>
+   <receiver>listView</receiver>
+   <slot>reset()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1030</x>
-     <y>661</y>
+     <x>1132</x>
+     <y>810</y>
     </hint>
     <hint type="destinationlabel">
-     <x>962</x>
-     <y>662</y>
+     <x>1146</x>
+     <y>741</y>
     </hint>
    </hints>
   </connection>

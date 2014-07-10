@@ -29,6 +29,9 @@ whether the `sender` is also the `author` of the message.
 
 Developer Guidelines
 --------------------------------------------------------------------------------
+- _ALWAYS RUN nosetests before committing any code! It is not optional but
+  mandatory!_ If you don't, you risk to push non-compiling code which has
+  happened in most comits in the last time.
 - 2 spaces for indentation. No tabs. No whitespace at the end of a line
 - Surround operators like `+`, `-`, `=`, .. with a single space
 - Never write more than 80 characters in a line. Try to avoid `&` by abusing
@@ -38,9 +41,11 @@ Developer Guidelines
 - Write a test for every function you write
     - Our tools are `nose` and `mock`. Look at written tests to see how it
     works.
-    - Just run `nosetests` in the main directory and it will find and check
-    all tests and assertions you add in `tests` automagically. Run `nosetests
-    -p` to see stdout
+    - Enter the main directory with a `bash` or `terminal`, enter into your
+    command line `nosetests` and press `ENTER`. It will find and check all tests
+    and assertions you add in `tests` automagically. At least if the test
+    functions start with `test_`. Run `nosetests -s` to see stdout that is
+    otherwise captured. It is not necessary to add a main in the test module.
 - Add at least a line of docstring with `"""some meaningful words"""` to each
   function that is more complex than `__str__` or `__init__`
 - Every module has its own file. Use a lot of modules to improve parallel
@@ -48,3 +53,8 @@ Developer Guidelines
 - Do not add a `main` in a module. You can test and try out as much as you like
   in the corresponding test and improve thereby even the stability of the code
 - Namespace: `ezc_modulename`, `tests/test_modulename`
+
+Dependencies
+--------------------------------------------------------------------------------
+- To run the tests: `pip install nose`, `pip install mock`
+- For the database: `pip install dataset`
