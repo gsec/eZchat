@@ -43,7 +43,7 @@ Developer Guidelines
     works.
     - Just run `nosetests` in the main directory and it will find and check
     all tests and assertions you add in `tests` automagically. Run `nosetests
-    -p` to see stdout
+    -s` to see stdout
 - Add at least a line of docstring with `"""some meaningful words"""` to each
   function that is more complex than `__str__` or `__init__`
 - Every module has its own file. Use a lot of modules to improve parallel
