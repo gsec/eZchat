@@ -1,63 +1,141 @@
-import sys,os
+#==============================================================================#
+#                                 ezc_main.pu                                  #
+#==============================================================================#
+
+#============#
+#  Includes  #
+#============#
+
+import sys, os, time
+
+from client import *
+import Queue
+
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.uic import *
 
+#==============================================================================#
+#                                class ezc_Gui                                 #
+#==============================================================================#
 
-def ezc_Gui():
+class ezc_Gui(QtGui.QWidget):
 
-  # functions called by the GUI
-  def message_send():
-    message=str(chatwindow.textEdit.toPlainText())
+  def __init__(self):
 
-    f = open(history_path, 'a')
-    f.write("\n"+user+":\n"+message+"\n")
+    #super(ezc_Gui, self).__init__()
+    QtGui.QMainWindow.__init__(self)
+
+    # variables
+    self.history_path = os.path.join(os.path.dirname(__file__), 'history',
+                                     'history_database.txt')
+    self.gui_path = os.path.join(os.path.dirname(__file__), 'ui02.ui')
+    self.group_members=["Nick","Bijan","Gui","Uli"]
+    self.user = "Ul]["
+
+    #loading the GUI
+    self.chatwindow = loadUi(self.gui_path, self)
+
+    # Data are imported from the database into a Model class
+    self.history_modell = Model(self.history_path)
+
+    # Data are transfered from the modell class to the View class
+    self.show_history = View(self.history_modell, self.chatwindow.listView)
+
+
+    # connections and actions
+    self.chatwindow.connect(self.chatwindow.Send_Button, SIGNAL("released()"),
+                            self.message_send)
+
+    self.client = client()
+    # start threading process
+    self.client.start()
+    self.client.commandQueue.put(ClientCommand(ClientCommand.connect,
+                                              ("localhost",2468)))
+    self.update_timer()
+
+    # execute application
+    self.chatwindow.show()
+
+
+#==============================================================================#
+#                            client related methods                            #
+#==============================================================================#
+
+  def update_timer(self):
+    self.client_reply_timer = QtCore.QTimer(self)
+    self.client_reply_timer.timeout.connect(self.on_client_reply_timer)
+    self.client_reply_timer.start(100)
+
+  def on_client_reply_timer(self):
+    """
+    Whenever client_reply_timer timesout on_client_reply_timer is called,
+    allowing to check if messages have been sent to the client
+    """
+    # If data has been sent to the client readable is active
+    try:
+      readable, _, _ = select.select([self.client.client_socket], [], [], 0)
+      read = bool(readable)
+    except socket.error:
+      pass
+    if read:
+      self.client.commandQueue.put(ClientCommand(ClientCommand.receive))
+    try:
+      reply = self.client.replyQueue.get(block=False)
+      status = "success" if reply.replyType == ClientReply.success else "ERROR"
+      self.log('Client reply %s: %s' % (status, reply.data))
+    except Queue.Empty:
+      pass
+
+    # TODO: nick repainting is called too often Fr 11 Jul 2014 16:50:46 CEST
+    # resulting in high performance loss. An empty queue (Queue.Empfy ->
+    # return) is apparently not the correct criterium
+
+    self.history_modell.reload(self.history_path)
+    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+
+  def closeEvent(self, event):
+    reply = QtGui.QMessageBox.question(self, 'Message',
+      "Are you sure to quit?", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+
+    if reply == QtGui.QMessageBox.Yes:
+      self.client.shutdown()
+      event.accept()
+    else:
+      event.ignore()
+
+  def log(self, message):
+    timestamp = '[%010.3f]' % time.clock()
+    f = open(self.history_path, 'a')
+    message = timestamp + str(message)
+    f.write("\n"+self.user+":\n"+message+"\n")
     f.close()
 
-    chatwindow.textEdit.clear()
-    newpost=[user,message]
-    history_modell.reload(history_path)
-    history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+#==============================================================================#
+#                          non client related methods                          #
+#==============================================================================#
 
-  # variables
-  history_path = os.path.join(os.path.dirname(__file__), 'history',
-                              'history_database.txt')
-  gui_path= os.path.join(os.path.dirname(__file__), 'ui02.ui')
-  group_members=["Nick","Bijan","Gui","Uli"]
-  user="Ul]["
+  # functions called by the GUI
+  def message_send(self):
+    message=str(self.chatwindow.textEdit.toPlainText())
 
-  #loading the GUI
-  app = QApplication(sys.argv)
-  chatwindow = loadUi(gui_path)
+    f = open(self.history_path, 'a')
+    f.write("\n"+self.user+":\n"+message+"\n")
+    f.close()
 
-  # Data are imported from the database into a Modell class
-  history_modell = Modell(history_path)
-
-  # Data are transfered from the modell class to the View class
-  show_history = View(history_modell,chatwindow.listView)
+    self.chatwindow.textEdit.clear()
+    #newpost=[self.user,message]
+    self.history_modell.reload(self.history_path)
+    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+#------------------------------------------------------------------------------#
 
 
-  # connections and actions
-  chatwindow.connect(chatwindow.Send_Button, SIGNAL("released()"),
-                     message_send)
+#==============================================================================#
+#                                 class Model                                  #
+#==============================================================================#
 
-  # execute application
-  chatwindow.show()
-  app.exec_()
-
-
-
-
-
-
-
-
-
-
-
-
-class Modell(QtCore.QAbstractListModel):
+class Model(QtCore.QAbstractListModel):
   def __init__(self, dateiname):
     QtCore.QAbstractListModel.__init__(self)
     self.data = []
@@ -94,7 +172,7 @@ class Modell(QtCore.QAbstractListModel):
     finally:
         f.close()
 
-  def reload(self,dateiname):
+  def reload(self, dateiname):
     self.data = []
 
     word_wrap_length=80     # we could define this later as a variable
@@ -135,6 +213,11 @@ class Modell(QtCore.QAbstractListModel):
   def data(self, index, role=QtCore.Qt.DisplayRole):
       return QtCore.QVariant(self.data[index.row()])
 
+#==============================================================================#
+#                                  class View                                  #
+#==============================================================================#
+
+#------------------------------------------------------------------------------#
 class View(QtGui.QListView):
   def __init__(self, modell, parent=None):
     QtGui.QListView.__init__(self, parent)
@@ -143,60 +226,69 @@ class View(QtGui.QListView):
     self.setItemDelegate(self.delegate)
     self.setModel(modell)
     self.setVerticalScrollMode(QtGui.QListView.ScrollPerPixel)
+#------------------------------------------------------------------------------#
 
+
+#==============================================================================#
+#                              class ViewDelegate                              #
+#==============================================================================#
+
+#------------------------------------------------------------------------------#
 class ViewDelegate(QtGui.QItemDelegate):
   def __init__(self):
     QtGui.QItemDelegate.__init__(self)
 
-    self.rahmenStift = QtGui.QPen(QtGui.QColor(0,0,0))
-    self.titelTextStift = QtGui.QPen(
-                                   QtGui.QColor(255,255,255))
-    self.titelFarbe = QtGui.QBrush(QtGui.QColor(120,120,120))
-    self.textStift = QtGui.QPen(QtGui.QColor(0,0,0))
-    self.titelSchriftart = QtGui.QFont("Helvetica", 10,
-                                       QtGui.QFont.Bold)
-    self.textSchriftart = QtGui.QFont("Helvetica", 10)
+    self.borderColor    = QtGui.QPen(QtGui.QColor(0, 0, 0))
+    self.titleTextColor = QtGui.QPen(QtGui.QColor(255, 255, 255))
+    self.titleColor     = QtGui.QBrush(QtGui.QColor(120, 120, 120))
+    self.textColor      = QtGui.QPen(QtGui.QColor(0, 0, 0))
+    self.titleFont      = QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold)
+    self.textFont       = QtGui.QFont("Helvetica", 10)
 
-    self.zeilenHoehe = 15
-    self.titelHoehe = 20
-    self.abstand = 4
-    self.abstandInnen = 2
-    self.abstandText = 4
+    self.lineHeight  = 15
+    self.titleHeight = 20
+    self.dist        = 4
+    self.innerDist   = 2
+    self.textDist    = 4
 
   def sizeHint(self, option, index):
-    anz = len(index.data().toList())
-    return QtCore.QSize(170,
-                      self.zeilenHoehe*anz + self.titelHoehe)
+    n_lines = len(index.data().toList())
+    return QtCore.QSize(170, self.lineHeight*n_lines + self.titleHeight)
 
   def paint(self, painter, option, index):
-    rahmen = option.rect.adjusted(self.abstand, self.abstand,
-                                -self.abstand, -self.abstand)
-    rahmenTitel = rahmen.adjusted(self.abstandInnen,
-                  self.abstandInnen, -self.abstandInnen+1, 0)
-    rahmenTitel.setHeight(self.titelHoehe)
-    rahmenTitelText = rahmenTitel.adjusted(self.abstandText,
-                                    0, self.abstandText, 0)
-    data = index.data().toList()
+    border = option.rect.adjusted(self.dist, self.dist,
+                                  -self.dist, -self.dist)
+    borderTitle = border.adjusted(self.innerDist,
+                  self.innerDist, -self.innerDist + 1, 0)
+    borderTitle.setHeight(self.titleHeight)
+    borderTitleText = borderTitle.adjusted(self.textDist, 0, self.textDist, 0)
     painter.save()
-    painter.setPen(self.rahmenStift)
+    painter.setPen(self.borderColor)
     # painter.drawRect(rahmen)
-    painter.fillRect(rahmenTitel, self.titelFarbe)
+    painter.fillRect(borderTitle, self.titleColor)
 
     # Titel schreiben
-    painter.setPen(self.titelTextStift)
-    painter.setFont(self.titelSchriftart)
-    painter.drawText(rahmenTitelText,
-                QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
-                data[0].toString())
+    painter.setPen(self.titleTextColor)
+    painter.setFont(self.titleFont)
+    data = index.data().toList()
+    # Do not draw if theres nothing to draw
+    if len(data) > 0:
+      stringData = data[0].toString()
+      painter.drawText(borderTitleText,
+                       QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
+                       data[0].toString())
 
     # Adresse schreiben
-    painter.setPen(self.textStift)
-    painter.setFont(self.textSchriftart)
-    for i, eintrag in enumerate(data[1:]):
-        painter.drawText(rahmenTitel.x() + self.abstandText,
-               rahmenTitel.bottom() + (i+1)*self.zeilenHoehe,
-               "%s" % eintrag.toString())
+    painter.setPen(self.textColor)
+    painter.setFont(self.textFont)
+    for i, entry in enumerate(data[1:]):
+        painter.drawText(borderTitle.x() + self.textDist,
+                         borderTitle.bottom() + (i+1)*self.lineHeight,
+                         "%s" % entry.toString())
     painter.restore()
+#------------------------------------------------------------------------------#
 
 if __name__ == "__main__":
-  ezc_Gui()
+  app = QApplication(sys.argv)
+  myapp = ezc_Gui()
+  sys.exit(app.exec_())
