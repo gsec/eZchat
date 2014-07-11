@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 from datetime import datetime
+from Crypto.Hash import SHA
 
 class Message(object):
   """
@@ -22,9 +23,8 @@ class Message(object):
     self.recipient  = recipient
     self.content    = content
     self.datatype   = datatype
-    self.msg_id     = "NOT WORKING"
-        #SHA(self.sender + self.recipient + str(self.time)).hexdigest()
-    #self.pub_key, self.priv_key = self.read_keys()
+    self.msg_id     = SHA.new(self.sender + self.recipient \
+        + str(self.time)).hexdigest()
     self.cipher     = self.var_cipher = ''
     self.plain      = self.var_plain = ''
 
