@@ -79,21 +79,18 @@ class ezc_Gui(QtGui.QWidget):
       read = bool(readable)
     except socket.error:
       pass
+    # triggered if there is something to read
     if read:
       self.client.commandQueue.put(ClientCommand(ClientCommand.receive))
     try:
+    # triggered if there is something to read or something has been sent
       reply = self.client.replyQueue.get(block=False)
       status = "success" if reply.replyType == ClientReply.success else "ERROR"
       self.log('Client reply %s: %s' % (status, reply.data))
     except Queue.Empty:
       pass
 
-    # TODO: nick repainting is called too often Fr 11 Jul 2014 16:50:46 CEST
-    # resulting in high performance loss. An empty queue (Queue.Empfy ->
-    # return) is apparently not the correct criterium
 
-    self.history_modell.reload(self.history_path)
-    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
 
   def closeEvent(self, event):
     reply = QtGui.QMessageBox.question(self, 'Message',
@@ -112,24 +109,34 @@ class ezc_Gui(QtGui.QWidget):
     f.write("\n"+self.user+":\n"+message+"\n")
     f.close()
 
+    self.history_modell.reload(self.history_path)
+    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+
 #==============================================================================#
 #                          non client related methods                          #
 #==============================================================================#
 
   # functions called by the GUI
   def message_send(self):
-    message=str(self.chatwindow.textEdit.toPlainText())
+    # retrieve message
+    message = str(self.chatwindow.textEdit.toPlainText())
 
+    # save to history
     f = open(self.history_path, 'a')
     f.write("\n"+self.user+":\n"+message+"\n")
     f.close()
 
+    # Send message to other clients. The client class confirms if sending was
+    # successful.
+    self.client.commandQueue.put(ClientCommand(ClientCommand.send, message))
+
+    # clear text entry
     self.chatwindow.textEdit.clear()
-    #newpost=[self.user,message]
+
+    # send signal for repainting
     self.history_modell.reload(self.history_path)
     self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
 #------------------------------------------------------------------------------#
-
 
 #==============================================================================#
 #                                 class Model                                  #
