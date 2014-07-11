@@ -19,21 +19,3 @@ class User(object):
 
   - UNSOLVED: how to store sent messages, without giving up anonymity?
   """
-  def __init__(self, username):
-    self.username = username
-    #self.key_size = KEY_SIZE
-
-    #self.generate_keys(self.username)
-
-  #def generate_keys(self, username):
-      #"""
-      #@todo:
-      #"""
-      #(pub_key, priv_key) = rsa.newkeys(self.key_size)
-
-      #with open(username + '_key.pub', 'w') as publicfile:
-        #pub_data = pub_key.save_pkcs1()
-        #publicfile.write(pub_data)
-      #with open(username + '_key.priv', 'w') as privatefile:
-        #priv_data = priv_key.save_pkcs1()
-        #privatefile.write(priv_data)

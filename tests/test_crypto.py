@@ -16,7 +16,7 @@ def test_AES():
   author = 'derEine'
   reader = 'derAndere'
 
-  plain_package = {'plain':text01, 'encrypted':False}
+  plain_package = {'plain':text01, 'crypt_mode':0}
   msg_object = ec.eZ_AES(plain_package)
   geheim = msg_object.encrypt()
   print("Crypted Object:\n", geheim)
