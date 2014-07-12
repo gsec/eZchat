@@ -1,12 +1,12 @@
 #==============================================================================#
-#                                  client.py                                   #
+#                                  ez_client                                   #
 #==============================================================================#
 
 #============#
 #  Includes  #
 #============#
-
 import sys, errno
+from __future__ import print_function
 import socket, struct, select
 import Queue, threading
 
@@ -14,9 +14,7 @@ import Queue, threading
 #                             class ClientCommand                              #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class ClientCommand(object):
-
   """
   A ClienCommand encapsulates commands which are then appended to the command
   queue ready for execution.
@@ -31,19 +29,16 @@ class ClientCommand(object):
   """
   connect, close, send, receive = range(4)
 
-  def __init__(self, msgType = None, data = None, clientID = None, ):
+  def __init__(self, msgType = None, data = None, clientID = None):
     self.clientID = clientID
     self.msgType  = msgType
     self.data     = data
-#------------------------------------------------------------------------------#
 
 #==============================================================================#
 #                              class ClientReply                               #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class ClientReply(object):
-
   """
   Encapsulate received data.
   A ServerReply instance can be appended to the reply queue.
@@ -57,29 +52,24 @@ class ClientReply(object):
     self.clientID  = clientID
     self.replyType = replyType
     self.data      = data
-#------------------------------------------------------------------------------#
 
 #==============================================================================#
 #                                 class client                                 #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class client(threading.Thread):
-
   """
   Client class with queue system. Commands are executed by appending
   ClientCommand instances to the client commandQueue.
   The connect command allows to:
     1. Create a socket
-    2. Connects to a remote server
+    2. Connect to a remote server
   Send command:
     3. Data is send to all connected clients
   The receive commands:
     4. Receive a reply. The result is appended to the replyQueue.
   """
-
-  def __init__(self, user = " "):
-
+  def __init__(self, user = ""):
     super(client, self).__init__()
     self.clientID = user
 
@@ -136,7 +126,7 @@ class client(threading.Thread):
   def send(self, cmd):
     """
     The struct module is used to handle binary data stored in files or from
-    network connections. Sofar it is assumend that cmd.data is a string.
+    network connections. So far it is assumed that cmd.data is a string.
     The first four bytes are reserved to store the size of the data (header).
     """
     header = struct.pack('<L', len(cmd.data))
@@ -162,7 +152,7 @@ class client(threading.Thread):
       self.replyQueue.put(self.error("Socket closed prematurely"))
       self.shutdown()
     except IOError as e:
-      print "error", e
+      print("error", e)
       self.replyQueue.put(self.error(str(e)))
 
   def receive_bytes(self, n_bytes):
@@ -185,4 +175,3 @@ class client(threading.Thread):
         self.handlers[cmd.msgType](cmd)
       except Queue.Empty as e:
         continue
-#------------------------------------------------------------------------------#

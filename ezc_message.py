@@ -1,10 +1,17 @@
-#! /usr/bin/env python
-# -*- coding: utf_8 -*-
+#==============================================================================#
+#                                  ez_message                                  #
+#==============================================================================#
 
-from __future__ import print_function
+#============#
+#  Includes  #
+#============#
 from datetime import datetime
 from Crypto.Hash import SHA # Shorter IDs than with 256
-import ezc_crypto as ec
+import ez_crypto as ec
+
+#==============================================================================#
+#                                class Message                                 #
+#==============================================================================#
 
 class Message(object):
   """

@@ -1,7 +1,10 @@
-#! /usr/bin/env python
-# -*- coding: utf_8 -*-
+#==============================================================================#
+#                                  ez_crypto                                   #
+#==============================================================================#
 
-#from __future__ import print_function
+#============#
+#  Includes  #
+#============#
 from Crypto.Hash import SHA256 # considered more secure than SHA1
 from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.PublicKey import RSA
@@ -11,8 +14,11 @@ from os.path import join as pathjoin
 
 RNG = Random.new()
 
+#==============================================================================#
+#                            class eZ_CryptoScheme                             #
+#==============================================================================#
+
 class eZ_CryptoScheme(object):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   Outline of crypto scheme. NOT WORKING AT ALL
   """
@@ -36,8 +42,11 @@ class eZ_CryptoScheme(object):
     #assert self.verify(self.signature, self.sender) == True "Invalid Signature"
     return self.plain
 
+#==============================================================================#
+#                                 class eZ_RSA                                 #
+#==============================================================================#
+
 class eZ_RSA(object):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   RSA cipher object. Provides asymmetric encrytpion.
   """
@@ -126,8 +135,11 @@ class eZ_RSA(object):
     verifier = PKCS1_PSS.new(public_key)
     return verifier.verify(msg_hash, signature)
 
+#==============================================================================#
+#                                 class eZ_AES                                 #
+#==============================================================================#
+
 class eZ_AES(object):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   AES cipher object. Provides symmetric encryption. Plaintext can be
   provided as string or dictionary object. Ciphertext must be dictionary

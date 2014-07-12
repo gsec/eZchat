@@ -1,14 +1,13 @@
 #==============================================================================#
-#                                 ezc_main.pu                                  #
+#                                   ez_main                                    #
 #==============================================================================#
 
 #============#
 #  Includes  #
 #============#
-
 import sys, os, time
 
-from client import *
+from ez_client import *
 import Queue
 
 from PyQt4 import QtCore, QtGui, uic
@@ -17,14 +16,14 @@ from PyQt4.QtGui import *
 from PyQt4.uic import *
 
 #==============================================================================#
-#                                class ezc_Gui                                 #
+#                                 class ez_Gui                                 #
 #==============================================================================#
 
-class ezc_Gui(QtGui.QWidget):
+class ez_Gui(QtGui.QWidget):
 
   def __init__(self):
 
-    #super(ezc_Gui, self).__init__()
+    #super(ez_Gui, self).__init__()
     QtGui.QMainWindow.__init__(self)
 
     # variables
@@ -90,8 +89,6 @@ class ezc_Gui(QtGui.QWidget):
     except Queue.Empty:
       pass
 
-
-
   def closeEvent(self, event):
     reply = QtGui.QMessageBox.question(self, 'Message',
       "Are you sure to quit?", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
@@ -136,7 +133,6 @@ class ezc_Gui(QtGui.QWidget):
     # send signal for repainting
     self.history_modell.reload(self.history_path)
     self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
-#------------------------------------------------------------------------------#
 
 #==============================================================================#
 #                                 class Model                                  #
@@ -183,7 +179,6 @@ class Model(QtCore.QAbstractListModel):
     self.data = []
 
     word_wrap_length=80     # we could define this later as a variable
-    # Lade data
     f = open(dateiname)
 
     try:
@@ -224,7 +219,6 @@ class Model(QtCore.QAbstractListModel):
 #                                  class View                                  #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class View(QtGui.QListView):
   def __init__(self, modell, parent=None):
     QtGui.QListView.__init__(self, parent)
@@ -233,14 +227,11 @@ class View(QtGui.QListView):
     self.setItemDelegate(self.delegate)
     self.setModel(modell)
     self.setVerticalScrollMode(QtGui.QListView.ScrollPerPixel)
-#------------------------------------------------------------------------------#
-
 
 #==============================================================================#
 #                              class ViewDelegate                              #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class ViewDelegate(QtGui.QItemDelegate):
   def __init__(self):
     QtGui.QItemDelegate.__init__(self)
@@ -293,9 +284,12 @@ class ViewDelegate(QtGui.QItemDelegate):
                          borderTitle.bottom() + (i+1)*self.lineHeight,
                          "%s" % entry.toString())
     painter.restore()
-#------------------------------------------------------------------------------#
+
+#==============================================================================#
+#                                     MAIN                                     #
+#==============================================================================#
 
 if __name__ == "__main__":
   app = QApplication(sys.argv)
-  myapp = ezc_Gui()
+  myapp = ez_Gui()
   sys.exit(app.exec_())

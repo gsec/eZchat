@@ -1,20 +1,35 @@
+#==============================================================================#
+#                                  ez_database                                 #
+#==============================================================================#
+
+#============#
+#  Includes  #
+#============#
 import dataset
-import ezc_message as em
+import ez_message as em
+
+#==============================================================================#
+#                                class Database                                #
+#==============================================================================#
 
 class Database(object):
+  """ The Database class gives access to the sql database """
 
-  def __init__(self, localdb = 'sqlite:///ezchat.db'):
-    # Opens a local sqlite database `ezchat.db` which is saved to and loaded
-    # from disk automatically
+  def __init__(self, localdb = 'sqlite:///ez.db'):
+    """
+    Opens a local sqlite database `ez.db` which is saved to and loaded from disk
+    automatically
+    """
     self.localdb = localdb
     self.db = dataset.connect(self.localdb)
     self.messages = self.db['messages']
     self.users = self.db['users']
 
   def __str__(self):
-    return "\nI am connected to " + self.localdb + \
-            " and have the following data: \n Messages: \n" + self.msg_list() + \
-            "\n Known users: \n TBD"
+    lst = ['\nI am connected to', self.localdb,
+           'and have the following data:\n---Messages---\n', self.msg_list(),
+           '\n---Users---\nTBD']
+    return ' '.join(lst)
 
   def add_msg(self, msg, out = False):
     """ Add a message without creating duplicates in self.messages """
@@ -24,13 +39,14 @@ class Database(object):
         return 'Added entry'
     else:
       if out:
-        return 'Already in ezc_db'
-    return ''
+        return 'Already in ez_db'
 
   def msg_list(self):
     """ Return a string of messages to be shown by the UI"""
     lst = [str(em.Message('', '', '', _dict=d)) for d in self.messages]
     return ('\n' + '='*80 + '\n').join(lst)
 
-# bcn: I guess this global object is necessary
+#==============================================================================#
+#                               Global Instance                                #
+#==============================================================================#
 database = Database()

@@ -20,7 +20,7 @@ def test_database():
 
   eq_(database.add_msg(mx, out = True), 'Added entry')
   eq_(database.add_msg(mx, out = True), 'Already in ezc_db')
-  eq_(database.add_msg(mx, out = False), '')
+  eq_(database.add_msg(mx, out = False), None)
   database.add_msg(my)
 
   print(database)
