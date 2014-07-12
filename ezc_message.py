@@ -3,33 +3,34 @@
 
 from __future__ import print_function
 from datetime import datetime
-from Crypto.Hash import SHA
+from Crypto.Hash import SHA # Shorter IDs than with 256
+import ezc_crypto as ec
 
 class Message(object):
   """
-  Creates a message object with a unique ID based on sender, recipient and
-  exact creation time. Encrypts or decrypts content if provided with keys.
-  @todo: message size limited by the key though!!!
-         further implementation of AES needed for msg_size to be arbitrary
+  This is the object that will be permanently saved in the database.
+  It generates a unique ID based on sender, recipient and exact date.
+  Unencrypted is recipient, year-month, injection vector and crypt_mode.
+  Crypted is the message as cipher(AES) and key as ciphered_key(RSA).
   """
 
-  def __init__(self, sender, recipient, content, datatype = 'text',
-      dtime = datetime.now()):
-    # todo: (bcn 2014-07-06) Isoformat is at least localization independent but
-    # timezone information is still missing !
-
-    self.time       = dtime.isoformat(' ')
-    self.sender     = sender
-    self.recipient  = recipient
-    self.content    = content
-    self.datatype   = datatype
-    self.msg_id     = SHA.new(self.sender + self.recipient \
-        + str(self.time)).hexdigest()
-    self.cipher     = self.var_cipher = ''
-    self.plain      = self.var_plain = ''
+  def __init__(self, sender, recipient, content, dtime = datetime.now(), _dict=None):
+    if _dict is not None:
+      self.__dict__.update(_dict)
+    else:
+      # todo: (bcn 2014-07-06) Isoformat is at least localization independent but
+      # timezone information is still missing !
+      self.time       = str(dtime.year) + '-' + str(dtime.month)
+      self.recipient  = recipient
+      self.msg_id     = SHA.new(sender + recipient + str(dtime.isoformat(' '))).\
+                            hexdigest()
+      # Fake it till you make it
+      #crypt_dict = ec.eZ_Crypto.encrypt(dtime.isoformat(' '), sender, content)
+      crypt_dict = { 'cipher' : 'laskjdhflkaj', 'ciphered_key' : 'alskdjaskldj',
+                     'iv' : 'uiofoqhehf', 'crypt_mode' : 1, 'signature' : 'lajd'}
+      for x in ['cipher', 'ciphered_key', 'iv', 'crypt_mode', 'signature']:
+        self.__dict__.update({x : crypt_dict[x]})
 
   def __str__(self):
-    return "\nFrom: " + self.sender + "\tTo: " + self.recipient + "\n@ "  \
-            + self.time + "\n---\n" + self.content + "\n---\n" +          \
-            "Message ID: " + self.msg_id + " (" + self.datatype + ")" +   \
-            "\n+++++++++++++\n"
+    lst = [str(k) + ' : ' + str(v) for k, v in self.__dict__.items()]
+    return '\n'.join(lst)

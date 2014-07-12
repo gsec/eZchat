@@ -11,15 +11,19 @@ def test_database():
   reader = 'derAndere'
   mx = em.Message(author, reader, msg,
        dtime = datetime(2014, 07, 06, 17, 41, 05))
+  my = em.Message(author, reader, msg,
+       dtime = datetime(2014, 06, 06, 17, 41, 05))
+
+  #print(mx)
 
   database = ed.Database(localdb = 'sqlite:///:memory:')
 
   eq_(database.add_msg(mx, out = True), 'Added entry')
   eq_(database.add_msg(mx, out = True), 'Already in ezc_db')
   eq_(database.add_msg(mx, out = False), '')
+  database.add_msg(my)
 
-  # TODO: (bcn 2014-07-06) Implement iteration over database
-  #print(ed.database)
+  print(database)
 
   # This is more as an export to another program but also shows what is inside
   # the database
