@@ -1,24 +1,19 @@
 #==============================================================================#
-#                                  server.py                                   #
+#                                  ez_server                                   #
 #==============================================================================#
 
 #============#
 #  Includes  #
 #============#
-
 import sys, time
-
 import socket, select, struct
-
 import Queue, threading
 
 #==============================================================================#
 #                                 class server                                 #
 #==============================================================================#
 
-#------------------------------------------------------------------------------#
 class server(object):
-
   """
   Server takes care of
   1. Openening sockets via socket.socket
@@ -146,8 +141,8 @@ class server(object):
             continue
 
     self.server_socket.close()
-#------------------------------------------------------------------------------#
 
+# TODO: (bcn 2014-07-12) Nick promised to remove this and adopt the P2P strategy
 if __name__ == "__main__":
   myserver = server()
   myserver.listen()
