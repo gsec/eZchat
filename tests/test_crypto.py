@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 from test_tools import *
-import ezc_crypto as ec
+import ez_crypto as ec
 
 def test_AES():
   text01 = """ If your public attribute name collides with a reserved keyword,

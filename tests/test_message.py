@@ -1,8 +1,8 @@
 from __future__ import print_function
 from test_tools import *
 
-import ezc_message as em
-import ezc_user as new_user
+import ez_message as em
+import ez_user as new_user
 from datetime import datetime
 
 def test_Message():

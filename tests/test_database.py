@@ -1,7 +1,7 @@
 from test_tools import *
 
-import ezc_database as ed
-import ezc_message as em
+import ez_database as ed
+import ez_message as em
 from datetime import datetime
 from sys import stdout
 
@@ -19,7 +19,7 @@ def test_database():
   database = ed.Database(localdb = 'sqlite:///:memory:')
 
   eq_(database.add_msg(mx, out = True), 'Added entry')
-  eq_(database.add_msg(mx, out = True), 'Already in ezc_db')
+  eq_(database.add_msg(mx, out = True), 'Already in ez_db')
   eq_(database.add_msg(mx, out = False), None)
   database.add_msg(my)
 

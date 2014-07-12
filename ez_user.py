@@ -1,11 +1,14 @@
-# creates an user of the network
-# feel free to add and edit if you got good ideas
-# bcn: The adding part will be in ezc_database.py while we can put
+#==============================================================================#
+#                                   ez_user                                    #
+#==============================================================================#
+
+# creates a user of the network
+# bcn: The adding part will be in ez_database.py while we can put
 # functionalities and information here. Just as with Message
 
-#import rsa # Key generation should be done by ezc_crypto. Pls fix
-#KEY_SIZE = 1024
-
+#==============================================================================#
+#                                  class User                                  #
+#==============================================================================#
 class User(object):
   """
   - check if user already in database, if not:

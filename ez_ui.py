@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Form implementation generated from reading ui file 'editor.ui'
 #
 # Created: Sat Jul  5 12:52:43 2014

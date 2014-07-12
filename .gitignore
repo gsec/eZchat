@@ -1,6 +1,6 @@
 # eZchat specifics
 history.json
-ezchat.db
+*.db
 
 # rsa keys
 *.priv
