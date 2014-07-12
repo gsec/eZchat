@@ -1,11 +1,22 @@
 #==============================================================================#
+#                                  server.py                                   #
+#==============================================================================#
+
+#============#
+#  Includes  #
+#============#
+
+import sys, time
+
+import socket, select, struct
+
+import Queue, threading
+
+#==============================================================================#
 #                                 class server                                 #
 #==============================================================================#
 
-import sys, time
-import socket, select, struct
-import Queue, threading
-
+#------------------------------------------------------------------------------#
 class server(object):
 
   """
@@ -20,8 +31,8 @@ class server(object):
   def __init__( self, id = "myserver", port = 2468, max_connections = 10):
     self.id = id
     self.port = port # Arbitrary non-privileged port
-    #self.host = ''   # Symbolic name meaning all available interfaces
-    self.host = "localhost"
+    self.host = ''   # Symbolic name meaning all available interfaces
+    #self.host = ""
     self.max_connections = max_connections
     self.clients = []
     self.alive = threading.Event()
@@ -50,8 +61,8 @@ class server(object):
 
   # Function to broadcast chat messages to all connected clients
   def broadcast_data (self, user, message):
-    # Do not send the message to master socket and the client who has send us the
-    # message
+    # Do not send the message to master socket and the client who has send us
+    # the message
     for socket in self.clients:
       if socket != self.server_socket and socket != user :
         print("Distributing data to other users")
@@ -135,6 +146,8 @@ class server(object):
             continue
 
     self.server_socket.close()
+#------------------------------------------------------------------------------#
 
-myserver = server()
-myserver.listen()
+if __name__ == "__main__":
+  myserver = server()
+  myserver.listen()
