@@ -17,24 +17,41 @@ class eZ_CryptoScheme(object):
   Outline of crypto scheme. NOT WORKING AT ALL
   """
 
-  def encrypt(self, date, sender, content):
-    """
-    @todo:
-    """
-    crypt_block = date + '\t' + sender + '\n' + content + '\n'
-    self.signature = self.sign(sender, content)
-    self.__dict__.update(ez_AES(crypt_block).encrypt())
-    self.ciphered_key = self.RSA_encrypt(self.key)
-    del self.key
-    return self.__dict__
+  def __init__(self, date, sender, recipient, content):
+    self.date       = date
+    self.sender     = sender
+    self.recipient  = recipient
+    self.content    = content
+    self.key_loc    = '.'
 
-  def decrypt(self, message):
-    self.__dict__.update(message.__dict__)
-    self.key = RSA_decrypt(self.ciphered_key)
-    self__dict__.update(ez_AES(self.__dict__).decrypt())
-    self.sender = self.get_sender(self.plain)
+  def encrypt(self):
+    self.crypt_block = self.date + '\t' + self.sender + '\n' \
+        + self.content + '\n'
+    self.sender_key = eZ_RSA().get_sender_key('sender'=self.sender)
+    self.signature = eZ_RSA().sign(self.sender_key, self.crypt_block)
+
+    
+
+
+# REFERENCE BLOCK
+  #def encrypt(self, date, sender, content):
+    #"""
+    #@todo:
+    #"""
+    #crypt_block = date + '\t' + sender + '\n' + content + '\n'
+    #self.signature = self.sign(sender, content)
+    #self.__dict__.update(ez_AES(crypt_block).encrypt())
+    #self.ciphered_key = self.RSA_encrypt(self.key)
+    #del self.key
+    #return self.__dict__
+
+  #def decrypt(self, message):
+    #self.__dict__.update(message.__dict__)
+    #self.key = RSA_decrypt(self.ciphered_key)
+    #self__dict__.update(ez_AES(self.__dict__).decrypt())
+    #self.sender = self.get_sender(self.plain)
     #assert self.verify(self.signature, self.sender) == True "Invalid Signature"
-    return self.plain
+    #return self.plain
 
 class eZ_RSA(object):
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -47,8 +64,8 @@ class eZ_RSA(object):
     Takes arbitrary list of items in format > "key"=value < and sets them as
     attributes of the eZ_RSA class.
     """
-    for key, value in kwargs.iteritems():
-      self.key = value
+    for item, value in kwargs.iteritems():
+      self.item = value
     self.rsa_key_length = 2048
 
   def get_sender_key(self, sender):
@@ -77,8 +94,8 @@ class eZ_RSA(object):
 
   def generate_keys(self, write=False):
     """
-    @todo: temporarily duplicate of function in ezc_create_user.py
-    should at the end be imported from (secured) files
+    Create RSA keypair and return them as tuple. if write argument is true, 
+    also write them to disk.
     """
     fresh_key   = RSA.generate(self.rsa_key_length)
     private_key = fresh_key
@@ -109,20 +126,20 @@ class eZ_RSA(object):
     plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
     return plaintext
 
-  def sign(self, private_key, message):
+  def sign(self, private_key, plaintext):
     """
     Sign a message.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     signer = PKCS1_PSS.new(private_key)
     signature = signer.sign(msg_hash)
     return signature
 
-  def verify(self, public_key, message, signature):
+  def verify(self, public_key, plaintext, signature):
     """
     Verify signature.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
     return verifier.verify(msg_hash, signature)
 
