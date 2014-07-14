@@ -8,12 +8,15 @@
 import sys, os, time
 
 from ez_client import *
+from ez_server import *
 import Queue
 
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.uic import *
+
+from ips import *
 
 #==============================================================================#
 #                                 class ez_Gui                                 #
@@ -46,12 +49,23 @@ class ez_Gui(QtGui.QWidget):
     # connections and actions
     self.chatwindow.connect(self.chatwindow.Send_Button, SIGNAL("released()"),
                             self.message_send)
+    self.chatwindow.connect(self.chatwindow.pushButton_5, SIGNAL("clicked()"),
+                            self.clear_history)
+    self.chatwindow.connect(self.chatwindow.pushButton_3, SIGNAL("clicked()"),
+                            self.connect_client)
+
+    ports = [u['port'] for u in ips_open.db.all()]
+    self.port = ports[0]
+
+    self.server = server()
+    self.server.start()
+    self.server.commandQueue.put(ServerCommand(ServerCommand.connect,
+                                              ("localhost",self.port)))
+    ips_open.remove_port(self.port)
+    ips_taken.add_port(self.port)
 
     self.client = client()
-    # start threading process
-    self.client.start()
-    self.client.commandQueue.put(ClientCommand(ClientCommand.connect,
-                                              ("localhost",2468)))
+
     self.update_timer()
 
     # execute application
@@ -64,37 +78,97 @@ class ez_Gui(QtGui.QWidget):
 
   def update_timer(self):
     self.client_reply_timer = QtCore.QTimer(self)
-    self.client_reply_timer.timeout.connect(self.on_client_reply_timer)
+    self.client_reply_timer.timeout.connect(self.on_reply_timer)
     self.client_reply_timer.start(100)
 
-  def on_client_reply_timer(self):
+  def on_reply_timer(self):
     """
-    Whenever client_reply_timer timesout on_client_reply_timer is called,
+    Whenever client_reply_timer timesout on_reply_timer is called,
     allowing to check if messages have been sent to the client
     """
-    # If data has been sent to the client readable is active
+
+#---------------              server related part               ---------------#
+
+    # The select function monitors all the client sockets and the master
+    # socket for readable activity. If any of the client socket is readable
+    # then it means that one of the chat client has send a message.
+
+    # Get the list sockets which are ready to be read through select
     try:
-      readable, _, _ = select.select([self.client.client_socket], [], [], 0)
+      readable, _, _ = select.select(self.server.clients, [], [], 0)
       read = bool(readable)
     except socket.error:
       pass
-    # triggered if there is something to read
     if read:
-      self.client.commandQueue.put(ClientCommand(ClientCommand.receive))
+      for user in readable:
+        # Found new client
+        if user == self.server.server_socket:
+          # Handle the case in which there is a new connection recieved through
+          # server_socket
+          print ("new client connects")
+          self.server.commandQueue.put(ServerCommand(ServerCommand.accept))
+
+        #Some incoming message from a client
+        else:
+          pass
+          # Data recieved from client -> process it
+          #print ("user:", user)
+          #print ("received msg")
+          #self.server.commandQueue.put(ServerCommand(ServerCommand.send,
+                                       #user))
     try:
-    # triggered if there is something to read or something has been sent
-      reply = self.client.replyQueue.get(block=False)
-      status = "success" if reply.replyType == ClientReply.success else "ERROR"
+      # triggered if there is something to read or something has been sent
+      reply = self.server.replyQueue.get(block=False)
+      status = "success" if reply.replyType == ServerReply.success else "ERROR"
       self.log('Client reply %s: %s' % (status, reply.data))
     except Queue.Empty:
       pass
+
+#---------------              client related part               ---------------#
+
+    if self.client.client_socket:
+      # If data has been sent to the client readable is active
+      try:
+        readable, _, _ = select.select([self.client.client_socket], [], [], 0)
+        read = bool(readable)
+      except socket.error:
+        pass
+      # triggered if there is something to read
+      if read:
+        self.client.commandQueue.put(ClientCommand(ClientCommand.receive))
+      try:
+      # triggered if there is something to read or something has been sent
+        reply = self.client.replyQueue.get(block=False)
+        status = "success" if reply.replyType == ClientReply.success           \
+                           else "ERROR"
+        self.log('Client reply %s: %s' % (status, reply.data))
+      except Queue.Empty:
+        pass
+
+  def connect_client(self):
+    ports = [u['port'] for u in ips_taken.db.all()]
+    if self.port in ports:
+      ports.remove(self.port)
+    if len(ports) > 0:
+      port1 = ports[0]
+      self.client.alive.set()
+      self.client.start()
+      self.client.commandQueue.put(ClientCommand(ClientCommand.connect,
+                                                ("localhost",port1)))
+    else:
+      print ("nothint to connect to")
+
 
   def closeEvent(self, event):
     reply = QtGui.QMessageBox.question(self, 'Message',
       "Are you sure to quit?", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
 
     if reply == QtGui.QMessageBox.Yes:
+
+      ips_open.add_port(self.port)
+      ips_taken.remove_port(self.port)
       self.client.shutdown()
+      self.server.shutdown()
       event.accept()
     else:
       event.ignore()
@@ -125,12 +199,23 @@ class ez_Gui(QtGui.QWidget):
 
     # Send message to other clients. The client class confirms if sending was
     # successful.
-    self.client.commandQueue.put(ClientCommand(ClientCommand.send, message))
+    #self.client.commandQueue.put(ClientCommand(ClientCommand.send, message))
+    self.server.commandQueue.put(ServerCommand(ServerCommand.send, message))
 
     # clear text entry
     self.chatwindow.textEdit.clear()
 
     # send signal for repainting
+    self.history_modell.reload(self.history_path)
+    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+
+  def clear_history(self):
+    """@todo: Docstring for clear_history.
+    :returns: @todo
+
+    """
+    f = open(self.history_path, 'w')
+    f.close()
     self.history_modell.reload(self.history_path)
     self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
 

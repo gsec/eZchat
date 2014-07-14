@@ -78,7 +78,8 @@ class client(threading.Thread):
 
     # As long as the client is alive queue is checked for commands and replies
     self.alive = threading.Event()
-    self.alive.set()
+    self.client_socket = None
+    #self.alive.set()
 
     # Storing client functionalities
     self.handlers = {
