@@ -19,6 +19,7 @@ RNG = Random.new()
 #==============================================================================#
 
 class eZ_CryptoScheme(object):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   Outline of crypto scheme. NOT WORKING AT ALL
   """
@@ -73,6 +74,7 @@ class eZ_CryptoScheme(object):
 #==============================================================================#
 
 class eZ_RSA(object):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   RSA cipher object. Provides asymmetric encrytpion.
   """
@@ -166,6 +168,7 @@ class eZ_RSA(object):
 #==============================================================================#
 
 class eZ_AES(object):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   AES cipher object. Provides symmetric encryption. Plaintext can be
   provided as string or dictionary object. Ciphertext must be dictionary
