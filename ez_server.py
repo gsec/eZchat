@@ -95,8 +95,6 @@ class server(threading.Thread):
       # AF_INET IP4
       self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM )
     except socket.error, msg:
-      #print('Failed to create socket. Error code: ' + str(msg[0]) +            \
-            #' , Error message : ' + msg[1])
       error_msg = 'Failed to create socket. Error code: ' + str(msg[0]) +      \
                   ' , Error message : ' + msg[1]
       self.replyQueue.put(self.error(error_msg))
@@ -109,17 +107,13 @@ class server(threading.Thread):
 
     try:
       self.server_socket.bind((host, port))
-      #self.server_socket.bind((self.host, self.port))
     except socket.error , msg:
-      #print('Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
       error_msg = 'Bind failed. Error Code : ' + str(msg[0]) +                 \
                   ' Message ' + msg[1]
-      print (error_msg)
       self.replyQueue.put(self.error(error_msg))
 
     self.server_socket.listen(self.max_connections)
     self.replyQueue.put(self.success("Socket bind complete"))
-    #print("Socket bind complete")
 
     self.clients.append(self.server_socket)
 
@@ -147,12 +141,9 @@ class server(threading.Thread):
     #self.broadcast_data(new_user, "[%s:%s] entered room\n" % addr)
 
   # Function to broadcast chat messages to all connected clients
-  #def broadcast(self, user, message):
   def broadcast(self, message):
-    # Do not send the message to master socket and the client who has send us
-    # the message
+    # Do not send the message to master socket
     for socket in self.clients:
-      #if socket != self.server_socket and socket != user :
       if socket != self.server_socket:
         try :
           header = struct.pack('<L', len(message))
@@ -166,35 +157,6 @@ class server(threading.Thread):
   def send(self, cmd):
     message = cmd.data
     self.broadcast(message)
-    # Try to receive data. Catching the exception is advised since the client
-    # might close abruptly throwing an exception
-    #try:
-      #data = self.receive(user)
-      #if data:
-        #if data == "close":
-          #self.shutdown()
-        #else:
-          #print ("data:", data)
-
-          #self.replyQueue.put(self.success(data))
-          #pass
-          ##self.broadcast( user, "\r" + '<' + str(user.getpeername()) +     \
-                               ##'> ' + data)
-      #else:
-        ##self.broadcast(user, "Client (%s, %s) is offline" % addr)
-        ##print("Client (%s, %s) is offline" % addr)
-        #print("Client is offline")
-        #user.close()
-        #self.clients.remove(user)
-
-
-    #except:
-      ##self.broadcast(user, "Client (%s, %s) is offline" % addr)
-      ##print("Client (%s, %s) is offline" % addr)
-      #print("Client is offline")
-      ##print ("user:", user.data)
-      #user.close()
-      #self.clients.remove(user)
 
   def receive(self, user):
     package_size = 4
@@ -231,15 +193,3 @@ class server(threading.Thread):
         self.handlers[cmd.msgType](cmd)
       except Queue.Empty as e:
         continue
-
-  #def run(self):
-    #print("Socket now listening")
-    #self.server_socket.listen(self.max_connections)
-    #while self.alive.isSet():
-
-    #self.server_socket.close()
-
-# TODO: (bcn 2014-07-12) Nick promised to remove this and adopt the P2P strategy
-#if __name__ == "__main__":
-  #myserver = server()
-  #myserver.start()

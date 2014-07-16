@@ -36,10 +36,10 @@ class Database(object):
 ips_open = Database("sqlite:///open.db")
 ips_taken = Database("sqlite:///taken.db")
 #ports = ips_open.db.all()
-ports = ips_taken.db.all()
+#ports = ips_taken.db.all()
 #ips_taken.remove_port(2469)
 #ips_taken.remove_port(2468)
-#ips_open.add_port(2468)
+#ips_open.add_port(2470)
 #ips_open.add_port(2469)
 #for entry in ports:
   #print entry['port']
