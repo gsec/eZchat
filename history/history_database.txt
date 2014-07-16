@@ -6,3 +6,9 @@ a very long sentence to test how the programm handels very long sentences with a
 
 person3:
 does it work?
+
+Ul][:
+[000000.280]Client reply success: Socket created
+
+Ul][:
+[000000.290]Client reply ERROR: Host unavailable

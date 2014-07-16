@@ -35,7 +35,7 @@ class eZ_CryptoScheme(object):
     #self.sender     = sender
     #self.recipient  = recipient
     #self.content    = content
-    self.key_loc    = '.'
+    #self.key_loc    = '.'
 
   def encrypt(self):
     self.crypt_block = self.date + '\t' + self.sender + '\n' \
@@ -153,7 +153,7 @@ class eZ_RSA(object):
     msg_hash = SHA256.new(plaintext)
     signer = PKCS1_PSS.new(private_key)
     signature = signer.sign(msg_hash)
-    return signature
+    return signature.encode('base64')
 
   def verify(self, public_key, plaintext, signature):
     """
@@ -161,7 +161,7 @@ class eZ_RSA(object):
     """
     msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
-    return verifier.verify(msg_hash, signature)
+    return verifier.verify(msg_hash, signature.decode('base64'))
 
 #==============================================================================#
 #                                 class eZ_AES                                 #
@@ -182,54 +182,72 @@ class eZ_AES(object):
 
   def input_wrapper(self, package):
     """
-    If package is string, assume it is plaintext. If dict, transfer values to
+    If package is string, assume it is plaintext . If dict, transfer values to
     attributes. Else raise ValueError.
     """
     if type(package) == str:
-      plaintext, package = package, {'plain':plaintext, 'crypt_mode':0}
+      package = {'plain':package, 'crypt_mode':0}     # unpack tuple + assign
+      #plaintext, package = package, {'plain':package, 'crypt_mode':0}
       #plaintext         = package
       #package           = {'plain':plaintext, 'crypt_mode':0}
     elif type(package) == dict:
-      pass
+      assert package.has_key('crypt_mode'), "AES package has no crypt mode."
     else:
       raise TypeError("AES input type: ", type(package), """AES input has 
       wrong format. Please specify plaintext string or crypt_mode compliant 
       dictionary as argument.""")
 
+    # crypt parameters for mode 1:
+    crypt_mode_1 = {'KEY_LENGTH': 32, 'INTERRUPT': "\1", 'PAD': "\0",
+          'MODE': AES.MODE_CBC}
+
     self.crypt_mode    = package['crypt_mode']
-    if self.crypt_mode == 1:
+    if self.crypt_mode == 0:
+      self.plain    = package['plain']
+    elif self.crypt_mode == 1:
       self.iv         = package['iv']
       self.key        = package['key']
       self.cipher     = package['cipher']
-      # Don't touch this:
-      self.KEY_LENGTH = 32
-      self.INTERRUPT  = '\1'
-      self.PAD        = '\0'
-      self.MODE       = AES.MODE_CBC
     else:
-      self.plain    = package['plain']
-      # Don't touch this:
-      self.KEY_LENGTH = 32
-      self.INTERRUPT  = '\1'
-      self.PAD        = '\0'
-      self.MODE       = AES.MODE_CBC
+      raise ValueError("Undefined Crypto Mode in AES input dictionary")
+
+    for key, value in crypt_mode_1.iteritems():
+      setattr(self, key, value)
+
+
+    #if self.crypt_mode == 1:
+      #self.iv         = package['iv']
+      #self.key        = package['key']
+      #self.cipher     = package['cipher']
+       #Don't touch this:
+      #self.KEY_LENGTH = 32
+      #self.INTERRUPT  = '\1'
+      #self.PAD        = '\0'
+      #self.MODE       = AES.MODE_CBC
+    #else:
+      #self.plain    = package['plain']
+       #Don't touch this:
+      #self.KEY_LENGTH = 32
+      #self.INTERRUPT  = '\1'
+      #self.PAD        = '\0'
+      #self.MODE       = AES.MODE_CBC
 
   def encrypt(self):
     """
     Creates random IV (Injection Vector) and random symmetric key. Encrypts
     padded text. Returns dictionary with base64 encoded ciphertext. Key, IV and
     padding bits are bytes.
-    @todo: Do we need base64? Probably not.
     """
     assert self.crypt_mode is 0, "Data already encrypted"
-    self.iv         = RNG.read(AES.block_size)          # never use same IV
-    self.key        = RNG.read(self.KEY_LENGTH)         # with same key twice
-    crypter         = AES.new(self.key, mode=self.MODE, IV=self.iv)
+    # never use same IV with same key twice
+    self.iv         = RNG.read(AES.block_size).encode('base64')
+    self.key        = RNG.read(self.KEY_LENGTH).encode('base64')
+    crypter         = AES.new(self.key.decode('base64'), mode=self.MODE,
+        IV=self.iv.decode('base64'))
     padded_text     = self.add_padding(self.plain)
     self.cipher     = crypter.encrypt(padded_text)
+    self.crypt_mode = 1
     del self.plain
-    self.crypt_mode      = 1
-    #self.encrypted_key  = False
     return self.__dict__
 
   def decrypt(self):
@@ -238,7 +256,8 @@ class eZ_AES(object):
     parameters.
     """
     assert self.crypt_mode is not 0, "Data is not encrypted"
-    decrypter = AES.new(self.key, mode=self.MODE, IV=self.iv)
+    decrypter = AES.new(self.key.decode('base64'), mode=self.MODE, 
+        IV=self.iv.decode('base64'))
     padded_text = decrypter.decrypt(self.cipher)
     self.plain = self.remove_padding(padded_text)
     self.crypt_mode = 0

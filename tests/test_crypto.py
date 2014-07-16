@@ -47,6 +47,10 @@ def test_RSA():
   priv_key, pub_key = er.generate_keys()    # temporary key generation
   sig02 =  er.sign(priv_key, text02)
   eq_(er.verify(pub_key, text02, sig02), True)
+  if er.verify(pub_key, text01, sig02) is True:
+    print("sig sucess")
+  else:
+    print("sig failed")
 
 def test_Scheme():
   """
@@ -59,4 +63,7 @@ def test_Scheme():
   es = ec.eZ_CryptoScheme(date=extime, sender=author, recipient=reader, \
       content=text01)
   supergeheim = es.encrypt()
-  print(supergeheim)
+
+  print("Supergeheim\n", supergeheim)
+  print("Content of es:\n", dir(es))
+  er.generate_keys('fuckinnewbie', True)
