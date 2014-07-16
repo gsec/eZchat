@@ -23,24 +23,50 @@ class eZ_CryptoScheme(object):
   Outline of crypto scheme. NOT WORKING AT ALL
   """
 
-  def encrypt(self, date, sender, content):
+  def __init__(self, **kwargs):
     """
-    @todo:
+    Takes the arguments and creates an attribute for each of them.
+    @ARGS: date, sender, recipient, content
     """
-    crypt_block = date + '\t' + sender + '\n' + content + '\n'
-    self.signature = self.sign(sender, content)
-    self.__dict__.update(ez_AES(crypt_block).encrypt())
-    self.ciphered_key = self.RSA_encrypt(self.key)
-    del self.key
+    for key, value in kwargs.iteritems():
+      setattr(self, key, value)
+    #self.date       = date
+    #self.sender     = sender
+    #self.recipient  = recipient
+    #self.content    = content
+    self.key_loc    = '.'
+
+  def encrypt(self):
+    self.crypt_block = self.date + '\t' + self.sender + '\n' \
+        + self.content + '\n'
+    self.sender_key = eZ_RSA().get_sender_key(self.sender)
+    self.signature = eZ_RSA().sign(self.sender_key, self.crypt_block)
+    #self.__dict__.update(ez_AES(crypt_block).encrypt())
     return self.__dict__
 
-  def decrypt(self, message):
-    self.__dict__.update(message.__dict__)
-    self.key = RSA_decrypt(self.ciphered_key)
-    self__dict__.update(ez_AES(self.__dict__).decrypt())
-    self.sender = self.get_sender(self.plain)
+
+
+
+
+# REFERENCE BLOCK
+  #def encrypt(self, date, sender, content):
+    #"""
+    #@todo:
+    #"""
+    #crypt_block = date + '\t' + sender + '\n' + content + '\n'
+    #self.signature = self.sign(sender, content)
+    #self.__dict__.update(ez_AES(crypt_block).encrypt())
+    #self.ciphered_key = self.RSA_encrypt(self.key)
+    #del self.key
+    #return self.__dict__
+
+  #def decrypt(self, message):
+    #self.__dict__.update(message.__dict__)
+    #self.key = RSA_decrypt(self.ciphered_key)
+    #self__dict__.update(ez_AES(self.__dict__).decrypt())
+    #self.sender = self.get_sender(self.plain)
     #assert self.verify(self.signature, self.sender) == True "Invalid Signature"
-    return self.plain
+    #return self.plain
 
 #==============================================================================#
 #                                 class eZ_RSA                                 #
@@ -56,8 +82,8 @@ class eZ_RSA(object):
     Takes arbitrary list of items in format > "key"=value < and sets them as
     attributes of the eZ_RSA class.
     """
-    for key, value in kwargs.iteritems():
-      self.key = value
+    #for item, value in kwargs.iteritems():
+      #self.item = value
     self.rsa_key_length = 2048
 
   def get_sender_key(self, sender):
@@ -84,22 +110,22 @@ class eZ_RSA(object):
       pub_key = RSA.importKey(pub_file.read())
     return pub_key
 
-  def generate_keys(self, write=False):
+  def generate_keys(self, user='FAKE_USER', write=False):
     """
-    @todo: temporarily duplicate of function in ezc_create_user.py
-    should at the end be imported from (secured) files
+    Create RSA keypair and return them as tuple. if write argument is true,
+    also write them to disk.
     """
     fresh_key   = RSA.generate(self.rsa_key_length)
     private_key = fresh_key
     public_key  = fresh_key.publickey()
     # insert check if files already exist
     if write:
-      with open(pathjoin('.', 'ez_rsa_' + new_user + '.pub'),
+      with open(pathjoin('.', 'ez_rsa_' + user + '.pub'),
           'aw') as pub_file, \
-      open(pathjoin('.', 'ez_rsa_' + new_user),
+      open(pathjoin('.', 'ez_rsa_' + user),
           'aw') as priv_file:
-        pub_file.write(private_key.exportKey)
-        priv_file.write(publickey.exportKey)
+        pub_file.write(public_key.exportKey())
+        priv_file.write(private_key.exportKey())
     return private_key, public_key
 
   def encrypt(self, public_key, plaintext):
@@ -118,20 +144,20 @@ class eZ_RSA(object):
     plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
     return plaintext
 
-  def sign(self, private_key, message):
+  def sign(self, private_key, plaintext):
     """
     Sign a message.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     signer = PKCS1_PSS.new(private_key)
     signature = signer.sign(msg_hash)
     return signature
 
-  def verify(self, public_key, message, signature):
+  def verify(self, public_key, plaintext, signature):
     """
     Verify signature.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
     return verifier.verify(msg_hash, signature)
 
@@ -157,12 +183,15 @@ class eZ_AES(object):
     attributes. Else raise ValueError.
     """
     if type(package) == str:
-      plaintext         = package
-      package           = {'plain':plaintext, 'crypt_mode':0}
+      plaintext, package = package, {'plain':plaintext, 'crypt_mode':0}
+      #plaintext         = package
+      #package           = {'plain':plaintext, 'crypt_mode':0}
     elif type(package) == dict:
       pass
     else:
-      raise TypeError("AES package has wrong format.")
+      raise TypeError("AES input type: ", type(package), """AES input has 
+      wrong format. Please specify plaintext string or crypt_mode compliant 
+      dictionary as argument.""")
 
     self.crypt_mode    = package['crypt_mode']
     if self.crypt_mode == 1:
