@@ -13,7 +13,7 @@ Python
 
 Markdown
 ========
-* [Mastering Markdown](https://guides.github.com/features/mastering-markdown/)
+- [Mastering Markdown](https://guides.github.com/features/mastering-markdown/)
   an introduction from GitHub
 
 Markdown CLI
@@ -24,3 +24,7 @@ Markdown CLI
     - `alias myalias='myfunc'`
 - Do not forget to enable vi-keys in lynx:
     - `o` => `[] Save to disk` => `Accept changes`
+
+Network
+=======
+- [Nmap and Ports tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-nmap-to-scan-for-open-ports-on-your-vps)

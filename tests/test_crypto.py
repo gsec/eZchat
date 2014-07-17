@@ -58,12 +58,16 @@ def test_Scheme():
   """
   er = ec.eZ_RSA()
   # only needed once:
-  #er.generate_keys(user=author, write=True)
-  #er.generate_keys(user=reader, write=True)
-  es = ec.eZ_CryptoScheme(date=extime, sender=author, recipient=reader, \
-      content=text01)
-  supergeheim = es.encrypt()
+  er.generate_keys(user=author)
+  er.generate_keys(user=reader)
+  package = {'etime':extime, 'sender':author, 'recipient':reader, \
+      'content':text01}
+  es = ec.eZ_CryptoScheme(package)
+  supergeheim = es.encrypt_sign()
 
-  print("Supergeheim\n", supergeheim)
-  print("Content of es:\n", dir(es))
-  er.generate_keys('fuckinnewbie', True)
+  print("Supergeheim\n", supergeheim, sep='\n')
+  #print("Content of es:\n", dir(es))
+  #er.generate_keys('fuckinnewbie', True)
+  dees = ec.eZ_CryptoScheme(supergeheim)
+  vollungeheim = es.decrypt_verify()
+  print("wieder normal: \n", vollungeheim)

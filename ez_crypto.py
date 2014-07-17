@@ -11,7 +11,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 from Crypto import Random
 from os.path import join as pathjoin
-
+from os.path import isfile
 RNG = Random.new()
 
 #==============================================================================#
@@ -21,53 +21,47 @@ RNG = Random.new()
 class eZ_CryptoScheme(object):
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
-  Outline of crypto scheme. NOT WORKING AT ALL
+  Crypto Scheme. Cleanup and documentation needed.
   """
 
-  def __init__(self, **kwargs):
+  def __init__(self, package):
     """
     Takes the arguments and creates an attribute for each of them.
     @ARGS: date, sender, recipient, content
     """
-    for key, value in kwargs.iteritems():
+    for key, value in package.iteritems():
       setattr(self, key, value)
-    #self.date       = date
-    #self.sender     = sender
-    #self.recipient  = recipient
-    #self.content    = content
-    #self.key_loc    = '.'
 
-  def encrypt(self):
-    self.crypt_block = self.date + '\t' + self.sender + '\n' \
-        + self.content + '\n'
-    self.sender_key = eZ_RSA().get_sender_key(self.sender)
-    self.signature = eZ_RSA().sign(self.sender_key, self.crypt_block)
-    #self.__dict__.update(ez_AES(crypt_block).encrypt())
-    return self.__dict__
+  def encrypt_sign(self):
+    _plain_block = '\1'.join([self.etime, self.sender, self.content])
+    _private_key = eZ_RSA().get_private_key(self.sender)
+    _public_key = eZ_RSA().get_public_key(self.recipient)
+   # encode with AES:
+    _aes_package = eZ_AES(_plain_block).encrypt()
+    for key, value in _aes_package.iteritems():
+      setattr(self, key, value)
+    # encode AES-key with RSA:
+    self.ciphered_key = eZ_RSA().encrypt(_public_key, self.key)
+    self.signature = eZ_RSA().sign(_private_key, _plain_block)
+    _items  = ['ciphered_key', 'iv', 'crypt_mode', 'cipher', 'signature',
+        'recipient']
+    _dict   = {k:v for k, v in self.__dict__.iteritems() if k in _items}
+    return _dict
 
-
-
-
-
-# REFERENCE BLOCK
-  #def encrypt(self, date, sender, content):
-    #"""
-    #@todo:
-    #"""
-    #crypt_block = date + '\t' + sender + '\n' + content + '\n'
-    #self.signature = self.sign(sender, content)
-    #self.__dict__.update(ez_AES(crypt_block).encrypt())
-    #self.ciphered_key = self.RSA_encrypt(self.key)
-    #del self.key
-    #return self.__dict__
-
-  #def decrypt(self, message):
-    #self.__dict__.update(message.__dict__)
-    #self.key = RSA_decrypt(self.ciphered_key)
-    #self__dict__.update(ez_AES(self.__dict__).decrypt())
-    #self.sender = self.get_sender(self.plain)
-    #assert self.verify(self.signature, self.sender) == True "Invalid Signature"
-    #return self.plain
+  def decrypt_verify(self):
+    _private_key = eZ_RSA().get_private_key(self.recipient)
+    self.key = eZ_RSA().decrypt(_private_key, self.ciphered_key)
+    _items  = ['key', 'iv', 'crypt_mode', 'cipher']
+    aes_package = {k:v for k, v in self.__dict__.iteritems() if k in _items}
+    _aes_return = eZ_AES(aes_package).decrypt()
+    for key, value in _aes_return.iteritems():
+      setattr(self, key, value)
+    (self.etime, self.sender, self.content) = self.plain.split("\1")
+    _public_key = eZ_RSA().get_public_key(self.sender)
+    self.authorized =  eZ_RSA().verify(_public_key, self.plain, self.signature)
+    _items  = ['etime', 'content', 'sender', 'recipient', 'authorized']
+    _dict   = {k:v for k, v in self.__dict__.iteritems() if k in _items}
+    return _dict
 
 #==============================================================================#
 #                                 class eZ_RSA                                 #
@@ -79,40 +73,42 @@ class eZ_RSA(object):
   RSA cipher object. Provides asymmetric encrytpion.
   """
 
-  def __init__(self, **kwargs):
+  def __init__(self, package={}):
     """
-    Takes arbitrary list of items in format > "key"=value < and sets them as
-    attributes of the eZ_RSA class.
+    Takes arbitrary dict of items in and sets them as attributes of the eZ_RSA
+    class.
     """
-    #for item, value in kwargs.iteritems():
-      #self.item = value
     self.rsa_key_length = 2048
+    self.location        = '.'
 
-  def get_sender_key(self, sender):
+    for key, value in package.iteritems():
+      setattr(self, key, value)
+
+  def key_loc(self, user, location='.'):
+    pub_loc = pathjoin(location, 'ez_rsa_' + user + '.pub')
+    priv_loc = pathjoin(location, 'ez_rsa_' + user + '.priv')
+    return pub_loc, priv_loc
+
+  def get_private_key(self, user):
     """
     Import the senders keypair from Harddisk.
     """
-    try:
-      loc = self.loc      # Set loc to attribute if present
-    except:
-      loc = '.'           # Else take current path
-    with open(pathjoin(loc, 'ez_rsa_' + sender), 'r') as keypairfile:
+    with open(self.key_loc(user)[1], 'r') as keypairfile:
       keypair = RSA.importKey(keypairfile.read())
     return keypair
 
-  def get_recipient_key(self, recipient):
+  def get_public_key(self, user):
     """
     Get recipient public key from database.
     """
     # currently a mock, insert here the db retrieve function
     # and remove with-statement
     #
-    with open(pathjoin('.', 'ez_rsa_' + recipient + '.pub'),
-        'r') as pub_file:
+    with open(self.key_loc(user)[0], 'r') as pub_file:
       pub_key = RSA.importKey(pub_file.read())
     return pub_key
 
-  def generate_keys(self, user='FAKE_USER', write=False):
+  def generate_keys(self, user='FAKE_USER', write=True):
     """
     Create RSA keypair and return them as tuple. if write argument is true,
     also write them to disk.
@@ -121,11 +117,16 @@ class eZ_RSA(object):
     private_key = fresh_key
     public_key  = fresh_key.publickey()
     # insert check if files already exist
+    try:
+      if isfile(self.key_loc(user)[1]):
+        write = False
+        raise IOError
+    except IOError:
+      print("RSA Keyfile already exist at: ", self.key_loc(user)[1])
+
     if write:
-      with open(pathjoin('.', 'ez_rsa_' + user + '.pub'),
-          'aw') as pub_file, \
-      open(pathjoin('.', 'ez_rsa_' + user),
-          'aw') as priv_file:
+      with open(self.key_loc(user)[0], 'aw') as pub_file, \
+          open(self.key_loc(user)[1], 'aw') as priv_file:
         pub_file.write(public_key.exportKey())
         priv_file.write(private_key.exportKey())
     return private_key, public_key
@@ -187,18 +188,15 @@ class eZ_AES(object):
     """
     if type(package) == str:
       package = {'plain':package, 'crypt_mode':0}     # unpack tuple + assign
-      #plaintext, package = package, {'plain':package, 'crypt_mode':0}
-      #plaintext         = package
-      #package           = {'plain':plaintext, 'crypt_mode':0}
     elif type(package) == dict:
       assert package.has_key('crypt_mode'), "AES package has no crypt mode."
     else:
-      raise TypeError("AES input type: ", type(package), """AES input has 
-      wrong format. Please specify plaintext string or crypt_mode compliant 
-      dictionary as argument.""")
+      raise TypeError("AES input type: ", type(package), """AES input has wrong
+          format. Please specify plaintext string or crypt_mode compliant
+          dictionary as argument.""")
 
     # crypt parameters for mode 1:
-    crypt_mode_1 = {'KEY_LENGTH': 32, 'INTERRUPT': "\1", 'PAD': "\0",
+    crypt_mode_1 = {'KEY_LENGTH':32, 'INTERRUPT':"\1", 'PAD':"\0",
           'MODE': AES.MODE_CBC}
 
     self.crypt_mode    = package['crypt_mode']
@@ -214,24 +212,6 @@ class eZ_AES(object):
     for key, value in crypt_mode_1.iteritems():
       setattr(self, key, value)
 
-
-    #if self.crypt_mode == 1:
-      #self.iv         = package['iv']
-      #self.key        = package['key']
-      #self.cipher     = package['cipher']
-       #Don't touch this:
-      #self.KEY_LENGTH = 32
-      #self.INTERRUPT  = '\1'
-      #self.PAD        = '\0'
-      #self.MODE       = AES.MODE_CBC
-    #else:
-      #self.plain    = package['plain']
-       #Don't touch this:
-      #self.KEY_LENGTH = 32
-      #self.INTERRUPT  = '\1'
-      #self.PAD        = '\0'
-      #self.MODE       = AES.MODE_CBC
-
   def encrypt(self):
     """
     Creates random IV (Injection Vector) and random symmetric key. Encrypts
@@ -239,16 +219,17 @@ class eZ_AES(object):
     padding bits are bytes.
     """
     assert self.crypt_mode is 0, "Data already encrypted"
-    # never use same IV with same key twice
-    self.iv         = RNG.read(AES.block_size).encode('base64')
-    self.key        = RNG.read(self.KEY_LENGTH).encode('base64')
-    crypter         = AES.new(self.key.decode('base64'), mode=self.MODE,
-        IV=self.iv.decode('base64'))
+    _iv             = RNG.read(AES.block_size)
+    _key            = RNG.read(self.KEY_LENGTH)
+    _crypter        = AES.new(_key, mode=self.MODE, IV=_iv)
     padded_text     = self.add_padding(self.plain)
-    self.cipher     = crypter.encrypt(padded_text)
     self.crypt_mode = 1
-    del self.plain
-    return self.__dict__
+    self.cipher     = _crypter.encrypt(padded_text).encode('base64')
+    self.key        = _key.encode('base64')
+    self.iv         = _iv.encode('base64')
+    _items  = ['key', 'iv', 'crypt_mode', 'cipher']
+    _dict   = {k:v for k, v in self.__dict__.iteritems() if k in _items}
+    return _dict
 
   def decrypt(self):
     """
@@ -256,11 +237,13 @@ class eZ_AES(object):
     parameters.
     """
     assert self.crypt_mode is not 0, "Data is not encrypted"
-    decrypter = AES.new(self.key.decode('base64'), mode=self.MODE, 
-        IV=self.iv.decode('base64'))
-    padded_text = decrypter.decrypt(self.cipher)
+    _key  = self.key.decode('base64')
+    _iv   = self.iv.decode('base64')
+    _cipher = self.cipher.decode('base64')
+    decrypter = AES.new(_key, mode=self.MODE, IV=_iv)
+    padded_text = decrypter.decrypt(_cipher)
     self.plain = self.remove_padding(padded_text)
-    self.crypt_mode = 0
+    self.crypt_mode = 0     # not required
     return {'plain':self.plain, 'crypt_mode':0}
 
   def add_padding(self, text):
