@@ -13,6 +13,9 @@ import ez_crypto as ec
 #                                class Message                                 #
 #==============================================================================#
 
+crypted_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode', 'signature']
+components = ['time', 'recipient', 'msg_id'] + crypted_content
+
 class Message(object):
   """
   This is the object that will be permanently saved in the database.
@@ -21,9 +24,12 @@ class Message(object):
   Crypted is the message as cipher(AES) and key as ciphered_key(RSA).
   """
 
-  def __init__(self, sender, recipient, content, dtime = datetime.now(), _dict=None):
+  def __init__(self, sender, recipient, content, dtime = datetime.now(),
+               _dict=None):
     if _dict is not None:
-      self.__dict__.update(_dict)
+      # We have to take care not to import local database information
+      for x in components:
+        self.__dict__.update({x : _dict[x]})
     else:
       # todo: (bcn 2014-07-06) Isoformat is at least localization independent but
       # timezone information is still missing !
@@ -35,9 +41,13 @@ class Message(object):
       #crypt_dict = ec.eZ_Crypto.encrypt(dtime.isoformat(' '), sender, content)
       crypt_dict = { 'cipher' : 'laskjdhflkaj', 'ciphered_key' : 'alskdjaskldj',
                      'iv' : 'uiofoqhehf', 'crypt_mode' : 1, 'signature' : 'lajd'}
-      for x in ['cipher', 'ciphered_key', 'iv', 'crypt_mode', 'signature']:
+      for x in crypted_content:
         self.__dict__.update({x : crypt_dict[x]})
 
   def __str__(self):
     lst = [str(k) + ' : ' + str(v) for k, v in self.__dict__.items()]
     return '\n'.join(lst)
+
+  def content(self):
+    return (self.time, self.recipient, self.msg_id, self.cipher,
+        self.ciphered_key, self.iv, self.crypt_mode, self.signature)

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 # Adding the modules from the main path
 import os, sys
 lib_path = os.path.abspath('../')
