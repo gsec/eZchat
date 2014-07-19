@@ -22,21 +22,29 @@ def test_AES():
   """
   Symmetric AES Encryption tests.
   """
-  plain_package = {'plain':text01, 'crypt_mode':0}
-  msg_object = ec.eZ_AES(plain_package)
-  geheim = msg_object.encrypt()
-  #print("Crypted Object:\n", geheim)
-  crypt_object = ec.eZ_AES(geheim)
-  ungeheim = crypt_object.decrypt()
-  #print("Plain:\n", ungeheim)
-  #eq_(text01, ungeheim['plain'])
+  kwargs_package = {'plain':text01, 'crypt_mode':0}
+  aes_object = ec.eZ_AES(**kwargs_package)
+  geheim01 = aes_object.encrypt()
+  print("\nCrypted Object KWARGS:\n", geheim01)
 
-# Text Padding
+  aes_object = ec.eZ_AES(text02)
+  geheim02 = aes_object.encrypt()
+  print("\nCrypted Object ARG:\n", geheim02)
+
+  crypt_object = ec.eZ_AES(**geheim01)
+  ungeheim = crypt_object.decrypt()
+  print("Plain:\n", ungeheim)
+  eq_(text01, ungeheim['plain'])
+
+ #Text Padding
   text03 = "123456"
-  msg_as_string = ec.eZ_AES(text01)
+  text04 = "123456\1\0\0\0\0\0\0\0\0\0\1\1\1\0\0\0"
+  text05 = "1234567890abcdef"
+  pad_block = "\1" + 15 * "\0"
   aes_object = ec.eZ_AES(text02)
   eq_(aes_object.add_padding(text03), "123456\1\0\0\0\0\0\0\0\0\0")
-  text04 = "123456\1\0\0\0\0\0\0\0\0\0\1\1\1\0\0\0"
+  eq_(aes_object.add_padding(text05), text05 + pad_block)
+
   eq_(aes_object.remove_padding(aes_object.add_padding(text04)), text04)
 
 def test_RSA():
@@ -44,30 +52,35 @@ def test_RSA():
   Asymmetric RSA encryption tests.
   """
   er = ec.eZ_RSA()
-  priv_key, pub_key = er.generate_keys()    # temporary key generation
+  #temporary key generation
+  priv_key, pub_key = er.generate_keys(user="FAKE_USER", write=False)    
   sig02 =  er.sign(priv_key, text02)
   eq_(er.verify(pub_key, text02, sig02), True)
-  if er.verify(pub_key, text01, sig02) is True:
+  if er.verify(pub_key, text01, sig02):
     print("sig sucess")
   else:
-    print("sig failed")
+    print("Signature FAILED (this is intentional for testing)")
 
-def test_Scheme():
+def test_OmniScheme():
   """
   Overal Crypto Scheme with AES + RSA(AES_key)
   """
   er = ec.eZ_RSA()
   # only needed once:
-  er.generate_keys(user=author)
-  er.generate_keys(user=reader)
-  package = {'etime':extime, 'sender':author, 'recipient':reader, \
+  #er.generate_keys(user=author)
+  #er.generate_keys(user=reader)
+  package = {'etime':extime, 'sender':author, 'recipient':reader, 
       'content':text01}
-  es = ec.eZ_CryptoScheme(package)
+  es = ec.eZ_CryptoScheme(**package)
   supergeheim = es.encrypt_sign()
 
-  print("Supergeheim\n", supergeheim, sep='\n')
-  #print("Content of es:\n", dir(es))
-  #er.generate_keys('fuckinnewbie', True)
-  dees = ec.eZ_CryptoScheme(supergeheim)
-  vollungeheim = es.decrypt_verify()
-  print("wieder normal: \n", vollungeheim)
+  print("::::::::::::::::::::::::::::::::::::::::::")
+  print("\nSupergeheim\n==========")
+  for k,v in supergeheim.iteritems():
+    print(k, "=", v)
+  dees = ec.eZ_CryptoScheme(**supergeheim)
+  vollungeheim = dees.decrypt_verify()
+  print("::::::::::::::::::::::::::::::::::::::::::")
+  print("\nWieder in normal\n==========")
+  for k,v in vollungeheim.iteritems():
+    print(k, "=", v)
