@@ -1,4 +1,4 @@
-#==============================================================================#
+# -*- coding: utf_8 -*- =======================================================#
 #                                  ez_crypto                                   #
 #==============================================================================#
 
@@ -11,100 +11,170 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 from Crypto import Random
 from os.path import join as pathjoin
+from os.path import isfile
+from os.path import abspath
 
+# Strong random generator as file object:
 RNG = Random.new()
+
+#==============================================================================#
+#                            class CryptoBaseClass                             #
+#==============================================================================#
+class CryptoBaseClass(object):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  """
+  Base class defining common functions.
+  """
+  def __init__(self, plaintext='', **kwargs):
+    self.input_wrapper()
+    if plaintext:
+      self.args_handler(plaintext)
+    if kwargs:
+      self.attribute_setter(**kwargs)
+
+  def attribute_setter(self, **kwargs):
+    """
+    Sets kwargs as instance attributes.
+    """
+    for key, value in kwargs.iteritems():
+      setattr(self, key, value)
+
+  def return_dict(self, return_list):
+    """
+    Extracts instance attributes into dictionary from return_list.
+    """
+    return {k:v for k, v in self.__dict__.iteritems() if k in return_list}
+
+  def input_wrapper(self):
+    pass
+
+  def args_handler(self, *args):
+    pass
+
 
 #==============================================================================#
 #                            class eZ_CryptoScheme                             #
 #==============================================================================#
-
-class eZ_CryptoScheme(object):
+class eZ_CryptoScheme(CryptoBaseClass):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
-  Outline of crypto scheme. NOT WORKING AT ALL
+  Outer crypto API to encrypt+sign and decrypt+verify message objects.
+  Encryption must be provided with following arguments as dictionary:
+  @ARGS: date, sender, recipient, content
   """
-
-  def encrypt(self, date, sender, content):
+  def encrypt_sign(self):
     """
-    @todo:
-    """
-    crypt_block = date + '\t' + sender + '\n' + content + '\n'
-    self.signature = self.sign(sender, content)
-    self.__dict__.update(ez_AES(crypt_block).encrypt())
-    self.ciphered_key = self.RSA_encrypt(self.key)
-    del self.key
-    return self.__dict__
+    Pack content, exact time and sender to plaintext block. Sign and encrypt
+    plaintext block. Return crypto items as dictionary.
 
-  def decrypt(self, message):
-    self.__dict__.update(message.__dict__)
-    self.key = RSA_decrypt(self.ciphered_key)
-    self__dict__.update(ez_AES(self.__dict__).decrypt())
-    self.sender = self.get_sender(self.plain)
-    #assert self.verify(self.signature, self.sender) == True "Invalid Signature"
-    return self.plain
+    """
+    # Pack plaintext block:
+    _plain_block = "\1".join([self.etime, self.sender, self.content])
+
+    _private_key = eZ_RSA().get_private_key(self.sender)
+    _public_key = eZ_RSA().get_public_key(self.recipient)
+
+    # Encode with AES:
+    _aes_output = eZ_AES(_plain_block).encrypt()
+    # Set AES output as attributes:
+    self.attribute_setter(**_aes_output)
+    # encode AES-key with public RSA key:
+    self.ciphered_key = eZ_RSA().encrypt(_public_key, self.key)
+    # Sign with private RSA key:
+    self.signature = eZ_RSA().sign(_private_key, _plain_block)
+
+    _encrypt_items  = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
+        'signature', 'recipient']
+    return self.return_dict(_encrypt_items)
+
+  def decrypt_verify(self):
+    """
+    Decrypt and unpack cipher block, check signature. Return signature check
+    result in 'authorized' key, aswell as the other plaintext attributes.
+    """
+    _private_key = eZ_RSA().get_private_key(self.recipient)
+    # Decrypt AES key:
+    self.key = eZ_RSA().decrypt(_private_key, self.ciphered_key)
+
+    # Decrypt cipher block:
+    _aes_items  = ['key', 'iv', 'crypt_mode', 'cipher']
+    _aes_input  = self.return_dict(_aes_items)
+    _aes_output = eZ_AES(**_aes_input).decrypt()
+    # Set AES output as attributes:
+    self.attribute_setter(**_aes_output)
+
+    # Unpack plaintext block
+    (self.etime, self.sender, self.content) = self.plain.split("\1")
+    _public_key = eZ_RSA().get_public_key(self.sender)
+    # Check signature
+    self.authorized = eZ_RSA().verify(_public_key, self.plain, self.signature)
+    decrypt_items  = ['etime', 'content', 'sender', 'recipient', 'authorized']
+    return self.return_dict(decrypt_items)
+
 
 #==============================================================================#
 #                                 class eZ_RSA                                 #
 #==============================================================================#
 
-class eZ_RSA(object):
+class eZ_RSA(CryptoBaseClass):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   RSA cipher object. Provides asymmetric encrytpion.
   """
-
-  def __init__(self, **kwargs):
-    """
-    Takes arbitrary list of items in format > "key"=value < and sets them as
-    attributes of the eZ_RSA class.
-    """
-    for key, value in kwargs.iteritems():
-      self.key = value
+  def input_wrapper(self):
     self.rsa_key_length = 2048
+    self.key_location  = '.'
 
-  def get_sender_key(self, sender):
+  def key_loc(self, user):
+    """
+    Sets the path for the keyfiles.
+    """
+    pub_loc = pathjoin(self.key_location, 'ez_rsa_' + user + '.pub')
+    priv_loc = pathjoin(self.key_location, 'ez_rsa_' + user + '.priv')
+    return pub_loc, priv_loc
+
+  def get_private_key(self, user):
     """
     Import the senders keypair from Harddisk.
     """
-    try:
-      loc = self.loc      # Set loc to attribute if present
-    except:
-      loc = '.'           # Else take current path
-    with open(pathjoin(loc, 'ez_rsa_' + sender), 'r') as keypairfile:
+    with open(self.key_loc(user)[1], 'r') as keypairfile:
       keypair = RSA.importKey(keypairfile.read())
     return keypair
 
-  def get_recipient_key(self, recipient):
+  def get_public_key(self, user):
     """
     Get recipient public key from database.
     """
+    #@TODO-----------------------------------------------
     # currently a mock, insert here the db retrieve function
     # and remove with-statement
     #
-    with open(pathjoin('.', 'ez_rsa_' + recipient + '.pub'),
-        'r') as pub_file:
+    with open(self.key_loc(user)[0], 'r') as pub_file:
       pub_key = RSA.importKey(pub_file.read())
     return pub_key
 
-  def generate_keys(self, write=False):
+  def generate_keys(self, user, write=True):
     """
-    @todo: temporarily duplicate of function in ezc_create_user.py
-    should at the end be imported from (secured) files
+    Create RSA keypair and return them as tuple. if write argument is true,
+    also write them to disk.
     """
     fresh_key   = RSA.generate(self.rsa_key_length)
     private_key = fresh_key
     public_key  = fresh_key.publickey()
-    # insert check if files already exist
-    if write:
-      with open(pathjoin('.', 'ez_rsa_' + new_user + '.pub'),
-          'aw') as pub_file, \
-      open(pathjoin('.', 'ez_rsa_' + new_user),
-          'aw') as priv_file:
-        pub_file.write(private_key.exportKey)
-        priv_file.write(publickey.exportKey)
+
+    if write and isfile(self.key_loc(user)[1]):
+      print("RSA Keyfile already existis at:", abspath(self.key_loc(user)[1]))
+    elif write:
+      with open(self.key_loc(user)[0], 'aw') as pub_file, \
+          open(self.key_loc(user)[1], 'aw') as priv_file:
+        pub_file.write(public_key.exportKey())
+        priv_file.write(private_key.exportKey())
     return private_key, public_key
 
   def encrypt(self, public_key, plaintext):
     """
-    RSA encrypt method.
+    RSA encrypt method, PKCS1_OAEP. (See PyCrypto documentation for further
+    information.)
     """
     cipher_scheme = PKCS1_OAEP.new(public_key)
     cipher = cipher_scheme.encrypt(plaintext)
@@ -112,112 +182,97 @@ class eZ_RSA(object):
 
   def decrypt(self, private_key, ciphertext):
     """
-    RSA decrypt method.
+    RSA decrypt method, PKCS1_OAEP. (See PyCrypto documentation for further
+    information.)
     """
     decipher_scheme = PKCS1_OAEP.new(private_key)
     plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
     return plaintext
 
-  def sign(self, private_key, message):
+  def sign(self, private_key, plaintext):
     """
-    Sign a message.
+    Sign plaintext with private key.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     signer = PKCS1_PSS.new(private_key)
     signature = signer.sign(msg_hash)
-    return signature
+    return signature.encode('base64')
 
-  def verify(self, public_key, message, signature):
+  def verify(self, public_key, plaintext, signature):
     """
-    Verify signature.
+    Verify signature agains plaintext with public key. Return True if
+    sucessful.
     """
-    msg_hash = SHA256.new(message)
+    msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
-    return verifier.verify(msg_hash, signature)
+    return verifier.verify(msg_hash, signature.decode('base64'))
+
 
 #==============================================================================#
-#                                 class eZ_AES                                 #
+#                                 class eZ_AES                                 # 
 #==============================================================================#
-
-class eZ_AES(object):
+class eZ_AES(CryptoBaseClass):
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
-  AES cipher object. Provides symmetric encryption. Plaintext can be
-  provided as string or dictionary object. Ciphertext must be dictionary
-  object.
-  Encryption parameters: keylength = 32bytes, padding = '\01\00\00 ...',
-  cipher mode = cipher block chain.
+  AES cipher object. Provides symmetric encryption. Requires plaintext string
+  or ciphered dictionary object. Cipherobject needs folowing entries:
+  @PARAMS: ['iv', 'key', 'cipher']
+  Encryption parameters as of crypt_mode_1: keylength = 32 Bytes,
+  padding = '\01\00\00...', AES cipher mode = Cipher Block Chain.
   """
-
-  def __init__(self, package):
-    self.input_wrapper(package)
-
-  def input_wrapper(self, package):
+  def args_handler(self, plaintext):
     """
-    If package is string, assume it is plaintext. If dict, transfer values to
-    attributes. Else raise ValueError.
+    Handles single argument string plaintext
     """
-    if type(package) == str:
-      plaintext         = package
-      package           = {'plain':plaintext, 'crypt_mode':0}
-    elif type(package) == dict:
-      pass
-    else:
-      raise TypeError("AES package has wrong format.")
+    assert type(plaintext) is str, """Single argument must be plaintext
+    string!"""
+    self.plain      = plaintext
+    self.crypt_mode = 0
 
-    self.crypt_mode    = package['crypt_mode']
-    if self.crypt_mode == 1:
-      self.iv         = package['iv']
-      self.key        = package['key']
-      self.cipher     = package['cipher']
-      # Don't touch this:
-      self.KEY_LENGTH = 32
-      self.INTERRUPT  = '\1'
-      self.PAD        = '\0'
-      self.MODE       = AES.MODE_CBC
-    else:
-      self.plain    = package['plain']
-      # Don't touch this:
-      self.KEY_LENGTH = 32
-      self.INTERRUPT  = '\1'
-      self.PAD        = '\0'
-      self.MODE       = AES.MODE_CBC
+  def input_wrapper(self):
+    crypt_parameters_mode_1 = {'KEY_LENGTH':32, 'INTERRUPT':"\1", 'PAD':"\0",
+        'MODE': AES.MODE_CBC}
+    self.attribute_setter(**crypt_parameters_mode_1)
 
   def encrypt(self):
     """
     Creates random IV (Injection Vector) and random symmetric key. Encrypts
-    padded text. Returns dictionary with base64 encoded ciphertext. Key, IV and
-    padding bits are bytes.
-    @todo: Do we need base64? Probably not.
+    padded text. Returns dictionary with base64 encoded ciphertext, key, IV and
+    the crypt_mode used.
     """
-    assert self.crypt_mode is 0, "Data already encrypted"
-    self.iv         = RNG.read(AES.block_size)          # never use same IV
-    self.key        = RNG.read(self.KEY_LENGTH)         # with same key twice
-    crypter         = AES.new(self.key, mode=self.MODE, IV=self.iv)
+    assert self.crypt_mode is 0, "Can not encrypt. Data already encrypted"
+    _iv             = RNG.read(AES.block_size)
+    _key            = RNG.read(self.KEY_LENGTH)
+    _crypter        = AES.new(_key, mode=self.MODE, IV=_iv)
     padded_text     = self.add_padding(self.plain)
-    self.cipher     = crypter.encrypt(padded_text)
-    del self.plain
-    self.crypt_mode      = 1
-    #self.encrypted_key  = False
-    return self.__dict__
+    self.crypt_mode = 1
+    self.cipher     = _crypter.encrypt(padded_text).encode('base64')
+    self.key        = _key.encode('base64')
+    self.iv         = _iv.encode('base64')
+    encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher']
+    return self.return_dict(encrypt_items)
 
   def decrypt(self):
     """
-    Produces plaintext from ciphertext with correct key and encryption
-    parameters.
+    Produces plaintext from ciphertext, if provided with correct key and 
+    encryption parameters.
     """
-    assert self.crypt_mode is not 0, "Data is not encrypted"
-    decrypter = AES.new(self.key, mode=self.MODE, IV=self.iv)
-    padded_text = decrypter.decrypt(self.cipher)
-    self.plain = self.remove_padding(padded_text)
+    assert self.crypt_mode is not 0, "Can not decrypt. Data is not encrypted"
+    _key        = self.key.decode('base64')
+    _iv         = self.iv.decode('base64')
+    _cipher     = self.cipher.decode('base64')
+    decrypter   = AES.new(_key, mode=self.MODE, IV=_iv)
+    padded_text = decrypter.decrypt(_cipher)
+    self.plain      = self.remove_padding(padded_text)
     self.crypt_mode = 0
-    return {'plain':self.plain, 'crypt_mode':0}
+    plain_items = ['plain', 'crypt_mode']
+    return self.return_dict(plain_items)
 
   def add_padding(self, text):
     """
     Pads text to whole blocks (AES blocksize = 16). Padding scheme is binary
-    '100000...'. If message length is multiple of blocksize, a whole block will
-    be padded.
-
+    '100000...'. If message length is multiple of blocksize, a whole additional
+    block will be padded.
     """
     pad_length = AES.block_size - len(text) % AES.block_size
     if pad_length:
@@ -228,6 +283,6 @@ class eZ_AES(object):
 
   def remove_padding(self, text):
     """
-    Unpads decrypted text. Removes rightmost zero and one byte.
+    Unpads decrypted text. Removes rightmost zeros and one (interrupt) byte.
     """
     return text.rstrip(self.PAD)[:-1]

@@ -78,7 +78,7 @@ class client(threading.Thread):
 
     # As long as the client is alive queue is checked for commands and replies
     self.alive = threading.Event()
-    self.alive.set()
+    self.client_socket = None
 
     # Storing client functionalities
     self.handlers = {
@@ -88,6 +88,7 @@ class client(threading.Thread):
         ClientCommand.receive:  self.receive
         }
 
+
   def success(self, success_msg = None):
     return ClientReply(ClientReply.success, success_msg)
 
@@ -95,13 +96,14 @@ class client(threading.Thread):
     return ClientReply(ClientReply.error, error_msg)
 
   def connect(self, cmd):
+
     try:
       self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     except socket.eror, msg:
       error_msg =  'Bind failed. Error Code: ' + str(msg[0]) + ' Message ' + \
                     msg[1]
       self.replyQueue.put(self.error(error_msg))
-      sys.exit()
+      return
 
     self.replyQueue.put(self.success("Socket created"))
     try:
@@ -111,7 +113,7 @@ class client(threading.Thread):
       self.client_socket.connect((host, port))
     except:
       self.replyQueue.put(self.error("Host unavailable"))
-      sys.exit()
+      return
 
     self.replyQueue.put(self.success("Connected to host"))
 

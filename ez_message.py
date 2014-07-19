@@ -35,8 +35,9 @@ class Message(object):
       # timezone information is still missing !
       self.time       = str(dtime.year) + '-' + str(dtime.month)
       self.recipient  = recipient
-      self.msg_id     = SHA.new(sender + recipient + str(dtime.isoformat(' '))).\
-                            hexdigest()
+      self.exact_time = dtime.isoformat(' ')
+      self.msg_id     = SHA.new(sender + recipient + str(self.exact_time))\
+                            .hexdigest()
       # Fake it till you make it
       #crypt_dict = ec.eZ_Crypto.encrypt(dtime.isoformat(' '), sender, content)
       crypt_dict = { 'cipher' : 'laskjdhflkaj', 'ciphered_key' : 'alskdjaskldj',

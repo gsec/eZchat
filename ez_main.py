@@ -8,12 +8,15 @@
 import sys, os, time
 
 from ez_client import *
+from ez_server import *
 import Queue
 
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.uic import *
+
+from ips import *
 
 #==============================================================================#
 #                                 class ez_Gui                                 #
@@ -46,12 +49,24 @@ class ez_Gui(QtGui.QWidget):
     # connections and actions
     self.chatwindow.connect(self.chatwindow.Send_Button, SIGNAL("released()"),
                             self.message_send)
+    self.chatwindow.connect(self.chatwindow.pushButton_5, SIGNAL("clicked()"),
+                            self.clear_history)
+    self.chatwindow.connect(self.chatwindow.pushButton_3, SIGNAL("clicked()"),
+                            self.connect_client)
 
-    self.client = client()
-    # start threading process
-    self.client.start()
-    self.client.commandQueue.put(ClientCommand(ClientCommand.connect,
-                                              ("localhost",2468)))
+    ports = [u['port'] for u in ips_open.db.all()]
+    self.port = ports[0]
+
+    self.server = server()
+    self.server.start()
+    self.server.commandQueue.put(ServerCommand(ServerCommand.connect,
+                                              ("localhost",self.port)))
+    ips_open.remove_port(self.port)
+    ips_taken.add_port(self.port)
+
+    self.clients = []
+    #self.clients.append(client())
+
     self.update_timer()
 
     # execute application
@@ -64,37 +79,112 @@ class ez_Gui(QtGui.QWidget):
 
   def update_timer(self):
     self.client_reply_timer = QtCore.QTimer(self)
-    self.client_reply_timer.timeout.connect(self.on_client_reply_timer)
+    self.client_reply_timer.timeout.connect(self.on_reply_timer)
     self.client_reply_timer.start(100)
 
-  def on_client_reply_timer(self):
+  def on_reply_timer(self):
     """
-    Whenever client_reply_timer timesout on_client_reply_timer is called,
-    allowing to check if messages have been sent to the client
+    Whenever client_reply_timer timesout on_reply_timer is called, allowing to:
+
+      - accept new connections (server related)
+      - check if messages have been received (client related)
+      - check if client maintaind connection, otherwise shutdown client
     """
-    # If data has been sent to the client readable is active
+
+#---------------              server related part               ---------------#
+
+    # The select function monitors all the client sockets and the master
+    # socket for readable activity. If any of the client socket is readable
+    # then it means that one of the chat client has send a message.
+
+    # Get the list sockets which are ready to be read through select
     try:
-      readable, _, _ = select.select([self.client.client_socket], [], [], 0)
+      readable, _, _ = select.select(self.server.clients, [], [], 0)
       read = bool(readable)
     except socket.error:
       pass
-    # triggered if there is something to read
     if read:
-      self.client.commandQueue.put(ClientCommand(ClientCommand.receive))
+      for user in readable:
+        # Found new client
+        if user == self.server.server_socket:
+          # Handle the case in which there is a new connection recieved through
+          # server_socket
+          self.server.commandQueue.put(ServerCommand(ServerCommand.accept))
+
+        #Some incoming message from a client
+        else:
+          # Sofar we do not allow to send data from client to server
+          pass
+
+    # check if server logged results in the replyQueue
     try:
-    # triggered if there is something to read or something has been sent
-      reply = self.client.replyQueue.get(block=False)
-      status = "success" if reply.replyType == ClientReply.success else "ERROR"
-      self.log('Client reply %s: %s' % (status, reply.data))
+      reply = self.server.replyQueue.get(block=False)
+      status = "success" if reply.replyType == ServerReply.success else "ERROR"
+      self.log('Server reply %s: %s' % (status, reply.data))
     except Queue.Empty:
       pass
 
+#---------------              client related part               ---------------#
+
+    for client in self.clients:
+      if not client.alive.isSet():
+        client.shutdown()
+        self.clients.remove(client)
+        self.server.replyQueue.put(self.server.error("removed client"))
+        continue
+
+      # If data has been sent to the client readable is active
+      try:
+        readable, _, _ = select.select([client.client_socket], [], [], 0)
+        read = bool(readable)
+      except socket.error:
+        pass
+      # triggered if there is something to read
+      if read:
+        client.commandQueue.put(ClientCommand(ClientCommand.receive))
+      # check if client logged results in the replyQueue
+      try:
+        reply = client.replyQueue.get(block=False)
+        status = "success" if reply.replyType == ClientReply.success         \
+                           else "ERROR"
+        self.log('Client reply %s: %s' % (status, reply.data))
+      except Queue.Empty:
+        pass
+
+  def connect_client(self):
+    ports = [u['port'] for u in ips_taken.db.all()]
+    if self.port in ports:
+      ports.remove(self.port)
+    if len(ports) > 0:
+      for port in ports:
+        cl = client()
+        cl.alive.set()
+        cl.start()
+        self.clients.append(cl)
+        cl.commandQueue.put(ClientCommand(ClientCommand.connect,
+                                         ("localhost", port)))
+        cl.replyQueue.put(cl.success("Connection to " +                        \
+                                     str(port) + " established"))
+    else:
+      self.server.replyQueue.put(self.server.error("Connection failed"))
+
+
   def closeEvent(self, event):
-    reply = QtGui.QMessageBox.question(self, 'Message',
-      "Are you sure to quit?", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+    reply = QtGui.QMessageBox.question( self, 'Message',
+                                        "Are you sure to quit?",
+                                        QtGui.QMessageBox.Yes,
+                                        QtGui.QMessageBox.No )
 
     if reply == QtGui.QMessageBox.Yes:
-      self.client.shutdown()
+
+      ips_open.add_port(self.port)
+      ips_taken.remove_port(self.port)
+
+      for client in self.clients:
+        client.shutdown()
+
+      self.server.shutdown()
+
       event.accept()
     else:
       event.ignore()
@@ -109,9 +199,7 @@ class ez_Gui(QtGui.QWidget):
     self.history_modell.reload(self.history_path)
     self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
 
-#==============================================================================#
-#                          non client related methods                          #
-#==============================================================================#
+#---------------      non client or server related methods      ---------------#
 
   # functions called by the GUI
   def message_send(self):
@@ -125,12 +213,20 @@ class ez_Gui(QtGui.QWidget):
 
     # Send message to other clients. The client class confirms if sending was
     # successful.
-    self.client.commandQueue.put(ClientCommand(ClientCommand.send, message))
+    self.server.commandQueue.put(ServerCommand(ServerCommand.send, message))
 
     # clear text entry
     self.chatwindow.textEdit.clear()
 
     # send signal for repainting
+    self.history_modell.reload(self.history_path)
+    self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
+
+  def clear_history(self):
+    # opening a file with the write flag ('w') clears the file
+    f = open(self.history_path, 'w')
+    f.close()
+
     self.history_modell.reload(self.history_path)
     self.history_modell.emit(QtCore.SIGNAL("layoutChanged()"))
 
@@ -143,33 +239,35 @@ class Model(QtCore.QAbstractListModel):
     QtCore.QAbstractListModel.__init__(self)
     self.data = []
 
-    word_wrap_length=80     # we could define this later as a variable
-    # Lade data
+    # we could define this later as a variable
+    word_wrap_length = 80
+
+    # load data
     f = open(dateiname)
 
     try:
       lst = []
-      for zeile in f:
-        if not zeile.strip():
+      for line in f:
+        if not line.strip():
           self.data.append(QtCore.QVariant(lst))
           lst = []
         else:
-          if len(zeile.strip())>word_wrap_length and len(zeile.split())>1:
-            sum=0
-            line=""
-            list_of_words=zeile.split()
+          if len(line.strip()) > word_wrap_length and len(line.split()) > 1:
+            sum = 0
+            line = ""
+            list_of_words = line.split()
             for i in range(len(list_of_words)):
-              sum+=len(list_of_words[i])+1
-              if sum<word_wrap_length:
-                line+=list_of_words[i]+" "
+              sum += len(list_of_words[i]) + 1
+              if sum < word_wrap_length:
+                line += list_of_words[i]+" "
               else:
-                sum=len(list_of_words[i])
+                sum = len(list_of_words[i])
                 lst.append(QtCore.QVariant(line))
-                line=list_of_words[i]+" "
+                line = list_of_words[i] + " "
             if line:
               lst.append(QtCore.QVariant(line))
           else:
-            lst.append(zeile.strip())
+            lst.append(line.strip())
       if lst:
           self.data.append(QtCore.QVariant(lst))
     finally:
@@ -183,27 +281,27 @@ class Model(QtCore.QAbstractListModel):
 
     try:
       lst = []
-      for zeile in f:
-        if not zeile.strip():
+      for line in f:
+        if not line.strip():
           self.data.append(QtCore.QVariant(lst))
           lst = []
         else:
-          if len(zeile.strip())>word_wrap_length and len(zeile.split())>1:
-            sum=0
-            line=""
-            list_of_words=zeile.split()
+          if len(line.strip()) > word_wrap_length and len(line.split()) > 1:
+            sum = 0
+            line = ""
+            list_of_words = line.split()
             for i in range(len(list_of_words)):
-              sum+=len(list_of_words[i])+1
-              if sum<word_wrap_length:
-                line+=list_of_words[i]+" "
+              sum += len(list_of_words[i]) + 1
+              if sum < word_wrap_length:
+                line += list_of_words[i]+" "
               else:
-                sum=len(list_of_words[i])
+                sum = len(list_of_words[i])
                 lst.append(QtCore.QVariant(line))
-                line=list_of_words[i]+" "
+                line = list_of_words[i] + " "
             if line:
               lst.append(QtCore.QVariant(line))
           else:
-            lst.append(zeile.strip())
+            lst.append(line.strip())
       if lst:
           self.data.append(QtCore.QVariant(lst))
     finally:
@@ -276,7 +374,7 @@ class ViewDelegate(QtGui.QItemDelegate):
                        QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
                        data[0].toString())
 
-    # Adresse schreiben
+    # write address
     painter.setPen(self.textColor)
     painter.setFont(self.textFont)
     for i, entry in enumerate(data[1:]):
