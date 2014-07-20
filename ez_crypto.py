@@ -202,12 +202,15 @@ class eZ_RSA(CryptoBaseClass):
 
   def verify(self, public_key, plaintext, signature):
     """
-    Verify signature agains plaintext with public key. Return True if
+    Verify signature against plaintext with public key. Return True if
     sucessful.
     """
     msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
-    return verifier.verify(msg_hash, signature.decode('base64'))
+    try:
+      return verifier.verify(msg_hash, signature.decode('base64'))
+    except:
+      return False
 
 
 #==============================================================================#

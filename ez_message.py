@@ -14,8 +14,8 @@ import ez_crypto as ec
 #                                class Message                                 #
 #==============================================================================#
 
-crypted_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode', 'signature']
-components = ['time', 'recipient', 'msg_id'] + crypted_content
+crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode', 'signature']
+components = ['time', 'recipient', 'msg_id'] + crypto_content
 
 class Message(object):
   """
@@ -40,7 +40,7 @@ class Message(object):
       package = {'etime' : exact_time, 'sender' : sender,
                  'recipient' : recipient, 'content' : content}
       crypt_dict = ec.eZ_CryptoScheme(**package).encrypt_sign()
-      for x in crypted_content:
+      for x in crypto_content:
         setattr(self, x, crypt_dict[x])
 
   def __str__(self):
@@ -49,7 +49,7 @@ class Message(object):
     return '-'*80 + '\n' + '\n'.join(lst)
 
   def clear_text(self):
-    crypt_dict = {x : getattr(self, x) for x in crypted_content}
+    crypt_dict = {x : getattr(self, x) for x in crypto_content}
     crypt_dict.update({'recipient' : self.recipient})
     clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
     if clear_dict['authorized']:

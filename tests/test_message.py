@@ -1,4 +1,4 @@
-from __future__ import print_function
+# encoding=utf-8
 from test_tools import *
 
 import ez_message as em
@@ -30,6 +30,9 @@ def test_Message():
 
   # I can only decrypt it with rsa_derAndere.priv
   print(mx.clear_text())
+  mx.signature = 'trying to hijack this'
+  invalid = '(signature : ✗ )'
+  eq_ (mx.clear_text()[-len(invalid):], invalid)
 
 #new_user.User(author)
 #new_user.User(reader)

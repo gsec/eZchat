@@ -17,7 +17,7 @@ Advanced nosetests usage I: Coverage
 - Install with `pip install coverage`
 - To only include our stuff (and not imported modules) in the report, use this sweet alias in your `~/.bashrc`:
 ```
-nosetests_cover_cmd="nosetests --with-coverage --cover-erase --cover-tests --cover-package=`ls *.py | sed -r 's/[.]py$//' | fgrep -v '.' | paste -s -d ',' `"
+nosetests_cover_cmd="nosetests --with-coverage --cover-erase --cover-tests --cover-package=\$(ls *.py | sed -r 's/[.]py$//' | fgrep -v '.' | paste -s -d ',' )"
 alias nosetests_cover=$nosetests_cover_cmd
 ```
 - In `eZchat` directory, run `nosetests_cover` from cmdline. You should be able
