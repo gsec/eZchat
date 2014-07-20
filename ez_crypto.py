@@ -10,9 +10,8 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 from Crypto import Random
-from os.path import join as pathjoin
-from os.path import isfile
-from os.path import abspath
+import ez_preferences as ep
+import os.path as path
 
 # Strong random generator as file object:
 RNG = Random.new()
@@ -123,14 +122,13 @@ class eZ_RSA(CryptoBaseClass):
   """
   def input_wrapper(self):
     self.rsa_key_length = 2048
-    self.key_location  = '.'
 
   def key_loc(self, user):
     """
     Sets the path for the keyfiles.
     """
-    pub_loc = pathjoin(self.key_location, 'ez_rsa_' + user + '.pub')
-    priv_loc = pathjoin(self.key_location, 'ez_rsa_' + user + '.priv')
+    pub_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.pub')
+    priv_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.priv')
     return pub_loc, priv_loc
 
   def get_private_key(self, user):
@@ -162,13 +160,19 @@ class eZ_RSA(CryptoBaseClass):
     private_key = fresh_key
     public_key  = fresh_key.publickey()
 
-    if write and isfile(self.key_loc(user)[1]):
-      print("RSA Keyfile already existis at:", abspath(self.key_loc(user)[1]))
-    elif write:
-      with open(self.key_loc(user)[0], 'aw') as pub_file, \
-          open(self.key_loc(user)[1], 'aw') as priv_file:
-        pub_file.write(public_key.exportKey())
-        priv_file.write(private_key.exportKey())
+    if write:
+      try:
+        if path.isfile(self.key_loc(user)[1]):
+          raise ImportError
+        with open(self.key_loc(user)[0], 'aw') as pub_file, \
+             open(self.key_loc(user)[1], 'aw') as priv_file:
+          pub_file.write(public_key.exportKey())
+          priv_file.write(private_key.exportKey())
+      except ImportError:
+        print("RSA Keyfile already existis at:",
+                path.abspath(self.key_loc(user)[1]))
+      except IOError:
+        print("Failed to write keys to disk")
     return private_key, public_key
 
   def encrypt(self, public_key, plaintext):
@@ -209,7 +213,7 @@ class eZ_RSA(CryptoBaseClass):
 
 
 #==============================================================================#
-#                                 class eZ_AES                                 # 
+#                                 class eZ_AES                                 #
 #==============================================================================#
 class eZ_AES(CryptoBaseClass):
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -254,7 +258,7 @@ class eZ_AES(CryptoBaseClass):
 
   def decrypt(self):
     """
-    Produces plaintext from ciphertext, if provided with correct key and 
+    Produces plaintext from ciphertext, if provided with correct key and
     encryption parameters.
     """
     assert self.crypt_mode is not 0, "Can not decrypt. Data is not encrypted"

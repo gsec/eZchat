@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf_8 -*-
 
-from __future__ import print_function
 from test_tools import *
 import ez_crypto as ec
 import ez_message as em
@@ -20,7 +19,7 @@ extime = '2014-07-15 11:09:43.059036'
 
 def test_AES():
   """
-  Symmetric AES Encryption tests.
+  Symmetric AES Encryption tests
   """
   kwargs_package = {'plain':text01, 'crypt_mode':0}
   aes_object = ec.eZ_AES(**kwargs_package)
@@ -49,11 +48,11 @@ def test_AES():
 
 def test_RSA():
   """
-  Asymmetric RSA encryption tests.
+  Asymmetric RSA encryption tests
   """
   er = ec.eZ_RSA()
   #temporary key generation
-  priv_key, pub_key = er.generate_keys(user="FAKE_USER", write=False)    
+  priv_key, pub_key = er.generate_keys(user="FAKE_USER", write=False)
   sig02 =  er.sign(priv_key, text02)
   eq_(er.verify(pub_key, text02, sig02), True)
   if er.verify(pub_key, text01, sig02):
@@ -66,10 +65,9 @@ def test_OmniScheme():
   Overal Crypto Scheme with AES + RSA(AES_key)
   """
   er = ec.eZ_RSA()
-  # only needed once:
-  #er.generate_keys(user=author)
-  #er.generate_keys(user=reader)
-  package = {'etime':extime, 'sender':author, 'recipient':reader, 
+  er.generate_keys(user=author, write=True)
+  er.generate_keys(user=reader, write=True)
+  package = {'etime':extime, 'sender':author, 'recipient':reader,
       'content':text01}
   es = ec.eZ_CryptoScheme(**package)
   supergeheim = es.encrypt_sign()

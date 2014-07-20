@@ -22,3 +22,7 @@ class User(object):
 
   - UNSOLVED: how to store sent messages, without giving up anonymity?
   """
+  def __init__(self, name, public_key, current_ip):
+    self.name = name
+    self.public_key = public_key
+    self.current_ip = current_ip
