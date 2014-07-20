@@ -22,6 +22,8 @@ alias nosetests_cover=$nosetests_cover_cmd
 ```
 - In `eZchat` directory, run `nosetests_cover` from cmdline. You should be able
   to get code coverage to 100 % with appropriate tests.
+- Functions which really don't make sense to be tested can get a `def
+  function(): # pragma: no cover`
 
 Markdown
 ========

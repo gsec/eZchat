@@ -47,9 +47,8 @@ class CryptoBaseClass(object):
   def input_wrapper(self):
     pass
 
-  def args_handler(self, *args):
+  def args_handler(self, *args): # pragma: no cover
     pass
-
 
 #==============================================================================#
 #                            class eZ_CryptoScheme                             #
@@ -156,24 +155,23 @@ class eZ_RSA(CryptoBaseClass):
     Create RSA keypair and return them as tuple. if write argument is true,
     also write them to disk.
     """
-    fresh_key   = RSA.generate(self.rsa_key_length)
-    private_key = fresh_key
-    public_key  = fresh_key.publickey()
-
-    if write:
+    key_exists = path.isfile(self.key_loc(user)[1])
+    if not write or not key_exists:
+      fresh_key   = RSA.generate(self.rsa_key_length)
+      private_key = fresh_key
+      public_key  = fresh_key.publickey()
+      if not write:
+        return private_key, public_key
+    # Out of performance reasons, we don't cover this. If it wouldn't work,
+    # tests would fail anyway.
+    if write and not key_exists: # pragma: no cover
       try:
-        if path.isfile(self.key_loc(user)[1]):
-          raise ImportError
         with open(self.key_loc(user)[0], 'aw') as pub_file, \
              open(self.key_loc(user)[1], 'aw') as priv_file:
           pub_file.write(public_key.exportKey())
           priv_file.write(private_key.exportKey())
-      except ImportError:
-        print("RSA Keyfile already existis at:",
-                path.abspath(self.key_loc(user)[1]))
       except IOError:
         print("Failed to write keys to disk")
-    return private_key, public_key
 
   def encrypt(self, public_key, plaintext):
     """

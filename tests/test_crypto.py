@@ -65,6 +65,7 @@ def test_OmniScheme():
   Overal Crypto Scheme with AES + RSA(AES_key)
   """
   er = ec.eZ_RSA()
+  # They are only generated if they don't exist
   er.generate_keys(user=author, write=True)
   er.generate_keys(user=reader, write=True)
   package = {'etime':extime, 'sender':author, 'recipient':reader,
