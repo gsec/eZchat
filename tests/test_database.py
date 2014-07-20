@@ -24,7 +24,12 @@ class Test_Database(object):
     eq_(self.database.add_msg(self.mx, out = True), 'Added entry')
     eq_(self.database.add_msg(self.mx, out = True), 'Already in ez_db')
     eq_(self.database.add_msg(self.mx, out = False), None)
-    self.database.add_msg(self.my)
+
+  def test_database_in_DB(self):
+    self.database.add_msg(self.mx)
+    eq_(self.database.in_DB(self.mx), True)
+    eq_(self.database.in_DB(self.mx.msg_id), True)
+    eq_(self.database.in_DB(None), False)
 
   def test_database_sync(self):
     self.database.add_msg(self.mx)
@@ -39,8 +44,5 @@ class Test_Database(object):
     msgs_to_be_send = self.database.get_msgs (missing_IDs_in_2)
     self.database2.add_msgs (msgs_to_be_send)
     # Succesfully synced. Rerun the other way for complete sync.
-    eq_(self.database.msg_string(), self.database2.msg_string())
-
-  # This is more as an export to another program but also shows what is inside
-  # the database
-  #ed.dataset.freeze(ed.msg_table.all(), format='json', filename='archive.json')
+    #eq_(self.database.msg_string(), self.database2.msg_string())
+    eq_(str(self.database), str(self.database2))

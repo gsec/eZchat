@@ -48,8 +48,6 @@ class Database(object):
       return self.messages.find_one(msg_id=msg.msg_id) != None
     except AttributeError:
       return self.messages.find_one(msg_id=msg) != None
-    except :
-      return 'Invalid msg, neither Message nor ID'
 
   def add_msg(self, msg, out = False):
     """ Add a message without creating duplicates in self.messages """

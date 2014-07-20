@@ -1,15 +1,27 @@
 What this is
 ------------
 
-A general purpose help and reference page for all different python, coding and 
+A general purpose help and reference page for all different python, coding and
 linux(& windows :) stuff.
-
-Feel free to edit, add and delete, as long as it contributes and is helpful.
 
 Python
 ======
-- [Python testing](http://pythontesting.net/start-here/) Introductions to 
+- [Python testing](http://pythontesting.net/start-here/) Introductions to
   Python Testing Frameworks
+
+Advanced nosetests usage I: Coverage
+-----------
+- [Coverage](http://nose.readthedocs.org/en/latest/plugins/cover.html):
+  Nosetests can be nicely convoluted with the coverage module that shows which
+  parts of your code is actually accessed
+- Install with `pip install coverage`
+- To only include our stuff (and not imported modules) in the report, use this sweet alias in your `~/.bashrc`:
+```
+nosetests_cover_cmd="nosetests --with-coverage --cover-erase --cover-tests --cover-package=`ls *.py | sed -r 's/[.]py$//' | fgrep -v '.' | paste -s -d ',' `"
+alias nosetests_cover=$nosetests_cover_cmd
+```
+- In `eZchat` directory, run `nosetests_cover` from cmdline. You should be able
+  to get code coverage to 100 % with appropriate tests.
 
 Markdown
 ========
