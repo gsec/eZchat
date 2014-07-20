@@ -45,23 +45,7 @@ coverage.xml
 # Translations
 *.mo
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Rope
-.ropeproject
-
-# Django stuff:
-*.log
-*.pot
-
-# Sphinx documentation
-docs/_build/
-
-# python and vim temp-files
-*.pyc
+# vim temp-files
 *.swp
 *.swo
 
