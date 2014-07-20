@@ -39,7 +39,7 @@ class Database(object):
   def msg_string (self):
     """ Return a string of all messages """
     results = self.messages.find(order_by=['time', '-msg_id'])
-    lst = [str(em.Message('', '', '', _dict=d)) for d in results]
+    lst = [str(em.Message(_dict=d)) for d in results]
     return ('\n' + '-'*80 + '\n').join(lst)
 
   def in_DB (self, msg):
@@ -48,6 +48,14 @@ class Database(object):
       return self.messages.find_one(msg_id=msg.msg_id) != None
     except AttributeError:
       return self.messages.find_one(msg_id=msg) != None
+
+  def get_msg(self, msg_id):
+    """ Return a message given the message ID """
+    return em.Message(_dict=self.messages.find_one(msg_id=msg_id))
+
+  def get_msgs(self, msg_ids):
+    """ Return messages given the message IDs """
+    return [self.get_msg(msg_id) for msg_id in msg_ids]
 
   def add_msg(self, msg, out = False):
     """ Add a message without creating duplicates in self.messages """
@@ -64,17 +72,9 @@ class Database(object):
     for msg in msgs:
       self.add_msg(msg)
 
-  def get_msg(self, msg_id):
-    """ Return a message given the message ID """
-    return em.Message('', '', '', _dict=self.messages.find_one(msg_id=msg_id))
-
-  def get_msgs(self, msg_ids):
-    """ Return messages given the message IDs """
-    return [self.get_msg(msg_id) for msg_id in msg_ids]
-
   def msg_id_list (self):
     """ Return a list of all message IDs as strings """
-    return [str(em.Message('', '', '', _dict=d).msg_id) for d in self.messages]
+    return [str(em.Message(_dict=d).msg_id) for d in self.messages]
 
   def necessary_msgs (self, lst):
     """

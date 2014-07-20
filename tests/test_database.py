@@ -35,7 +35,7 @@ class Test_Database(object):
     self.database.add_msg(self.mx)
     self.database.add_msg(self.my)
     self.database2.add_msg(self.my)
-    eq_(self.database.get_msg(self.mx.msg_id).content(), self.mx.content())
+    eq_(str(self.database.get_msg(self.mx.msg_id)), str(self.mx))
 
     list_to_be_send_to_2 = self.database.msg_id_list()
     missing_IDs_in_2 = self.database2.necessary_msgs(list_to_be_send_to_2)

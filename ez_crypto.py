@@ -58,7 +58,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
   """
   Outer crypto API to encrypt+sign and decrypt+verify message objects.
   Encryption must be provided with following arguments as dictionary:
-  @ARGS: date, sender, recipient, content
+  @ARGS: etime, sender, recipient, content
   """
   def encrypt_sign(self):
     """
@@ -88,7 +88,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
   def decrypt_verify(self):
     """
     Decrypt and unpack cipher block, check signature. Return signature check
-    result in 'authorized' key, aswell as the other plaintext attributes.
+    result in 'authorized' key, as well as the other plaintext attributes.
     """
     _private_key = eZ_RSA().get_private_key(self.recipient)
     # Decrypt AES key:

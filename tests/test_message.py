@@ -6,7 +6,7 @@ import ez_user as new_user
 from datetime import datetime
 
 def test_Message():
-  msg = """ If your public attribute name collides with a reserved keyword,
+  msg = """If your public attribute name collides with a reserved keyword,
       append a single trailing underscore to your attribute name. This is
       preferable to an abbreviation or corrupted spelling. (However,
       notwithstanding this rule, 'cls' is the preferred spelling for any
@@ -15,6 +15,21 @@ def test_Message():
   short_msg = "hi, was geht"
   author = 'derEine'
   reader = 'derAndere'
+  mx = em.Message(author, reader, msg, datetime(2014, 07, 06, 17, 41, 05))
+
+  print("Testing the basic message object: \n" + str(mx))
+  eq_ (mx.recipient, reader)
+  eq_ (mx.msg_id, 'd22a9cb0b7f87ffc1905944a754fdc5a326b5f53')
+  eq_ (mx.time, '2014-7')
+
+  # Making sure no security leaks can be abused
+  assert_raises(AttributeError, getattr, mx, 'etime')
+  assert_raises(AttributeError, getattr, mx, 'plaintext')
+  assert_raises(AttributeError, getattr, mx, 'content')
+  assert_raises(AttributeError, getattr, mx, 'sender')
+
+  # I can only decrypt it with rsa_derAndere.priv
+  print(mx.clear_text())
 
 #new_user.User(author)
 #new_user.User(reader)
@@ -22,26 +37,8 @@ def test_Message():
 #mx = em.Message(author, reader, msg, dtime = datetime(2014, 07, 06, 17,
   #41, 05))
 #print("Testing the basic message object: \n" + str(mx) + str(my))
-  my = em.Message('derEine','derEine', short_msg)
 # at the moment sender=recipient
-  print("Testing the basic message object: \n" + str(my))
 
 #mx_secret = mx.encrypt()
 #print("Encrypted + armored: \n-----\n", mx_secret)
 #print("Decrypted again: \n-----\n", mx.decrypt(mx_secret))
-#eq_ (mx.sender, author)
-#eq_ (mx.recipient, reader)
-#eq_ (mx.msg_id, 'f41af76925eddfac4447e4ce2d0a1a03f4af27ba83a99e1e723b91ffccfd54f9')
-#eq_ (mx.time, '2014-07-06 17:41:05')
-
-# NOT WORKING
-#my.encrypt()
-#print("Ciphertext:\n", my.cipher)
-#my.decrypt()
-#print("Plaintext:\n", my.plain)
-
-# NOT WORKING
-#my.var_encrypt()
-#print("VARIABLE Ciphertext:\n", my.var_cipher)
-#my.var_decrypt()
-#print("VARIABLE Plaintext:\n", my.var_plain)

@@ -1,3 +1,4 @@
+# encoding=utf-8
 #==============================================================================#
 #                                  ez_message                                  #
 #==============================================================================#
@@ -19,36 +20,43 @@ components = ['time', 'recipient', 'msg_id'] + crypted_content
 class Message(object):
   """
   This is the object that will be permanently saved in the database.
-  It generates a unique ID based on sender, recipient and exact date.
+  It generates a unique ID based on sender, recipient and exact datetime.
   Unencrypted is recipient, year-month, injection vector and crypt_mode.
   Crypted is the message as cipher(AES) and key as ciphered_key(RSA).
   """
 
-  def __init__(self, sender, recipient, content, dtime = datetime.now(),
-               _dict=None):
+  def __init__(self, sender='', recipient='', content='',
+               dtime = datetime.now(), _dict=None):
     if _dict is not None:
-      # We have to take care not to import local database information
       for x in components:
-        self.__dict__.update({x : _dict[x]})
+        setattr(self, x, _dict[x])
     else:
-      # todo: (bcn 2014-07-06) Isoformat is at least localization independent but
-      # timezone information is still missing !
-      self.time       = str(dtime.year) + '-' + str(dtime.month)
-      self.recipient  = recipient
-      self.exact_time = dtime.isoformat(' ')
-      self.msg_id     = SHA.new(sender + recipient + str(self.exact_time))\
-                            .hexdigest()
-      # Fake it till you make it
-      #crypt_dict = ec.eZ_Crypto.encrypt(dtime.isoformat(' '), sender, content)
-      crypt_dict = { 'cipher' : 'laskjdhflkaj', 'ciphered_key' : 'alskdjaskldj',
-                     'iv' : 'uiofoqhehf', 'crypt_mode' : 1, 'signature' : 'lajd'}
+      # todo: (bcn 2014-07-06) Isoformat is at least localization independent
+      # but timezone information is still missing !
+      self.time = str(dtime.year) + '-' + str(dtime.month)
+      exact_time = dtime.isoformat(' ')
+      self.recipient = recipient
+      self.msg_id = SHA.new(sender + recipient + exact_time).hexdigest()
+      package = {'etime' : exact_time, 'sender' : sender,
+                 'recipient' : recipient, 'content' : content}
+      crypt_dict = ec.eZ_CryptoScheme(**package).encrypt_sign()
       for x in crypted_content:
-        self.__dict__.update({x : crypt_dict[x]})
+        setattr(self, x, crypt_dict[x])
 
   def __str__(self):
-    lst = [str(k) + ' : ' + str(v) for k, v in self.__dict__.items()]
-    return '\n'.join(lst)
+    """ Full representation including local database information """
+    lst = [str(k) + ' : ' + str(getattr(self, k)) for k in components]
+    return '-'*80 + '\n' + '\n'.join(lst)
 
-  def content(self):
-    return (self.time, self.recipient, self.msg_id, self.cipher,
-        self.ciphered_key, self.iv, self.crypt_mode, self.signature)
+  def clear_text(self):
+    crypt_dict = {x : getattr(self, x) for x in crypted_content}
+    crypt_dict.update({'recipient' : self.recipient})
+    clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
+    if clear_dict['authorized']:
+      sig_symb = '✓'
+    else:
+      sig_symb = '✗'
+    lst = [clear_dict['sender'], "@", clear_dict['etime'], ":",
+           clear_dict['content'], '(signature :', sig_symb, ')']
+    return ' '.join(lst)
+    #return [key + ' : ' + str(val) for key, val in clear_dict.iteritems()]
