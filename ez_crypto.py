@@ -203,7 +203,7 @@ class eZ_RSA(CryptoBaseClass):
   def verify(self, public_key, plaintext, signature):
     """
     Verify signature against plaintext with public key. Return True if
-    sucessful.
+    successful, false otherwise.
     """
     msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
@@ -263,14 +263,14 @@ class eZ_AES(CryptoBaseClass):
     encryption parameters.
     """
     assert self.crypt_mode is not 0, "Can not decrypt. Data is not encrypted"
-    _key        = self.key.decode('base64')
-    _iv         = self.iv.decode('base64')
-    _cipher     = self.cipher.decode('base64')
-    decrypter   = AES.new(_key, mode=self.MODE, IV=_iv)
-    padded_text = decrypter.decrypt(_cipher)
+    _key            = self.key.decode('base64')
+    _iv             = self.iv.decode('base64')
+    _cipher         = self.cipher.decode('base64')
+    decrypter       = AES.new(_key, mode=self.MODE, IV=_iv)
+    padded_text     = decrypter.decrypt(_cipher)
     self.plain      = self.remove_padding(padded_text)
     self.crypt_mode = 0
-    plain_items = ['plain', 'crypt_mode']
+    plain_items     = ['plain', 'crypt_mode']
     return self.return_dict(plain_items)
 
   def add_padding(self, text):
@@ -281,10 +281,10 @@ class eZ_AES(CryptoBaseClass):
     """
     pad_length = AES.block_size - len(text) % AES.block_size
     if pad_length:
-      text = text + self.INTERRUPT + (pad_length-1) * self.PAD
+      pass
     else:
-      text = text + self.INTERRUPT + (AES.block_size-1) * self.PAD
-    return text
+      pad_length = AES.block_size
+    return text + self.INTERRUPT + (pad_length - 1) * self.PAD
 
   def remove_padding(self, text):
     """

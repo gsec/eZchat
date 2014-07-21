@@ -27,7 +27,7 @@ class Message(object):
 
   def __init__(self, sender='', recipient='', content='',
                dtime = datetime.now(), _dict=None):
-    if _dict is not None:
+    if _dict:
       for x in components:
         setattr(self, x, _dict[x])
     else:
@@ -56,7 +56,6 @@ class Message(object):
       sig_symb = '✓'
     else:
       sig_symb = '✗'
-    lst = [clear_dict['sender'], "@", clear_dict['etime'], ":",
-           clear_dict['content'], '(signature :', sig_symb, ')']
+    lst = [clear_dict['sender'], "@", clear_dict['etime'], ":\n",
+        clear_dict['content'], "\n:Signature:", "[", sig_symb, "]"]
     return ' '.join(lst)
-    #return [key + ' : ' + str(val) for key, val in clear_dict.iteritems()]
