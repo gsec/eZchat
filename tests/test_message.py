@@ -7,11 +7,11 @@ from datetime import datetime
 
 def test_Message():
   msg = """If your public attribute name collides with a reserved keyword,
-      append a single trailing underscore to your attribute name. This is
-      preferable to an abbreviation or corrupted spelling. (However,
-      notwithstanding this rule, 'cls' is the preferred spelling for any
-      variable or argument which is known to be a class, especially the first
-      argument to a class method.)"""
+  append a single trailing underscore to your attribute name. This is
+  preferable to an abbreviation or corrupted spelling. (However,
+  notwithstanding this rule, 'cls' is the preferred spelling for any variable
+  or argument which is known to be a class, especially the first argument to a
+  class method.)"""
   short_msg = "hi, was geht"
   author = 'derEine'
   reader = 'derAndere'
@@ -31,7 +31,7 @@ def test_Message():
   # I can only decrypt it with rsa_derAndere.priv
   print(mx.clear_text())
   mx.signature = 'trying to hijack this'
-  invalid = '(signature : ✗ )'
+  invalid = ':Signature: [ ✗ ]'
   eq_ (mx.clear_text()[-len(invalid):], invalid)
 
 #new_user.User(author)
