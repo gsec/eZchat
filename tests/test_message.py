@@ -30,7 +30,7 @@ def test_Message():
 
   # I can only decrypt it with rsa_derAndere.priv
   print(mx.clear_text())
-  mx.signature = 'trying to hijack this'
+  mx.hmac = 'trying to hijack this'
   invalid = ':Signature: [ ✗ ]'
   eq_ (mx.clear_text()[-len(invalid):], invalid)
 

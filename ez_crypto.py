@@ -6,6 +6,7 @@
 #  Includes  #
 #============#
 from Crypto.Hash import SHA256 # considered more secure than SHA1
+from Crypto.Hash import HMAC
 from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
@@ -82,7 +83,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
     self.signature = eZ_RSA().sign(_private_key, _plain_block)
 
     _encrypt_items  = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
-        'signature', 'recipient']
+        'signature', 'recipient', 'hmac']
     return self.return_dict(_encrypt_items)
 
   def decrypt_verify(self):
@@ -95,7 +96,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
     self.key = eZ_RSA().decrypt(_private_key, self.ciphered_key)
 
     # Decrypt cipher block:
-    _aes_items  = ['key', 'iv', 'crypt_mode', 'cipher']
+    _aes_items  = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     _aes_input  = self.return_dict(_aes_items)
     _aes_output = eZ_AES(**_aes_input).decrypt()
     # Set AES output as attributes:
@@ -106,7 +107,8 @@ class eZ_CryptoScheme(CryptoBaseClass):
     _public_key = eZ_RSA().get_public_key(self.sender)
     # Check signature
     self.authorized = eZ_RSA().verify(_public_key, self.plain, self.signature)
-    decrypt_items  = ['etime', 'content', 'sender', 'recipient', 'authorized']
+    decrypt_items  = ['etime', 'content', 'sender', 'recipient',
+        'authorized_aes']
     return self.return_dict(decrypt_items)
 
 
@@ -254,7 +256,9 @@ class eZ_AES(CryptoBaseClass):
     self.cipher     = _crypter.encrypt(padded_text).encode('base64')
     self.key        = _key.encode('base64')
     self.iv         = _iv.encode('base64')
-    encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher']
+    # Create HMAC Authentitcation
+    self.hmac = self.hmac_digest(_key, self.plain)
+    encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     return self.return_dict(encrypt_items)
 
   def decrypt(self):
@@ -270,8 +274,32 @@ class eZ_AES(CryptoBaseClass):
     padded_text     = decrypter.decrypt(_cipher)
     self.plain      = self.remove_padding(padded_text)
     self.crypt_mode = 0
-    plain_items     = ['plain', 'crypt_mode']
+    # Verify HMAC
+    _mac_sig        = self.hmac
+    self.authorized_aes = self.hmac_verify(_key, self.plain, _mac_sig)
+    plain_items     = ['plain', 'crypt_mode', 'authorized_aes']
     return self.return_dict(plain_items)
+
+  def hmac_verify(self, key, plaintext, hexmac_to_verify):
+    """
+    Return bool. True if verification sucessfull, False otherwise.
+    """
+    mac_object      = HMAC.new(key)
+    mac_object.update(plaintext)
+    if mac_object.hexdigest() == hexmac_to_verify:
+      authorized = True
+    else:
+      authorized = False
+    return authorized
+
+  def hmac_digest(self, key, plaintext):
+    """
+    Returns the hexdigest of a message,  if provided with key.
+    """
+    mac_object      = HMAC.new(key)
+    mac_object.update(plaintext)
+    return mac_object.hexdigest()
+
 
   def add_padding(self, text):
     """
