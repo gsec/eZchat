@@ -30,8 +30,14 @@ def test_Message():
 
   # I can only decrypt it with rsa_derAndere.priv
   print(mx.clear_text())
-  mx.hmac = 'trying to hijack this'
-  invalid = ':Signature: [ ✗ ]'
+  # 'trying to hijack this': properly formatted, but wrong ciphered mac
+  mx.ciphered_mac = """
+  cql2uQqwu10lnSK+sNBdpOz4o2QYQOdLRfYf+ITX8Tk/lHbn0CqWnDNUcFkB2xgJD0QyGUsP/JQe
+  pXYHRgma4y0MThZ4QA47c/IpIMi4RwuGdpGGPgovZgsrKYSg57pzZHI0KdsUSY+gl/nxzxVRTxaT
+  h8xYlW5eLqS328jLc5jcxr6LvB3GsdfR45ukjNx8ZES2t9qdSa3WONRlfsmBFOrrrrfuSyinRqxO
+  FUziCxVI3lVC8k517bWDqX3xh1fb3USqhS5c2mlCuk+95CIlS8gVIBgWpEK1knwlI4lGApIyXenA
+  jlOoIMizUmFgoQRGZ1hUONpZzthQ/CpyumJu/w== """
+  invalid = ':HMAC: [ ✗ ]'
   eq_ (mx.clear_text()[-len(invalid):], invalid)
 
 #new_user.User(author)

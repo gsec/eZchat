@@ -44,6 +44,7 @@ def test_AES():
   pad_block = "\1" + 15 * "\0"
   aes_object = ec.eZ_AES(text02)
   eq_(aes_object.add_padding(text03), "123456\1\0\0\0\0\0\0\0\0\0")
+  # actually covers line 307 (if pad_length = 0 ) in pad function:
   eq_(aes_object.add_padding(text05), text05 + pad_block)
 
   eq_(aes_object.remove_padding(aes_object.add_padding(text04)), text04)
@@ -56,7 +57,9 @@ def test_RSA():
   #temporary key generation
   priv_key, pub_key = er.generate_keys(user="FAKE_USER", write=False)
   sig02 =  er.sign(priv_key, text02)
+  wrongsig = 'somerandomstuff'
   eq_(er.verify(pub_key, text02, sig02), True)
+  eq_(er.verify(pub_key, text02, wrongsig), False)
   if er.verify(pub_key, text01, sig02):
     print("sig sucess")
   else:

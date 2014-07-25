@@ -45,7 +45,7 @@ class CryptoBaseClass(object):
     """
     return {k:v for k, v in self.__dict__.iteritems() if k in return_list}
 
-  def input_wrapper(self):
+  def input_wrapper(self): # pragma: no cover
     pass
 
   def args_handler(self, *args): # pragma: no cover
@@ -67,48 +67,41 @@ class eZ_CryptoScheme(CryptoBaseClass):
     plaintext block. Return crypto items as dictionary.
 
     """
-    # Pack plaintext block:
-    _plain_block = "\1".join([self.etime, self.sender, self.content])
-
-    _private_key = eZ_RSA().get_private_key(self.sender)
-    _public_key = eZ_RSA().get_public_key(self.recipient)
+    encrypt_items = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
+        'recipient', 'ciphered_mac']
 
     # Encode with AES:
-    _aes_output = eZ_AES(_plain_block).encrypt()
-    # Set AES output as attributes:
+    _plain_block  = "\1".join([self.etime, self.sender, self.content])
+    _aes_output   = eZ_AES(_plain_block).encrypt()
     self.attribute_setter(**_aes_output)
-    # encode AES-key with public RSA key:
-    self.ciphered_key = eZ_RSA().encrypt(_public_key, self.key)
-    # Sign with private RSA key:
-    self.signature = eZ_RSA().sign(_private_key, _plain_block)
 
-    _encrypt_items  = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
-        'signature', 'recipient', 'hmac']
-    return self.return_dict(_encrypt_items)
+    # encode AES-key and HMAC with public RSA key:
+    _public_key       = eZ_RSA().get_public_key(self.recipient)
+    self.ciphered_key = eZ_RSA().encrypt(_public_key, self.key)
+    self.ciphered_mac = eZ_RSA().encrypt(_public_key, self.hmac)
+
+    return self.return_dict(encrypt_items)
 
   def decrypt_verify(self):
     """
-    Decrypt and unpack cipher block, check signature. Return signature check
+    Decrypt and unpack cipher block, check HMAC. Return HMAC check
     result in 'authorized' key, as well as the other plaintext attributes.
     """
-    _private_key = eZ_RSA().get_private_key(self.recipient)
-    # Decrypt AES key:
-    self.key = eZ_RSA().decrypt(_private_key, self.ciphered_key)
+    _aes_items      = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
+    decrypt_items   = ['etime', 'content', 'sender', 'recipient', 'authorized']
 
-    # Decrypt cipher block:
-    _aes_items  = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
+    # Decrypt AES key and HMAC:
+    _private_key    = eZ_RSA().get_private_key(self.recipient)
+    self.key        = eZ_RSA().decrypt(_private_key, self.ciphered_key)
+    self.hmac       = eZ_RSA().decrypt(_private_key, self.ciphered_mac)
+
+    # Decrypt cipher block (and HMAC check inside AES class):
     _aes_input  = self.return_dict(_aes_items)
     _aes_output = eZ_AES(**_aes_input).decrypt()
-    # Set AES output as attributes:
     self.attribute_setter(**_aes_output)
-
     # Unpack plaintext block
     (self.etime, self.sender, self.content) = self.plain.split("\1")
-    _public_key = eZ_RSA().get_public_key(self.sender)
-    # Check signature
-    self.authorized = eZ_RSA().verify(_public_key, self.plain, self.signature)
-    decrypt_items  = ['etime', 'content', 'sender', 'recipient',
-        'authorized_aes']
+
     return self.return_dict(decrypt_items)
 
 
@@ -119,14 +112,16 @@ class eZ_CryptoScheme(CryptoBaseClass):
 class eZ_RSA(CryptoBaseClass):
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
-  RSA cipher object. Provides asymmetric encrytpion.
+  RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
+  keylength: 2048 bit.
   """
   def input_wrapper(self):
     self.rsa_key_length = 2048
 
   def key_loc(self, user):
     """
-    Sets the path for the keyfiles.
+    Sets the path for the keyfiles. Base path retrieved from the user
+    preferences.
     """
     pub_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.pub')
     priv_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.priv')
@@ -256,8 +251,7 @@ class eZ_AES(CryptoBaseClass):
     self.cipher     = _crypter.encrypt(padded_text).encode('base64')
     self.key        = _key.encode('base64')
     self.iv         = _iv.encode('base64')
-    # Create HMAC Authentitcation
-    self.hmac = self.hmac_digest(_key, self.plain)
+    self.hmac       = self.hmac_digest(_key, self.plain)    # Create HMAC
     encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     return self.return_dict(encrypt_items)
 
@@ -274,17 +268,16 @@ class eZ_AES(CryptoBaseClass):
     padded_text     = decrypter.decrypt(_cipher)
     self.plain      = self.remove_padding(padded_text)
     self.crypt_mode = 0
-    # Verify HMAC
-    _mac_sig        = self.hmac
-    self.authorized_aes = self.hmac_verify(_key, self.plain, _mac_sig)
-    plain_items     = ['plain', 'crypt_mode', 'authorized_aes']
+    _hmac_sig       = self.hmac   # Verify HMAC
+    self.authorized = self.hmac_verify(_key, self.plain, _hmac_sig)
+    plain_items     = ['plain', 'crypt_mode', 'authorized']
     return self.return_dict(plain_items)
 
   def hmac_verify(self, key, plaintext, hexmac_to_verify):
     """
     Return bool. True if verification sucessfull, False otherwise.
     """
-    mac_object      = HMAC.new(key)
+    mac_object      = HMAC.new(key, digestmod=SHA256)
     mac_object.update(plaintext)
     if mac_object.hexdigest() == hexmac_to_verify:
       authorized = True
@@ -296,7 +289,7 @@ class eZ_AES(CryptoBaseClass):
     """
     Returns the hexdigest of a message,  if provided with key.
     """
-    mac_object      = HMAC.new(key)
+    mac_object      = HMAC.new(key, digestmod=SHA256)
     mac_object.update(plaintext)
     return mac_object.hexdigest()
 

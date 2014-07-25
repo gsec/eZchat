@@ -14,8 +14,7 @@ import ez_crypto as ec
 #                                class Message                                 #
 #==============================================================================#
 
-crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode',
-'signature','hmac']
+crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode','ciphered_mac']
 components = ['time', 'recipient', 'msg_id'] + crypto_content
 
 class Message(object):
@@ -25,7 +24,6 @@ class Message(object):
   Unencrypted is recipient, year-month, injection vector and crypt_mode.
   Crypted is the message as cipher(AES) and key as ciphered_key(RSA).
   """
-
   def __init__(self, sender='', recipient='', content='',
                dtime = datetime.now(), _dict=None):
     if _dict:
@@ -53,10 +51,10 @@ class Message(object):
     crypt_dict = {x : getattr(self, x) for x in crypto_content}
     crypt_dict.update({'recipient' : self.recipient})
     clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
-    if clear_dict['authorized_aes']:
+    if clear_dict['authorized']:
       sig_symb = '✓'
     else:
       sig_symb = '✗'
     lst = [clear_dict['sender'], "@", clear_dict['etime'], ":\n",
-        clear_dict['content'], "\n:Signature:", "[", sig_symb, "]"]
+        clear_dict['content'], "\n:HMAC:", "[", sig_symb, "]"]
     return ' '.join(lst)
