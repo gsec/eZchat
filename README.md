@@ -56,5 +56,13 @@ Developer Guidelines
 
 Dependencies
 --------------------------------------------------------------------------------
-- To run the tests: `pip install nose`, `pip install mock`
-- For the database: `pip install dataset`
+- `pip install -r requirements.txt`
+
+Warning
+--------------------------------------------------------------------------------
+As we are still in heavy development, you might want to check
+[Travis](https://travis-ci.org/gsec/eZchat) to see the current build status of
+the continuous integration server.
+
+Right now, it seems to be
+![build status](https://travis-ci.org/gsec/eZchat.svg?branch=master)
