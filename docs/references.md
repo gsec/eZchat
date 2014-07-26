@@ -42,3 +42,5 @@ Markdown CLI
 Network
 =======
 - [Nmap and Ports tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-nmap-to-scan-for-open-ports-on-your-vps)
+- [urwid Manual](http://urwid.org/manual/overview.html) A high level
+  python-curses-wrapper
