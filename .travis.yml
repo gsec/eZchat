@@ -1,0 +1,9 @@
+language: python
+python:
+#- "2.6" #Won't support this if we don't have to. Has no set comprehensions..
+  - "2.7"
+  #- "3.3" #We will have to port first
+# command to install dependencies
+install: "pip install -r requirements.txt"
+# command to run tests
+script: nosetests
