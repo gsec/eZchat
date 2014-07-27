@@ -54,9 +54,8 @@ class Database(object):
 
   def add_entry(self, entry, out = False):
     """
-    Add an entry without creating duplicates in self.table. You should only
-    rely on this for immutable objects like messages. Objects that change like
-    users should use the update_entry function.
+    Add an entry without creating duplicates in self.table. Objects that change
+    like users should use the update_entry function.
     """
     if self.in_DB(entry):
       if out:
@@ -119,6 +118,13 @@ class UserDatabase(Database):
     temporary database in memory use 'sqlite:///:memory:'
     """
     Database.__init__(self, 'Users', eu.User, **kwargs)
+
+  def check_for_ip(self, ip, port):
+    """
+    Given IP and port, check whether the user is in DB is in DB and return UID.
+    """
+    user = eu.User(_dict=self.table.find_one(IP=':'.join([ip, port])))
+    return user.UID
 
 #==============================================================================#
 #                               Global Instance                                #
