@@ -152,8 +152,8 @@ class eZ_RSA(CryptoBaseClass):
     Create RSA keypair and return them as tuple. if write argument is true,
     also write them to disk.
     """
-    key_exists = path.isfile(self.key_loc(user)[1])
-    if not write or not key_exists:
+    no_private_key = not path.isfile(self.key_loc(user)[1])
+    if not write or no_private_key:
       fresh_key   = RSA.generate(self.rsa_key_length)
       private_key = fresh_key
       public_key  = fresh_key.publickey()
@@ -161,7 +161,7 @@ class eZ_RSA(CryptoBaseClass):
         return private_key, public_key
     # Out of performance reasons, we don't cover this. If it wouldn't work,
     # tests would fail anyway.
-    if write and not key_exists: # pragma: no cover
+    if write and no_private_key: # pragma: no cover
       try:
         with open(self.key_loc(user)[0], 'aw') as pub_file, \
              open(self.key_loc(user)[1], 'aw') as priv_file:
@@ -169,6 +169,23 @@ class eZ_RSA(CryptoBaseClass):
           priv_file.write(private_key.exportKey())
       except IOError:
         print("Failed to write keys to disk")
+
+  def generate_keys_(self, user):
+    """
+    Create RSA keypair, return the exported public key, which will be stored in
+    the database, and write the private key to disc. This might supersede
+    generate_keys as it is most likely the only use case.
+    """
+    no_private_key = not path.isfile(self.key_loc(user)[1])
+    fresh_key   = RSA.generate(self.rsa_key_length)
+    private_key = fresh_key
+    public_key  = fresh_key.publickey()
+    try:
+      with open(self.key_loc(user)[1], 'aw') as priv_file:
+        priv_file.write(private_key.exportKey())
+    except IOError:
+      print("Failed to write private key to disk")
+    return public_key.exportKey()
 
   def encrypt(self, public_key, plaintext):
     """
