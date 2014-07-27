@@ -15,7 +15,7 @@ import ez_crypto as ec
 #==============================================================================#
 
 crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode','ciphered_mac']
-components = ['time', 'recipient', 'msg_id'] + crypto_content
+components = ['time', 'recipient', 'UID'] + crypto_content
 
 class Message(object):
   """
@@ -35,7 +35,7 @@ class Message(object):
       self.time = str(dtime.year) + '-' + str(dtime.month)
       exact_time = dtime.isoformat(' ')
       self.recipient = recipient
-      self.msg_id = SHA.new(sender + recipient + exact_time).hexdigest()
+      self.UID = SHA.new(sender + recipient + exact_time).hexdigest()
       package = {'etime' : exact_time, 'sender' : sender,
                  'recipient' : recipient, 'content' : content}
       crypt_dict = ec.eZ_CryptoScheme(**package).encrypt_sign()

@@ -19,7 +19,7 @@ def test_Message():
 
   print("Testing the basic message object: \n" + str(mx))
   eq_ (mx.recipient, reader)
-  eq_ (mx.msg_id, 'd22a9cb0b7f87ffc1905944a754fdc5a326b5f53')
+  eq_ (mx.UID, 'd22a9cb0b7f87ffc1905944a754fdc5a326b5f53')
   eq_ (mx.time, '2014-7')
 
   # Making sure no security leaks can be abused

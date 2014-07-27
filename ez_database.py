@@ -7,82 +7,121 @@
 #============#
 import dataset
 import ez_message as em
+import ez_user as eu
 
 #==============================================================================#
 #                                class Database                                #
 #==============================================================================#
-
 class Database(object):
   """
-  The Database class gives access to the sql database with user info and
-  saved, encrypted messages
+  The Database class is a template for giving access to the SQL database. Also
+  other databases like MySQL could be used.
+  """
+  def __init__(self, table_name, constructor, localdb = 'sqlite:///ez.db'):
+    self.localdb = localdb
+    self.db = dataset.connect(self.localdb)
+    self.table = self.db[table_name]
+    self.constructor = constructor
+    self.table_name = table_name
+
+  def __str__(self):
+    lst = ['\n', '='*80, '\nThis is the database located in', self.localdb,
+           'with the following data:\n---' + self.table_name + '---\n',
+           self.entry_string()]
+    return ' '.join(lst)
+
+  def entry_string (self):
+    """ Return a string of all entries """
+    results = self.table.find(order_by=['-UID'])
+    lst = [str(self.constructor(_dict=d)) for d in results]
+    return ('\n' + '-'*80 + '\n').join(lst)
+
+  def in_DB (self, entry):
+    """ Boolean if entry.UID or entry is in database """
+    try:
+      return self.table.find_one(UID=entry.UID) != None
+    except AttributeError:
+      return self.table.find_one(UID=entry) != None
+
+  def get_entry(self, UID):
+    """ Return an entry given the UID """
+    return self.constructor(_dict=self.table.find_one(UID=UID))
+
+  def get_entries(self, UIDs):
+    """ Return list of entries given the UIDs """
+    # This could be optimized
+    return [self.get_entry(UID) for UID in UIDs]
+
+  def add_entry(self, entry, out = False):
+    """
+    Add an entry without creating duplicates in self.table. You should only
+    rely on this for immutable objects like messages. Objects that change like
+    users should use the update_entry function.
+    """
+    if self.in_DB(entry):
+      if out:
+        return 'Already in ez_db'
+    else:
+      self.table.insert(entry.__dict__)
+      if out:
+        return 'Added entry'
+
+  def add_entries(self, entries, out = False):
+    """ Add entries without creating duplicates in self.table """
+    # This could be optimized
+    for entry in entries:
+      self.add_entry(entry)
+
+  def UID_list (self):
+    """ Return a list of all message IDs as strings """
+    return [str(self.constructor(_dict=d).UID) for d in self.table]
+
+  def necessary_entries (self, lst):
+    """
+    Given a list of UIDs, return a list of UIDs that are not in this database
+    """
+    return [entry for entry in lst if not self.in_DB(entry)]
+
+#==============================================================================#
+#                            class MessageDatabase                             #
+#==============================================================================#
+
+class MessageDatabase(Database):
+  """
+  The MessageDatabase class gives access to the saved, encrypted messages in the
+  SQL database
   """
 
-  def __init__(self, localdb = 'sqlite:///ez.db'):
+  def __init__(self, **kwargs):
     """
     Opens a local sqlite database
         localdb = 'sqlite:///ez.db'
     which is saved to and loaded from disk automatically. To create a merely
     temporary database in memory use 'sqlite:///:memory:'
     """
-    self.localdb = localdb
-    self.db = dataset.connect(self.localdb)
-    self.messages = self.db['messages']
-    self.users = self.db['users']
+    Database.__init__(self, 'Messages', em.Message, **kwargs)
 
-  def __str__(self):
-    lst = ['\n', '='*80, '\nThis is the database located in', self.localdb,
-           'with the following data:\n---Messages---\n', self.msg_string(),
-           '\n---Users---\nTBD']
-    return ' '.join(lst)
+#==============================================================================#
+#                              class UserDatabase                              #
+#==============================================================================#
 
-  def msg_string (self):
-    """ Return a string of all messages """
-    results = self.messages.find(order_by=['time', '-msg_id'])
-    lst = [str(em.Message(_dict=d)) for d in results]
-    return ('\n' + '-'*80 + '\n').join(lst)
+class UserDatabase(Database):
+  """
+  The UserDatabase class gives access to the saved information about users in
+  the SQL database
+  """
 
-  def in_DB (self, msg):
-    """ Boolean if message or ID `msg` is in database """
-    try:
-      return self.messages.find_one(msg_id=msg.msg_id) != None
-    except AttributeError:
-      return self.messages.find_one(msg_id=msg) != None
-
-  def get_msg(self, msg_id):
-    """ Return a message given the message ID """
-    return em.Message(_dict=self.messages.find_one(msg_id=msg_id))
-
-  def get_msgs(self, msg_ids):
-    """ Return messages given the message IDs """
-    return [self.get_msg(msg_id) for msg_id in msg_ids]
-
-  def add_msg(self, msg, out = False):
-    """ Add a message without creating duplicates in self.messages """
-    if self.in_DB(msg):
-      if out:
-        return 'Already in ez_db'
-    else:
-      self.messages.insert(msg.__dict__)
-      if out:
-        return 'Added entry'
-
-  def add_msgs(self, msgs, out = False):
-    """ Add messages without creating duplicates in self.messages """
-    for msg in msgs:
-      self.add_msg(msg)
-
-  def msg_id_list (self):
-    """ Return a list of all message IDs as strings """
-    return [str(em.Message(_dict=d).msg_id) for d in self.messages]
-
-  def necessary_msgs (self, lst):
+  def __init__(self, **kwargs):
     """
-    Given a list of IDs, return a list of IDs that are not in this database
+    Opens a local sqlite database
+        localdb = 'sqlite:///ez.db'
+    which is saved to and loaded from disk automatically. To create a merely
+    temporary database in memory use 'sqlite:///:memory:'
     """
-    return [msg for msg in lst if not self.in_DB(msg)]
+    Database.__init__(self, 'Users', eu.User, **kwargs)
 
 #==============================================================================#
 #                               Global Instance                                #
 #==============================================================================#
-database = Database()
+message_database = MessageDatabase()
+user_database = UserDatabase()
