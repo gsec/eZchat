@@ -65,11 +65,19 @@ class Database(object):
       if out:
         return 'Added entry'
 
-  def add_entries(self, entries, out = False):
-    """ Add entries without creating duplicates in self.table """
-    # This could be optimized
-    for entry in entries:
-      self.add_entry(entry)
+  def update_entry(self, entry, out = False):
+    """
+    Update an entry. It is selected in the table according to entry.UID.
+    """
+    self.table.update(entry.__dict__, ['UID'])
+
+  def add_entries(self, entries, **kwargs):
+    """
+    Performance function. Does not avoid duplicates like add_entry. Can be
+    useful for syncing. You can specify `chunk_size` to optimize performance.
+    """
+    dicts = [e.__dict__ for e in entries]
+    self.table.insert_many(dicts, **kwargs)
 
   def UID_list (self):
     """ Return a list of all message IDs as strings """
