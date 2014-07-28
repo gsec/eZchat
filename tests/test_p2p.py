@@ -31,7 +31,7 @@ class Test_p2p(object):
 
     pr = p2pCommand(p2pCommand.ips_request, data = "server")
     self.alice.ips_request(pr)
-    sleep(1)
+    sleep(0.1)
     pr = p2pCommand(p2pCommand.ping_request, data = "bob")
     ping = self.alice.ping_request(pr)
 

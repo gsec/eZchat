@@ -32,6 +32,12 @@ class Test_MessageDatabase(object):
     eq_(self.database.in_DB(self.mx.UID), True)
     eq_(self.database.in_DB(None), False)
 
+  def test_database_update_entry(self):
+    self.database.add_entry(self.mx)
+    self.mx.recipient = 'Charlie'
+    self.database.update_entry(self.mx)
+    eq_(str(self.database.get_entry(self.mx.UID)), str(self.mx))
+
   def test_database_sync(self):
     self.database.add_entry(self.mx)
     self.database.add_entry(self.my)
