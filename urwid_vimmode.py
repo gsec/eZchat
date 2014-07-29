@@ -9,8 +9,24 @@ def show_or_exit(key):
         raise urwid.ExitMainLoop()
     txt.set_text(repr(key))
 
+class VimButton(urwid.Button):
+
+  insert_mode, command_mode, visual_mode = range(3)
+  def __init__(self,*args, **kwargs):
+
+    self.__super.__init__(*args, **kwargs)
+
+  def keypress(self, size, key):
+    if key =='j':
+      return 'down'
+    elif key == 'k':
+      return 'up'
+    else:
+      super(VimButton, self).keypress(size, key)
+
+
 class VimEdit(urwid.Edit):
-  _metaclass_ = urwid.signals.MetaSignals
+  #_metaclass_ = urwid.signals.MetaSignals
   signals = ['done', 'insert_mode', 'command_mode', 'visual_mode']
   insert_mode, command_mode, visual_mode = range(3)
 
@@ -19,11 +35,17 @@ class VimEdit(urwid.Edit):
     self.__super.__init__(**kwargs)
     self.mode = VimEdit.insert_mode
     self.last_key = None
+    self.double_press = False
 
   def keypress(self, size, key):
-
     (maxcol,) = size
     p = self.edit_pos
+    if key == self.last_key:
+      self.last_key = None
+      self.double_press = True
+    else:
+      self.last_key = key
+
     if key == 'enter':
       if self.multiline and self.mode == VimEdit.insert_mode:
         key = "\n"
@@ -32,6 +54,7 @@ class VimEdit(urwid.Edit):
         urwid.emit_signal(self, 'done', self, self.get_edit_text())
         super(VimEdit, self).set_edit_text('')
       return
+
 # command mode
     elif key == 'esc':
       self.last_key = key
@@ -40,41 +63,72 @@ class VimEdit(urwid.Edit):
       if p==0: return key
       p = move_prev_char(self.edit_text,0,p)
       self.set_edit_pos(p)
+
+# delete modes
+    elif key == 'x' and self.mode == VimEdit.command_mode:
+      self.pref_col_maxcol = None, None
+      p = self.edit_pos
+      if not self._delete_highlighted():
+        if p == 0: return key
+        self.set_edit_text( self.edit_text[:p] +
+            self.edit_text[self.edit_pos + 1:] )
+        p = move_prev_char(self.edit_text, 0, p)
+        self.set_edit_pos( p )
+
     elif key == 'd' and self.mode == VimEdit.command_mode:
-      if self.last_key == 'd':
-        super(VimEdit, self).set_edit_text('')
-      else:
-        self.last_key = 'd'
-      return
+      if self.last_key == None and self.double_press:
+        text = self.get_edit_text()
+        x,y = self.get_cursor_coords((maxcol,))
+        text = text.split('\n')
+        text.pop(y-1)
+        if len(text) > 0:
+          text = [u + '\n' for u in text[:-1]] + [text[-1]]
+        else:
+          text = ['']
+        text = "".join(text)
+        super(VimEdit, self).set_edit_text(text)
 
 # insert modes
     elif key == 'i' and self.mode == VimEdit.command_mode:
-      self.last_key = key
       self.mode = VimEdit.insert_mode
       urwid.emit_signal(self, 'insert_mode', self, 'insert mode')
       return
+
     elif key == 'a' and self.mode == VimEdit.command_mode:
-      self.last_key = key
       self.mode = VimEdit.insert_mode
       urwid.emit_signal(self, 'insert_mode', self, 'insert mode')
       if p >= len(self.edit_text): return key
       p = move_next_char(self.edit_text,p,len(self.edit_text))
       self.set_edit_pos(p)
+      return
+
+    elif key == 'o' and self.mode == VimEdit.command_mode:
+      self.mode = VimEdit.insert_mode
+      urwid.emit_signal(self, 'insert_mode', self, 'insert mode')
+      x,y = self.get_cursor_coords((maxcol,))
+      text = self.get_edit_text()
+      text = text.split('\n')
+      if len(text) > 1:
+        text_last = ['\n'] + [u + '\n' for u in text[y:-1]] + [text[-1]]
+      else:
+        text_last = ['']
+      text = [u + '\n' for u in text[0:y]] + [' '] + text_last
+
+      text = "".join(text)
+      super(VimEdit, self).set_edit_text(text)
+      self.move_cursor_to_coords((maxcol,), 'left', y + 1)
       return
 
 # hjkl bindings
     elif key == 'h' and self.mode == VimEdit.command_mode:
-      self.last_key = key
       if p==0: return key
       p = move_prev_char(self.edit_text,0,p)
       self.set_edit_pos(p)
     elif key == 'l' and self.mode == VimEdit.command_mode:
-      self.last_key = key
       if p >= len(self.edit_text): return key
       p = move_next_char(self.edit_text,p,len(self.edit_text))
       self.set_edit_pos(p)
-    elif key in ('j', 'k'):
-      self.last_key = key
+    elif key in ('j', 'k') and self.mode == VimEdit.command_mode:
       self.highlight = None
 
       x,y = self.get_cursor_coords((maxcol,))
@@ -85,10 +139,12 @@ class VimEdit(urwid.Edit):
       else: y += 1
 
       if not self.move_cursor_to_coords((maxcol,),pref_col,y):
-          return key
+        if key =='j':
+          return 'down'
+        else:
+          return 'up'
 
     elif self._command_map[key] in (CURSOR_UP, CURSOR_DOWN):
-      self.last_key = key
       self.highlight = None
 
       x,y = self.get_cursor_coords((maxcol,))
@@ -99,9 +155,8 @@ class VimEdit(urwid.Edit):
       else: y += 1
 
       if not self.move_cursor_to_coords((maxcol,),pref_col,y):
-          return key
+        return key
     elif self.mode == VimEdit.insert_mode:
-      self.last_key = key
       super(VimEdit, self).keypress(size, key)
 
 
@@ -109,7 +164,7 @@ class VimEdit(urwid.Edit):
 palette = [('VimEdit', 'default,bold', 'default', 'bold'),]
 ask = VimEdit(caption = ('VimEdit', u"Vim Mode FTW!\n"), multiline = True)
 reply = urwid.Text(u'insert_mode')
-button = urwid.Button(u'Exit')
+button = VimButton(u'Exit')
 div = urwid.Divider()
 pile = urwid.Pile([ask, div, reply, div, button])
 top = urwid.Filler(pile, valign='top')
