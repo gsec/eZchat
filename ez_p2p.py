@@ -113,7 +113,7 @@ class client(threading.Thread):
     self.users_connected = 0
     self.timeout = 0
 
-    db_name = 'sqlite:///:' + name + '_memory:'
+    db_name = 'sqlite:///:memory:'
     self.UserDatabase = ed.UserDatabase(localdb = db_name)
 
 
