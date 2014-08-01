@@ -8,7 +8,7 @@
 from __future__ import print_function
 import sys, errno, time
 import socket, struct, select
-import Queue, threading
+import Queue, thread, threading
 import cPickle as pickle
 
 import ez_database as ed
@@ -57,6 +57,39 @@ class p2pReply(object):
     self.replyType = replyType
     self.data      = data
 
+
+
+class Operation(threading._Timer):
+  def __init__(self, *args, **kwargs):
+    threading._Timer.__init__(self, *args, **kwargs)
+    self.setDaemon(True)
+
+  def run(self):
+    #while True:
+      #self.finished.clear()
+    while not self.finished.isSet():
+      self.finished.wait(self.interval)
+      self.function(self, *self.args, **self.kwargs)
+      self.finished.set()
+      #else:
+        ##return
+
+class Manager(object):
+
+    ops = []
+
+    def add_operation(self, operation, interval, args=[], kwargs={}):
+        op = Operation(interval, operation, args, kwargs)
+        self.ops.append(op)
+        thread.start_new_thread(op.run, ())
+
+    def stop(self):
+        for op in self.ops:
+            op.cancel()
+        self._event.set()
+
+
+
 #==============================================================================#
 #                                 class client                                 #
 #==============================================================================#
@@ -75,7 +108,6 @@ class client(threading.Thread):
   """
   def __init__(self, name = ""):
     super(client, self).__init__()
-    #self.clientID = user
 
     self.commandQueue = Queue.Queue()
     self.replyQueue   = Queue.Queue()
@@ -110,11 +142,13 @@ class client(threading.Thread):
       sys.exit()
 
     self.ips = {}
+    self.command_history = {}
     self.users_connected = 0
     self.timeout = 0
 
     db_name = 'sqlite:///:memory:'
     self.UserDatabase = ed.UserDatabase(localdb = db_name)
+
 
 
   def success(self, success_msg = None):
@@ -296,22 +330,24 @@ class client(threading.Thread):
     try:
       returned_bytes = self.receive_bytes(package_size)
       if returned_bytes != None:
-        header_data, user_addr = returned_bytes
+        header_data, user_addr_header = returned_bytes
         if len(header_data) == package_size:
           msg_len = struct.unpack('<L', header_data)[0]
-          data, _ = self.receive_bytes(msg_len)
-          if len(data) == msg_len:
-            sdata = pickle.loads(data)
-            if isinstance(sdata, dict):
-              for command in sdata:
-                self.commandQueue.put(p2pCommand(command,
-                                                (sdata[command], user_addr)))
-            # pure data
-            else:
-              return sdata
+          returned_bytes = self.receive_bytes(package_size)
+          if returned_bytes != None:
+            data, user_addr = returned_bytes
+            if len(data) == msg_len and user_addr == user_addr_header:
+              sdata = pickle.loads(data)
+              if isinstance(sdata, dict):
+                for command in sdata:
+                  self.commandQueue.put(p2pCommand(command,
+                                                  (sdata[command], user_addr)))
+              # pure data
+              else:
+                return sdata
             return
-        self.replyQueue.put(self.error("Socket closed prematurely"))
-        self.shutdown()
+
+      self.replyQueue.put(self.error("Conflict in receive()"))
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
@@ -386,6 +422,19 @@ class client(threading.Thread):
           self.replyQueue.put(self.error(str(e)))
       except:
         self.replyQueue.put(self.error("Syntax error in send"))
+    elif "time" in str(data[:-1]):
+      #try:
+        _, t = data.split()
+        def hello(urst):
+          print ("Hello World!")
+          urst.finished.clear()
+
+        timer = Manager()
+        timer.add_operation(hello, 5)
+        #ti = timer(int(t))
+        #ti.start()
+      #except:
+        #self.replyQueue.put(self.error("Syntax error in time"))
     elif "ips" in str(data[:-1]):
       users = data.split()
       try:
