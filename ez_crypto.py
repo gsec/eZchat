@@ -1,4 +1,4 @@
-# -*- coding: utf_8 -*- =======================================================#
+# encoding=utf-8 ==============================================================#
 #                                  ez_crypto                                   #
 #==============================================================================#
 
@@ -11,11 +11,9 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 from Crypto import Random
-import ez_preferences as ep
 import os.path as path
-
-# Strong random generator as file object:
-RNG = Random.new()
+import ez_preferences as ep
+import ez_user as eu
 
 #==============================================================================#
 #                            class CryptoBaseClass                             #
@@ -25,13 +23,6 @@ class CryptoBaseClass(object):
   """
   Base class defining common functions.
   """
-  def __init__(self, plaintext='', **kwargs):
-    self.input_wrapper()
-    if plaintext:
-      self.args_handler(plaintext)
-    if kwargs:
-      self.attribute_setter(**kwargs)
-
   def attribute_setter(self, **kwargs):
     """
     Sets kwargs as instance attributes.
@@ -45,12 +36,6 @@ class CryptoBaseClass(object):
     """
     return {k:v for k, v in self.__dict__.iteritems() if k in return_list}
 
-  def input_wrapper(self): # pragma: no cover
-    pass
-
-  def args_handler(self, *args): # pragma: no cover
-    pass
-
 #==============================================================================#
 #                            class eZ_CryptoScheme                             #
 #==============================================================================#
@@ -61,14 +46,16 @@ class eZ_CryptoScheme(CryptoBaseClass):
   Encryption must be provided with following arguments as dictionary:
   @ARGS: etime, sender, recipient, content
   """
+  def __init__(self, **kwargs):
+    self.attribute_setter(**kwargs)
+
   def encrypt_sign(self):
     """
     Pack content, exact time and sender to plaintext block. Sign and encrypt
     plaintext block. Return crypto items as dictionary.
-
     """
     encrypt_items = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
-        'recipient', 'ciphered_mac']
+                     'recipient', 'ciphered_mac']
 
     # Encode with AES:
     _plain_block  = "\1".join([self.etime, self.sender, self.content])
@@ -115,23 +102,20 @@ class eZ_RSA(CryptoBaseClass):
   RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
   keylength: 2048 bit.
   """
-  def input_wrapper(self):
-    self.rsa_key_length = 2048
+  rsa_key_length = 2048
 
-  def key_loc(self, user):
+  def priv_key_loc(self, user):
     """
-    Sets the path for the keyfiles. Base path retrieved from the user
+    Sets the path for the private keyfiles. Base path retrieved from the user
     preferences.
     """
-    pub_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.pub')
-    priv_loc = path.join(ep.key_location, 'ez_rsa_' + user + '.priv')
-    return pub_loc, priv_loc
+    return path.join(ep.key_location, 'ez_rsa_' + user + '.priv')
 
   def get_private_key(self, user):
     """
     Import the senders keypair from Harddisk.
     """
-    with open(self.key_loc(user)[1], 'r') as keypairfile:
+    with open(self.priv_key_loc(user), 'r') as keypairfile:
       keypair = RSA.importKey(keypairfile.read())
     return keypair
 
@@ -139,53 +123,23 @@ class eZ_RSA(CryptoBaseClass):
     """
     Get recipient public key from database.
     """
-    #@TODO-----------------------------------------------
-    # currently a mock, insert here the db retrieve function
-    # and remove with-statement
-    #
-    with open(self.key_loc(user)[0], 'r') as pub_file:
-      pub_key = RSA.importKey(pub_file.read())
-    return pub_key
+    pub_key_stored = eu.user_database.get_entry(name=user).public_key
+    return RSA.importKey(pub_key_stored)
 
-  def generate_keys(self, user, write=True):
-    """
-    Create RSA keypair and return them as tuple. if write argument is true,
-    also write them to disk.
-    """
-    no_private_key = not path.isfile(self.key_loc(user)[1])
-    if not write or no_private_key:
-      fresh_key   = RSA.generate(self.rsa_key_length)
-      private_key = fresh_key
-      public_key  = fresh_key.publickey()
-      if not write:
-        return private_key, public_key
-    # Out of performance reasons, we don't cover this. If it wouldn't work,
-    # tests would fail anyway.
-    if write and no_private_key: # pragma: no cover
-      try:
-        with open(self.key_loc(user)[0], 'aw') as pub_file, \
-             open(self.key_loc(user)[1], 'aw') as priv_file:
-          pub_file.write(public_key.exportKey())
-          priv_file.write(private_key.exportKey())
-      except IOError:
-        print("Failed to write keys to disk")
-
-  def generate_keys_(self, user):
+  def generate_keys(self, user, testing=False):
     """
     Create RSA keypair, return the exported public key, which will be stored in
-    the database, and write the private key to disc. This might supersede
-    generate_keys as it is most likely the only use case.
+    the database, and write the exported private key to disc.
     """
-    no_private_key = not path.isfile(self.key_loc(user)[1])
-    fresh_key   = RSA.generate(self.rsa_key_length)
+    fresh_key   = RSA.generate(eZ_RSA.rsa_key_length)
     private_key = fresh_key
     public_key  = fresh_key.publickey()
-    try:
-      with open(self.key_loc(user)[1], 'aw') as priv_file:
+    if testing:
+      return private_key, public_key
+    else: #pragma : no cover
+      with open(self.priv_key_loc(user), 'w') as priv_file:
         priv_file.write(private_key.exportKey())
-    except IOError:
-      print("Failed to write private key to disk")
-    return public_key.exportKey()
+      return public_key.exportKey()
 
   def encrypt(self, public_key, plaintext):
     """
@@ -239,19 +193,15 @@ class eZ_AES(CryptoBaseClass):
   Encryption parameters as of crypt_mode_1: keylength = 32 Bytes,
   padding = '\01\00\00...', AES cipher mode = Cipher Block Chain.
   """
-  def args_handler(self, plaintext):
-    """
-    Handles single argument string plaintext
-    """
-    assert type(plaintext) is str, """Single argument must be plaintext
-    string!"""
-    self.plain      = plaintext
-    self.crypt_mode = 0
-
-  def input_wrapper(self):
+  def __init__(self, plaintext=None, **kwargs):
     crypt_parameters_mode_1 = {'KEY_LENGTH':32, 'INTERRUPT':"\1", 'PAD':"\0",
-        'MODE': AES.MODE_CBC}
+                               'MODE': AES.MODE_CBC}
     self.attribute_setter(**crypt_parameters_mode_1)
+    if type(plaintext) is str:
+      self.plain      = plaintext
+      self.crypt_mode = 0
+    if kwargs:
+      self.attribute_setter(**kwargs)
 
   def encrypt(self):
     """
@@ -310,7 +260,6 @@ class eZ_AES(CryptoBaseClass):
     mac_object.update(plaintext)
     return mac_object.hexdigest()
 
-
   def add_padding(self, text):
     """
     Pads text to whole blocks (AES blocksize = 16). Padding scheme is binary
@@ -329,3 +278,9 @@ class eZ_AES(CryptoBaseClass):
     Unpads decrypted text. Removes rightmost zeros and one (interrupt) byte.
     """
     return text.rstrip(self.PAD)[:-1]
+
+#==============================================================================#
+#                               GLOBAL INSTANCES                               #
+#==============================================================================#
+# Strong random generator as file object:
+RNG = Random.new()

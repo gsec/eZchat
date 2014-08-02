@@ -1,5 +1,4 @@
-# encoding=utf-8
-#==============================================================================#
+# encoding=utf-8 ==============================================================#
 #                                  ez_message                                  #
 #==============================================================================#
 
@@ -9,6 +8,7 @@
 from datetime import datetime
 from Crypto.Hash import SHA # Shorter IDs than with 256
 import ez_crypto as ec
+import ez_database as ed
 
 #==============================================================================#
 #                                class Message                                 #
@@ -58,3 +58,24 @@ class Message(object):
     lst = [clear_dict['sender'], "@", clear_dict['etime'], ":\n",
         clear_dict['content'], "\n:HMAC:", "[", sig_symb, "]"]
     return ' '.join(lst)
+
+#==============================================================================#
+#                            class MessageDatabase                             #
+#==============================================================================#
+
+class MessageDatabase(ed.Database):
+  """
+  The MessageDatabase class gives access to the saved, encrypted messages in the
+  SQL database
+  """
+
+  def __init__(self, **kwargs):
+    """
+    Opens a local sqlite database
+        localdb = 'sqlite:///ez.db'
+    which is saved to and loaded from disk automatically. To create a merely
+    temporary database in memory use 'sqlite:///:memory:'
+    """
+    ed.Database.__init__(self, 'Messages', Message, **kwargs)
+
+message_database = MessageDatabase()

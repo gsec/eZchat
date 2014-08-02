@@ -147,7 +147,7 @@ class client(threading.Thread):
     self.timeout = 0
 
     db_name = 'sqlite:///:memory:'
-    self.UserDatabase = ed.UserDatabase(localdb = db_name)
+    self.UserDatabase = eu.UserDatabase(localdb = db_name)
 
 
 
