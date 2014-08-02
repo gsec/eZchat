@@ -1,4 +1,4 @@
-eZchat
+eZchat [![Build Status](https://travis-ci.org/gsec/eZchat.svg?branch=master)](https://travis-ci.org/gsec/eZchat)
 =======
 Manifesto
 --------------------------------------------------------------------------------
@@ -63,6 +63,3 @@ Warning
 As we are still in heavy development, you might want to check
 [Travis](https://travis-ci.org/gsec/eZchat) to see the current build status of
 the continuous integration server.
-
-Right now, it seems to be
-![build status](https://travis-ci.org/gsec/eZchat.svg?branch=master)
