@@ -30,9 +30,9 @@ def test_Message():
 
   # I can only decrypt it with ez_rsa_Bob.priv
   print(mx.clear_text())
-  # bcn : This leads to an incorrect decryption! Please clarify! What is the
-  # difference between mac and signature?
   # gsec : 'trying to hijack this': properly formatted, but wrong ciphered mac
+  # i.e. mac has been altered
+  print("--TEST-- The following should output a decrytpion warning:")
   mx.ciphered_mac = """
   cql2uQqwu10lnSK+sNBdpOz4o2QYQOdLRfYf+ITX8Tk/lHbn0CqWnDNUcFkB2xgJD0QyGUsP/JQe
   pXYHRgma4y0MThZ4QA47c/IpIMi4RwuGdpGGPgovZgsrKYSg57pzZHI0KdsUSY+gl/nxzxVRTxaT
@@ -40,6 +40,5 @@ def test_Message():
   FUziCxVI3lVC8k517bWDqX3xh1fb3USqhS5c2mlCuk+95CIlS8gVIBgWpEK1knwlI4lGApIyXenA
   jlOoIMizUmFgoQRGZ1hUONpZzthQ/CpyumJu/w== """
   invalid = ':HMAC: [ ✗ ]'
-  # TODO: Make this work again !!! I want coverage
-  #eq_ (mx.clear_text()[-len(invalid):], invalid)
+  eq_ (mx.clear_text()[-len(invalid):], invalid)
 

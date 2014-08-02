@@ -36,6 +36,7 @@ class CryptoBaseClass(object):
     """
     return {k:v for k, v in self.__dict__.iteritems() if k in return_list}
 
+
 #==============================================================================#
 #                            class eZ_CryptoScheme                             #
 #==============================================================================#
@@ -95,14 +96,13 @@ class eZ_CryptoScheme(CryptoBaseClass):
 #==============================================================================#
 #                                 class eZ_RSA                                 #
 #==============================================================================#
-
 class eZ_RSA(CryptoBaseClass):
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
   keylength: 2048 bit.
   """
-  rsa_key_length = 2048
+  RSA_KEY_SIZE = 2048
 
   def priv_key_loc(self, user):
     """
@@ -131,7 +131,7 @@ class eZ_RSA(CryptoBaseClass):
     Create RSA keypair, return the exported public key, which will be stored in
     the database, and write the exported private key to disc.
     """
-    fresh_key   = RSA.generate(eZ_RSA.rsa_key_length)
+    fresh_key   = RSA.generate(eZ_RSA.RSA_KEY_SIZE)
     private_key = fresh_key
     public_key  = fresh_key.publickey()
     if testing:
@@ -156,8 +156,11 @@ class eZ_RSA(CryptoBaseClass):
     information.)
     """
     decipher_scheme = PKCS1_OAEP.new(private_key)
-    plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
-    return plaintext
+    try:
+      plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
+      return plaintext
+    except ValueError:
+      print("Warning: Could not decrypt, wrong format.")
 
   def sign(self, private_key, plaintext):
     """
@@ -254,7 +257,7 @@ class eZ_AES(CryptoBaseClass):
 
   def hmac_digest(self, key, plaintext):
     """
-    Returns the hexdigest of a message,  if provided with key.
+    Returns the hexdigest of a message, if provided with key.
     """
     mac_object      = HMAC.new(key, digestmod=SHA256)
     mac_object.update(plaintext)
@@ -278,6 +281,7 @@ class eZ_AES(CryptoBaseClass):
     Unpads decrypted text. Removes rightmost zeros and one (interrupt) byte.
     """
     return text.rstrip(self.PAD)[:-1]
+
 
 #==============================================================================#
 #                               GLOBAL INSTANCES                               #
