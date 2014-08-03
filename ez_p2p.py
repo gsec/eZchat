@@ -177,7 +177,6 @@ class client(threading.Thread):
     print ("ping request from:", user_addr)
     packet   = {p2pCommand.send_packet: packet_info}
     msg    = pickle.dumps(ping)
-    time.sleep(3)
     try:
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
@@ -218,7 +217,8 @@ class client(threading.Thread):
   def ips_request(self, cmd):
     user_id = cmd.data
     if not user_id in self.ips:
-      print ("user not in client list")
+      #print ("user not in client list")
+      self.replyQueue.put(self.error("user not in client list"))
     else:
       master  = self.ips[user_id]
       ping    = {p2pCommand.distributeIPs: user_id}
@@ -293,7 +293,7 @@ class client(threading.Thread):
     """
     user_id, user_addr = cmd.data
 
-    self.replyQueue.put(self.success("ping request from:", user_addr))
+    self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
     ping   = {p2pCommand.ping_success: user_id}
     msg    = pickle.dumps(ping)
     #time.sleep(3)
@@ -493,7 +493,6 @@ class client(threading.Thread):
                        if self.ips[u_id] != master }
 
       for other_id in other_users:
-        print "other_users[other_id]:", other_users[other_id]
         relay_request  = {p2pCommand.connect: other_users[other_id]}
         relay_request2 = {p2pCommand.connect: master}
         msg            = pickle.dumps(relay_request)
@@ -767,7 +766,7 @@ class client(threading.Thread):
         if i == 0:
           self.CLI()
         elif i == self.sockfd:
-          print ("receiving data")
+          #print ("receiving data")
           self.commandQueue.put(p2pCommand(p2pCommand.receive))
 
       try:

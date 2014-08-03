@@ -89,10 +89,3 @@ class Packets(object):
   def chunks(self, step_size):
     for i in xrange(0, len(self.data), step_size):
       yield self.data[i:i + step_size]
-
-
-
-#msg = "blabla123"
-#mypacket = Packets(msg, 3)
-#del mypacket.packets[1]
-#print mypacket.reconstruct_data()
