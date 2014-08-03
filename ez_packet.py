@@ -43,7 +43,7 @@ class Packets(object):
 
   - data = arbitrary data or even python objects.
   """
-  def __init__(self, data = None, chunksize = 1):
+  def __init__(self, data = None, chunksize = 100):
 
     if data == None:
       return

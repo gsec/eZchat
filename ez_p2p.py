@@ -14,6 +14,8 @@ import cPickle as pickle
 import ez_database as ed
 import ez_user     as eu
 import ez_packet   as ep
+import ez_message  as em
+from datetime import datetime
 
 #==============================================================================#
 #                               class p2pCommand                               #
@@ -30,8 +32,9 @@ class p2pCommand(object):
   shutdown, send, receive                                = range(5, 8)
   servermode, conn_request, relay_request, distributeIPs = range(8, 12)
   ping_request, ping_reply, ping_success, ips_request    = range(12, 16)
-  send_packet                                            = 16
-  test_func                                              = 17
+  send_packet, packet_request                            = range(16,18)
+  add_contact, contact_request_in, contact_request_out   = range(18, 21)
+  test_func                                              = 21
 
   def __init__(self, msgType = None, data = None):
     self.msgType  = msgType
@@ -125,6 +128,7 @@ class client(threading.Thread):
         p2pCommand.shutdown:                 self.shutdown,
         p2pCommand.send:                     self.send,
         p2pCommand.send_packet:              self.send_packet,
+        p2pCommand.packet_request:           self.packet_request,
         p2pCommand.receive:                  self.receive,
         p2pCommand.servermode:               self.servermode,
         p2pCommand.ping_request:             self.ping_request,
@@ -133,6 +137,9 @@ class client(threading.Thread):
         p2pCommand.ips_request:              self.ips_request,
         p2pCommand.distributeIPs:            self.distributeIPs,
         p2pCommand.relay_request:            self.relay_request,
+        p2pCommand.add_contact:              self.add_contact,
+        p2pCommand.contact_request_in:       self.contact_request_in,
+        p2pCommand.contact_request_out:      self.contact_request_out,
         p2pCommand.test_func:                self.test_func
         }
 
@@ -155,8 +162,18 @@ class client(threading.Thread):
     self.users_connected = 0
     self.timeout = 0
 
-    db_name = 'sqlite:///:memory:'
+    db_name = 'sqlite:///:' + self.name + 'memory:'
     self.UserDatabase = eu.UserDatabase(localdb = db_name)
+
+    print "self.UserDatabase.UID_list():", self.UserDatabase.UID_list()
+
+    if not self.UserDatabase.in_DB(name = self.name):
+      print "new user created"
+      self.myself  = eu.User(name = self.name)
+      self.UserDatabase.add_entry(self.myself)
+    else:
+      print "retrieved user"
+      self.myself = self.UserDatabase.get_entry(name = self.name)
 
   def send_packet(self, cmd):
     packets_hash, packet_number, user_id = cmd.data
@@ -182,6 +199,26 @@ class client(threading.Thread):
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
+  def contact_request_out(self, cmd):
+    user_id = cmd.data
+    if user_id in self.ips:
+      user_addr = self.ips[user_id]
+      contact_request = {p2pCommand.contact_request_in: self.myself}
+      msg             = pickle.dumps(contact_request)
+      try:
+        self.sockfd.sendto(msg, user_addr)
+      except IOError as e:
+        self.replyQueue.put(self.error(str(e)))
+
+  def contact_request_in(self, cmd):
+    user, user_addr = cmd.data
+    myself    = {p2pCommand.add_contact: self.myself}
+    msg       = pickle.dumps(myself)
+    try:
+      self.sockfd.sendto(msg, user_addr)
+    except IOError as e:
+      self.replyQueue.put(self.error(str(e)))
+
 
   def start_background_process(self, pr_key, proc, interval, *args, **kwargs):
     pr = Timer(interval, proc, args, kwargs)
@@ -201,9 +238,22 @@ class client(threading.Thread):
   def error(self, error_msg = None):
     return p2pReply(p2pReply.error, error_msg)
 
-  def add_client(self, user_id, addr):
+  def add_client(self, user_id, user_addr):
     self.users_connected += 1
-    self.ips[user_id] = addr
+    self.ips[user_id]  = user_addr
+    user_ip, user_port = user_addr
+
+  def add_contact(self, cmd):
+    new_user, _  = cmd.data
+    if not self.UserDatabase.in_DB(UID = new_user.UID):
+      self.myself  = eu.User(name = self.name)
+      self.UserDatabase.add_entry(new_user)
+      print "new_user:", new_user.name
+    else:
+      print "user alrdy in database -> contact updated"
+      self.myself = self.UserDatabase.update_entry(new_user)
+
+
 
   def remove_client(self, user_id):
     self.UserDatabase.add_entries
@@ -597,6 +647,7 @@ class client(threading.Thread):
                 reconstructed, result = packets.reconstruct_data()
                 if reconstructed:
                   self.replyQueue.put(self.success(result))
+                  print "self.background_processes.keys():", self.background_processes.keys()
                   pr = self.background_processes[pr_key]
                   pr.finished.set()
                   pr.cancel()
@@ -612,11 +663,11 @@ class client(threading.Thread):
                 update_and_reconstruct_packets()
 
               else:
-                pass
-                #if not pr_key in self.background_processes:
-                  #self.start_background_process( pr_key,
-                                                 #update_and_reconstruct_packets,
-                                                 #5 )
+                #pass
+                if not pr_key in self.background_processes:
+                  self.start_background_process( pr_key,
+                                                 update_and_reconstruct_packets,
+                                                 5 )
 
         # raw data
         else:
@@ -636,8 +687,13 @@ class client(threading.Thread):
       self.commandQueue.put(p2pCommand(p2pCommand.shutdown))
       return
     elif str(data[:-1]) == "users":
+      print "online users"
       for user in self.ips:
         print "user:", user, self.ips[user]
+      print "contacts"
+      UIDs = self.UserDatabase.UID_list()
+      for entry in self.UserDatabase.get_entries(UIDs):
+        print "contact:", entry.name
     elif str(data[:-1]) == "dist":
       self.commandQueue.put(p2pCommand(p2pCommand.distributeIPs))
     elif "ping" in str(data[:-1]):
@@ -712,6 +768,14 @@ class client(threading.Thread):
       except:
         self.replyQueue.put(self.error("Syntax error in ips"))
 
+    elif "key" in str(data[:-1]):
+      try:
+        _, user_id = data.split()
+        self.commandQueue.put(p2pCommand(p2pCommand.contact_request_out,
+                                        (user_id)))
+      except:
+        self.replyQueue.put(self.error("Syntax error in key"))
+
 
     elif "verify" in str(data[:-1]):
       for key in self.stored_packets:
@@ -725,21 +789,30 @@ class client(threading.Thread):
             self.commandQueue.put(cmd)
 
     else:
-      try:
+      #try:
         user_id, msg = data.split()
-        packets = ep.Packets(data = msg)
+        if not user_id in self.ips:
+          return
+        if not self.UserDatabase.in_DB(name = user_id):
+          return
+
+        print "self.myself.name:", self.myself.name
+        print "self.user_id:", user_id
+        print "msg:", msg
+        mx = em.Message(self.name, user_id, msg)
+        packets = ep.Packets(data = mx)
         print "packets.max_packets:", packets.max_packets
         self.sent_packets[packets.packets_hash] = packets
 
         for packet_id in packets.packets:
-          if packet_id != 5:
-            data = pickle.dumps(packets.packets[packet_id])
-            if len(data) > 2048:
-              self.replyQueue.put(self.error("data larger than 2048 bytes"))
-            else:
-              self.commandQueue.put(p2pCommand(p2pCommand.send, (user_id, data)))
-      except:
-        self.replyQueue.put(self.error("Syntax error in command"))
+          #if packet_id != 5:
+          data = pickle.dumps(packets.packets[packet_id])
+          if len(data) > 2048:
+            self.replyQueue.put(self.error("data larger than 2048 bytes"))
+          else:
+            self.commandQueue.put(p2pCommand(p2pCommand.send, (user_id, data)))
+      #except:
+        #self.replyQueue.put(self.error("Syntax error in command"))
 
   def run(self):
     """
