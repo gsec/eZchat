@@ -42,6 +42,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
+# Refactoring
+.ropeproject
+
 # Translations
 *.mo
 
