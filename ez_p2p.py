@@ -156,7 +156,7 @@ class client(threading.Thread):
     self.timeout = 0
 
     db_name = 'sqlite:///:memory:'
-    self.UserDatabase = ed.UserDatabase(localdb = db_name)
+    self.UserDatabase = eu.UserDatabase(localdb = db_name)
 
   def send_packet(self, cmd):
     packets_hash, packet_number, user_id = cmd.data

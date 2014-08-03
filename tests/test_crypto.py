@@ -1,10 +1,11 @@
-#! /usr/bin/env python
-# -*- coding: utf_8 -*-
-
+# encoding=utf-8
 from __future__ import print_function
 from test_tools import *
+
 import ez_crypto as ec
 import ez_message as em
+import ez_database as ed
+import ez_user as eu
 
 text01 = """
 If your public attribute name collides with a reserved keyword, append a single
@@ -14,10 +15,9 @@ is the preferred spelling for any variable or argument which is known to be a
 class, especially the first argument to a class method.)
 """
 text02 = "hi, was geht"
-author = 'derEine'
-reader = 'derAndere'
+author = 'Alice'
+reader = 'Bob'
 extime = '2014-07-15 11:09:43.059036'
-
 
 def test_AES():
   """
@@ -37,14 +37,14 @@ def test_AES():
   print("Plain:\n", ungeheim)
   eq_(text01, ungeheim['plain'])
 
- #Text Padding
+  # Text Padding
   text03 = "123456"
   text04 = "123456\1\0\0\0\0\0\0\0\0\0\1\1\1\0\0\0"
   text05 = "1234567890abcdef"
   pad_block = "\1" + 15 * "\0"
   aes_object = ec.eZ_AES(text02)
   eq_(aes_object.add_padding(text03), "123456\1\0\0\0\0\0\0\0\0\0")
-  # actually covers line 307 (if pad_length = 0 ) in pad function:
+  # covers line (if pad_length = 0 ) in pad function:
   eq_(aes_object.add_padding(text05), text05 + pad_block)
 
   eq_(aes_object.remove_padding(aes_object.add_padding(text04)), text04)
@@ -54,27 +54,25 @@ def test_RSA():
   Asymmetric RSA encryption tests
   """
   er = ec.eZ_RSA()
-  #temporary key generation
-  priv_key, pub_key = er.generate_keys(user="FAKE_USER", write=False)
+  # temporary key generation
+  priv_key, pub_key = er.generate_keys(user="FAKE_USER", testing=True)
   sig02 =  er.sign(priv_key, text02)
   wrongsig = 'somerandomstuff'
   eq_(er.verify(pub_key, text02, sig02), True)
   eq_(er.verify(pub_key, text02, wrongsig), False)
-  if er.verify(pub_key, text01, sig02):
-    print("sig sucess")
-  else:
-    print("Signature FAILED (this is intentional for testing)")
+  eq_(er.verify(pub_key, text01, sig02), False)
 
 def test_OmniScheme():
   """
-  Overal Crypto Scheme with AES + RSA(AES_key)
+  Overall Crypto Scheme with AES + RSA(AES_key)
   """
   er = ec.eZ_RSA()
-  # They are only generated if they don't exist
-  er.generate_keys(user=author, write=True)
-  er.generate_keys(user=reader, write=True)
+  if not eu.user_database.in_DB(name=author):
+    eu.user_database.add_entry(eu.User(author, '0.0.0.0' + ':' + '0'))
+  if not eu.user_database.in_DB(name=reader):
+    eu.user_database.add_entry(eu.User(reader, '0.0.0.0' + ':' + '0'))
   package = {'etime':extime, 'sender':author, 'recipient':reader,
-      'content':text01}
+             'content':text01}
   es = ec.eZ_CryptoScheme(**package)
   supergeheim = es.encrypt_sign()
 
