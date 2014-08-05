@@ -1,6 +1,7 @@
 # eZchat specifics
 history.json
 *.db
+deps.*
 
 # rsa keys
 *.priv
@@ -51,3 +52,7 @@ coverage.xml
 
 # misc files, documentation, examples etc.
 misc/
+
+# generally ignore dotfiles
+# use 'git add -f <filename>' if necessary
+.*

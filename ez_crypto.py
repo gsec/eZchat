@@ -19,7 +19,6 @@ import ez_user as eu
 #                            class CryptoBaseClass                             #
 #==============================================================================#
 class CryptoBaseClass(object):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   Base class defining common functions.
   """
@@ -41,11 +40,10 @@ class CryptoBaseClass(object):
 #                            class eZ_CryptoScheme                             #
 #==============================================================================#
 class eZ_CryptoScheme(CryptoBaseClass):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   Outer crypto API to encrypt+sign and decrypt+verify message objects.
-  Encryption must be provided with following arguments as dictionary:
-  @ARGS: etime, sender, recipient, content
+  Encryption must be provided as dictionary with following keys:
+  ['etime', 'sender', 'recipient', 'content']
   """
   def __init__(self, **kwargs):
     self.attribute_setter(**kwargs)
@@ -97,7 +95,6 @@ class eZ_CryptoScheme(CryptoBaseClass):
 #                                 class eZ_RSA                                 #
 #==============================================================================#
 class eZ_RSA(CryptoBaseClass):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
   keylength: 2048 bit.
@@ -188,11 +185,10 @@ class eZ_RSA(CryptoBaseClass):
 #                                 class eZ_AES                                 #
 #==============================================================================#
 class eZ_AES(CryptoBaseClass):
-#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   """
   AES cipher object. Provides symmetric encryption. Requires plaintext string
-  or ciphered dictionary object. Cipherobject needs folowing entries:
-  @PARAMS: ['iv', 'key', 'cipher']
+  or ciphered dictionary object. Dictionary object must contain following keys:
+  ['iv', 'key', 'cipher']
   Encryption parameters as of crypt_mode_1: keylength = 32 Bytes,
   padding = '\01\00\00...', AES cipher mode = Cipher Block Chain.
   """

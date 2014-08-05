@@ -8,7 +8,7 @@ from urwid.util import move_next_char, move_prev_char
 from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
     CURSOR_UP, CURSOR_DOWN, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT)
 
-import signal, os
+import signal
 
 
 #==============================================================================#
@@ -18,7 +18,7 @@ import signal, os
 class VimButton(urwid.Button):
   insert_mode, command_mode, visual_mode = range(3)
 
-  def __init__(self,*args, **kwargs):
+  def __init__(self, *args, **kwargs):
     self.__super.__init__(*args, **kwargs)
 
   def keypress(self, size, key):
@@ -54,7 +54,7 @@ class VimCommandLine(urwid.Edit):
 
   def evalutate_command(self):
     command = self.get_edit_text()[1:]
-    if command == 'q':
+    if command == 'q' or command == 'quit':
       urwid.emit_signal(self, 'exit_ez_chat')
 
 #==============================================================================#
@@ -89,7 +89,7 @@ class VimEdit(urwid.Edit):
         urwid.emit_signal(self, 'done', self, self.get_edit_text())
         super(VimEdit, self).set_edit_text('')
       return
-    elif key == ':':
+    elif key == ':' and self.mode == VimEdit.command_mode:
       if self.mode == VimEdit.command_mode:
         urwid.emit_signal(self, 'command_line', self, ':')
         super(VimEdit, self).set_edit_text('')
