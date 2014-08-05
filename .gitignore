@@ -43,9 +43,6 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# Refactoring
-.ropeproject
-
 # Translations
 *.mo
 
@@ -55,3 +52,7 @@ coverage.xml
 
 # misc files, documentation, examples etc.
 misc/
+
+# generally ignore dotfiles
+# use 'git add -f <filename>' if necessary
+.*
