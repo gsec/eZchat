@@ -90,9 +90,7 @@ class ez_process(type):
     else:
       stage = 1
     for arg in args:
-      print "arg:", arg
     for key, value in kwargs.items():
-      print "key:", key
       if key == 'send':
         cls.send = value
         cls.command[ez_process.send] = cls.send
@@ -171,11 +169,11 @@ class ez_ping(object):
 
   # the commands are defined by ez_process commands and ez_process commands are
   # mapped back to class commands which do atm not exists.
+  process_name       = "ping"
   process_definition = {1:{'cmd': ez_process.send, "break": 1},
                         2:{'cmd': ez_process.send},
                         3:{'cmd': ez_process.stop, 'end': ping_success}}
 
-  process_name       = "ping"
   def __init__(self):
     print "init class"
     self.process()

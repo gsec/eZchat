@@ -15,6 +15,8 @@ import ez_database as ed
 import ez_user     as eu
 import ez_packet   as ep
 import ez_message  as em
+import ez_prozess  as ez
+
 from datetime import datetime
 
 #==============================================================================#
@@ -174,6 +176,11 @@ class client(threading.Thread):
     else:
       print "retrieved user"
       self.myself = self.UserDatabase.get_entry(name = self.name)
+
+
+    # create different processes
+
+
 
   def send_packet(self, cmd):
     packets_hash, packet_number, user_id = cmd.data
