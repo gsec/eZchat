@@ -1,4 +1,7 @@
 from ez_p2p import p2pCommand, Timer
+import sys, errno, time
+
+import Queue, thread, threading
 #================#
 #  ping methods  #
 #================#
@@ -91,24 +94,22 @@ class ez_process(type):
     for key, value in kwargs.items():
       print "key:", key
       if key == 'send':
-        print "value:", value
         cls.send = value
+        cls.command[ez_process.send] = cls.send
 
-    cmd_order = ["cmd", "arg", "break", "end"]
+    cmd_order = ["cmd", "arg"]
 
     processes = cls.process_definition
     for pr_num in processes:
-      print "processes[pr_num]:", processes[pr_num]
       for cmd in cmd_order:
         if cmd in processes[pr_num]:
       #for pr_name in processes[pr_num]:
           pr = processes[pr_num][cmd]
           if pr in cls.command:
-            print "pr:", pr, cmd
-            print "cls.command:", cls.command
-            cls.proceed[pr_num] = cls.send
+            cls.proceed[pr_num].append(cls.send)
             #pass
       #if 'cmd' in processes[pr_num]:
+
     return super(ez_process, cls).__call__()
 
 
@@ -123,38 +124,64 @@ class ez_process(type):
 
     print "setting class attributes"
     cls.recipients = []
-    cls.proceed = {}
-    cls.command = { ez_process.send: cls.send }
-
+    cls.proceed    = {}
+    cls.timer      = {}
+    cls.command    = {}
 
     print "makeing sure the class structure is set up properly"
     assert("process_definition" in dct)
 
-    processes = dct["process_definition"]
+    processes  = dct["process_definition"]
     cls.stages = len(processes)
+    cls.stage  = 0
+
+    for stage in range(1, cls.stages):
+      cls.proceed[stage] = []
 
 
+    def start_timer(cls, interval, proc, *args, **kwargs):
+      pr = Timer(interval, proc, args, kwargs)
+      cls.timer[cls.stage] = pr
+      thread.start_new_thread(pr.run, ())
 
-    #for key, value in dct.items():
-      #print "key:", key
+    def gen_timer(cls, arg, pr_num):
+      if isinstance(arg, int):
+        def process_failed(self):
+          print cls.process_name + " failed"
+        cls.proceed[pr_num].append(lambda self: start_timer(self, arg,
+                                                            process_failed))
+
+    def gen_stop(cls, arg, pr_num):
+      pass
+
+    cmds = {'break': gen_timer, 'end': gen_stop}
+    for pr_num in processes:
+      print "processes[pr_num]:", processes[pr_num]
+      for cmd in cmds:
+        if cmd in processes[pr_num]:
+          cmds[cmd](cls, processes[pr_num][cmd], pr_num)
+    #sys.exit()
 
 
 class ez_ping(object):
   __metaclass__ = ez_process
 
-
   def ping_success():
     print "ping success"
 
   # the commands are defined by ez_process commands and ez_process commands are
-  # mapped back to class commands which do atm not exists. Looks like a hack,
-  # but makes it easy to induce the commands afterwards and I wouldnt know how
-  # to do that otherwise
-  process_definition = {1:{'cmd': ez_process.send, "break": Timer},
+  # mapped back to class commands which do atm not exists.
+  process_definition = {1:{'cmd': ez_process.send, "break": 1},
                         2:{'cmd': ez_process.send},
                         3:{'cmd': ez_process.stop, 'end': ping_success}}
+
+  process_name       = "ping"
   def __init__(self):
-    pass
+    print "init class"
+    self.process()
+  def process(self):
+    for f in self.proceed[self.stage]:
+      f(self)
     #self.stages = 3
   def foo(self, para):
     pass
@@ -162,11 +189,12 @@ class ez_ping(object):
 def Bar(self):
   print "bar"
 
-t = ez_ping(2, stage = 3, send = Bar)
+t = ez_ping(2, stage = 1, send = Bar)
 #print "t.d:", t.d
 
 #print t.proceed
-t.send()
-print t.proceed
+#t.send()
+#print t.proceed
+time.sleep(3)
 
 #print type(ez_ping.ping_success)
