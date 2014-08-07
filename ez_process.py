@@ -1,3 +1,11 @@
+#==============================================================================#
+#                                ez_prozess.py                                 #
+#==============================================================================#
+
+#============#
+#  Includes  #
+#============#
+
 import sys, errno, time
 import cPickle as pickle
 
@@ -85,9 +93,10 @@ class ez_ping(object):
 
   def __init__(self, *args, **kwargs):
     self.handlers.update( {
-        'ping_request': self.ping_request,
-        'ping_reply'  : self.ping_reply,
-        'ping_success': self.ping_success
+        'ping_request'   : self.ping_request,
+        'ping_reply'     : self.ping_reply,
+        'ping_success'   : self.ping_success,
+        'ping_background': self.ping_background
         } )
     super(ez_ping, self).__init__(*args, **kwargs)
 
@@ -169,6 +178,37 @@ class ez_ping(object):
 
     self.replyQueue.put(self.error("ping failed: " + user_id))
     return False
+
+  def ping_background(self, cmd):
+    # the process id
+    pr_key = ('ping_reply', 'all')
+
+    # define the function called by the timer after the countdown
+    # ping_background_func calls itself resulting in an endless ping chain.
+    def ping_background_func(self_timer, queue, user_ids):
+      pr_key = ('ping_reply', 'all')
+      # ping all users
+      for user_id in user_ids:
+        queue.put(p2pCommand('ping_request', user_id))
+
+      # check if the process still running, i.e. that it has not been killed
+      # the process might have been killed while this function called.
+      # I don't know if this case can occur, so the if case is just to make it
+      # safe
+      if pr_key in self.background_processes:
+        # Reset process. I wanted to avoid a while true loop as a background
+        # process thats why the following steps are necessary. We might
+        # implement a reset method.
+        pr = self.background_processes[pr_key]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[pr_key]
+        self.start_background_process(pr_key, ping_background_func,
+                                      10, self.commandQueue, self.ips.keys())
+
+    # start the background process
+    self.start_background_process(pr_key, ping_background_func, 10,
+                                  self.commandQueue, self.ips.keys())
 
 
 #==============================================================================#
