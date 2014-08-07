@@ -6,14 +6,13 @@
 #  Includes  #
 #============#
 #from __future__ import print_function
-import sys, errno, time
-import socket, struct, select
+import sys, time
+import socket, select
 import Queue, thread, threading
 import cPickle as pickle
 
 from ez_process  import ez_process, p2pCommand, p2pReply
 
-import ez_database as ed
 import ez_user     as eu
 import ez_packet   as ep
 import ez_message  as em
@@ -54,32 +53,6 @@ class client(ez_process, threading.Thread):
     # internal cli enabled
     self.enableCLI = True
 
-    # Storing client functionalities
-    self.handlers = {
-        p2pCommand.connect:                  self.connect,
-        p2pCommand.connect_server:           self.connect_server,
-        p2pCommand.connection_success:       self.connection_success,
-        p2pCommand.connection_request:       self.connection_request,
-        p2pCommand.connection_nat_traversal: self.connection_nat_traversal,
-        p2pCommand.shutdown:                 self.shutdown,
-        p2pCommand.send:                     self.send,
-        p2pCommand.send_packet:              self.send_packet,
-        p2pCommand.packet_request:           self.packet_request,
-        p2pCommand.receive:                  self.receive,
-        p2pCommand.servermode:               self.servermode,
-        p2pCommand.ping_request:             self.ping_request,
-        p2pCommand.ping_reply:               self.ping_reply,
-        p2pCommand.ping_success:             self.ping_success,
-        p2pCommand.ips_request:              self.ips_request,
-        p2pCommand.distributeIPs:            self.distributeIPs,
-        p2pCommand.relay_request:            self.relay_request,
-        p2pCommand.add_contact:              self.add_contact,
-        p2pCommand.contact_request_in:       self.contact_request_in,
-        p2pCommand.contact_request_out:      self.contact_request_out,
-        p2pCommand.process:                  self.process,
-        p2pCommand.test_func:                self.test_func
-        }
-
     try:
       self.sockfd = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
     except socket.eror, msg:
@@ -88,20 +61,22 @@ class client(ez_process, threading.Thread):
       self.replyQueue.put(self.error(error_msg))
       sys.exit()
 
+    # online users are stored in the ips dict
+    # ips = {user_id: (user_host, user_port)}
     self.ips = {}
     self.command_history = {}
 
-    self.update_packets = False
+    # sent_packets are cached in case they need to be send again
     self.sent_packets   = {}
+
+    # received packets are cached in case packets belonging to a group of
+    # packets is missing or packets being corrupted
     self.stored_packets = {}
 
-    self.users_connected = 0
-    self.timeout = 0
+    self.timeout = 0.1
 
     db_name = 'sqlite:///:' + self.name + 'memory:'
     self.UserDatabase = eu.UserDatabase(localdb = db_name)
-
-    print "self.UserDatabase.UID_list():", self.UserDatabase.UID_list()
 
     if not self.UserDatabase.in_DB(name = self.name):
       print "new user created"
@@ -127,11 +102,18 @@ class client(ez_process, threading.Thread):
     data = sys.stdin.readline()
     if not data:
       return
-    # compare command without eol
+
+#=================#
+#  close process  #
+#=================#
     if str(data[:-1]) == "close":
       self.enableCLI = False
-      self.commandQueue.put(p2pCommand(p2pCommand.shutdown))
+      self.commandQueue.put(p2pCommand('shutdown'))
       return
+
+#===========================#
+#  online users + contacts  #
+#===========================#
     elif str(data[:-1]) == "users":
       print "online users"
       for user in self.ips:
@@ -140,100 +122,103 @@ class client(ez_process, threading.Thread):
       UIDs = self.UserDatabase.UID_list()
       for entry in self.UserDatabase.get_entries(UIDs):
         print "contact:", entry.name
-    elif str(data[:-1]) == "dist":
-      self.commandQueue.put(p2pCommand(p2pCommand.distributeIPs))
+
+#================#
+#  ping process  #
+#================#
     elif "ping" in str(data[:-1]):
       try:
         _, user_id = data.split()
-        self.commandQueue.put(p2pCommand(p2pCommand.ping_request,
-                                         user_id))
+        self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in ping"))
+
+#============================#
+#  add user to online users  #
+#============================#
     elif "add" in str(data[:-1]):
       try:
         _, user_id, host, port = data.split()
         self.add_client((str(host), int(port)), user_id)
-        self.commandQueue.put(p2pCommand(p2pCommand.ping_request,
-                                         user_id))
+        self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in user"))
+
+#===================#
+#  start listening  #
+#===================#
     elif "servermode" in str(data[:-1]):
       try:
         _, host, port = data.split()
-        self.commandQueue.put(p2pCommand(p2pCommand.servermode,
-                                        (host, int(port))))
+        self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
       except:
         self.replyQueue.put(self.error("Syntax error in servermode"))
-    elif "send" in str(data[:-1]):
-      try:
-        _, host, port, msg = data.split()
-        user_addr = (str(host), int(port))
-        msg       = pickle.dumps(msg)
-        header    = struct.pack('<L', len(msg))
-        try:
-          self.sockfd.sendto(header, user_addr)
-          self.sockfd.sendto(msg, user_addr)
-        except IOError as e:
-          self.replyQueue.put(self.error(str(e)))
-      except:
-        self.replyQueue.put(self.error("Syntax error in send"))
-    elif "time" in str(data[:-1]):
-      try:
-        _, t = data.split()
-        def put_command(urst):
-          cmd = p2pCommand(p2pCommand.test_func, "hi")
-          self.commandQueue.put(cmd)
 
-        self.start_background_process(put_command, int(t))
-      except:
-        self.replyQueue.put(self.error("Syntax error in time"))
+    #elif "time" in str(data[:-1]):
+      #try:
+        #_, t = data.split()
+        #def put_command(urst):
+          #cmd = p2pCommand('test_func', "hi")
+          #self.commandQueue.put(cmd)
+
+        #self.start_background_process(put_command, int(t))
+      #except:
+        #self.replyQueue.put(self.error("Syntax error in time"))
+
+#=====================================#
+#  show running background processes  #
+#=====================================#
     elif "bp" in str(data[:-1]):
       try:
         print ("background_processes:", self.background_processes)
       except:
         self.replyQueue.put(self.error("Syntax error in bp"))
-    elif "stop" in str(data[:-1]):
-      try:
-        self.stop_background_process()
-      except:
-        self.replyQueue.put(self.error("Syntax error in bp"))
 
 
+#==================================================#
+#  user requests connection with all online users  #
+#==================================================#
     elif "ips" in str(data[:-1]):
       users = data.split()
       try:
         if len(users) > 1:
           for user_id in users[1:]:
-            self.commandQueue.put(p2pCommand(p2pCommand.ips_request,
-                                            (user_id)))
+            self.commandQueue.put(p2pCommand('ips_request', (user_id)))
         else:
           for user_id in self.ips:
-            self.commandQueue.put(p2pCommand(p2pCommand.ips_request,
-                                            (user_id)))
+            self.commandQueue.put(p2pCommand('ips_request', (user_id)))
 
       except:
         self.replyQueue.put(self.error("Syntax error in ips"))
 
+#============================#
+#  add user to contact list  #
+#============================#
     elif "key" in str(data[:-1]):
       try:
         _, user_id = data.split()
-        self.commandQueue.put(p2pCommand(p2pCommand.contact_request_out,
-                                        (user_id)))
+        self.commandQueue.put(p2pCommand('contact_request_out', (user_id)))
       except:
         self.replyQueue.put(self.error("Syntax error in key"))
 
-
+#========================#
+#  verify send packages  #
+#========================#
     elif "verify" in str(data[:-1]):
       for key in self.stored_packets:
         packets = self.stored_packets[key]
         reconstructed, result = packets.reconstruct_data()
         if not reconstructed:
-          print "result:", result
           for packet_number in result:
-            cmd = p2pCommand(p2pCommand.packet_request,
+            cmd = p2pCommand('packet_request',
                             (packets.packets_hash, packet_number, key[0]) )
             self.commandQueue.put(cmd)
+        else:
+          print "package:", key, " successfully reconstructed"
 
+#======================#
+#  send encrypted msg  #
+#======================#
     else:
       #try:
         user_id, msg = data.split()
@@ -242,9 +227,6 @@ class client(ez_process, threading.Thread):
         if not self.UserDatabase.in_DB(name = user_id):
           return
 
-        print "self.myself.name:", self.myself.name
-        print "self.user_id:", user_id
-        print "msg:", msg
         mx = em.Message(self.name, user_id, msg)
         packets = ep.Packets(data = mx)
         print "packets.max_packets:", packets.max_packets
@@ -256,7 +238,7 @@ class client(ez_process, threading.Thread):
           if len(data) > 2048:
             self.replyQueue.put(self.error("data larger than 2048 bytes"))
           else:
-            self.commandQueue.put(p2pCommand(p2pCommand.send, (user_id, data)))
+            self.commandQueue.put(p2pCommand('send', (user_id, data)))
       #except:
         #self.replyQueue.put(self.error("Syntax error in command"))
 
@@ -265,6 +247,16 @@ class client(ez_process, threading.Thread):
 #===================#
 
   def receive(self, cmd):
+    """
+    The receive function supports 3 types of data:
+
+    - Dictionaries with p2pCommand keys and appropriate arguments as values
+    - Packet instances, see ez_packet.py. They underly further restrictions, see
+      below
+    - Raw printable data
+
+    UDP packets must be pickled otherwise the data is rejected
+    """
     try:
       readable, _, _ = select.select([self.sockfd], [], [], 0)
     except:
@@ -273,76 +265,85 @@ class client(ez_process, threading.Thread):
       return
     sdata, user_addr = self.sockfd.recvfrom(2048)
     if sdata != None:
-      #try:
+      try:
         data = pickle.loads(sdata)
-        #print "data:", data
-        # command dict
-        if isinstance(data, dict):
-          for command in data:
-            user_cmd = p2pCommand(command, (data[command], user_addr))
-            self.commandQueue.put(user_cmd)
+      except:
+        self.replyQueue.put(self.error("data not pickled -> rejected"))
 
-        # packet
-        elif isinstance(data, ep.Packet):
+      # TODO: nick new interface here Do 07 Aug 2014 12:59:17 CEST
+      # it shouldn't be possible that every user can start commands on other
+      # users clients. We need some security measures here and we may connect
+      # them with options like how often one can be pinged or being requested to
+      # send packages etc.
+      if isinstance(data, dict):
+        for command in data:
+          user_cmd = p2pCommand(command, (data[command], user_addr))
+          self.commandQueue.put(user_cmd)
 
-          packets_hash = data.packets_hash
-          for user_id in self.ips:
-            # packages are dropped if not associated to a known user_id
-            if user_addr == self.ips[user_id]:
-              key = (user_addr, packets_hash)
-              if not key in self.stored_packets:
-                self.stored_packets[key] = ep.Packets()
-                self.stored_packets[key].max_packets = data.max_packets
-                self.stored_packets[key].packets = {}
+      # packet
+      elif isinstance(data, ep.Packet):
 
+        packets_hash = data.packets_hash
+        for user_id in self.ips:
+          # packages are dropped if not associated to a known user_id
+          if user_addr == self.ips[user_id]:
+            key = (user_addr, packets_hash)
+            if not key in self.stored_packets:
+              self.stored_packets[key] = ep.Packets()
+              self.stored_packets[key].max_packets = data.max_packets
+              self.stored_packets[key].packets = {}
+
+            packets = self.stored_packets[key]
+
+            if data.max_packets == 1 and data.packet_number == 0:
+              self.replyQueue.put(self.success(pickle.loads(data.data)))
+              return
+
+            packets.packets[data.packet_number] = data
+            self.stored_packets[key]            = packets
+
+            self.replyQueue.put(self.success("Received package"))
+
+            pr_key = ('receive', user_id)
+
+            # TODO: nick prebuild automatic packet request Do 07 Aug 2014
+            # 13:01:49 CEST Same here, we need a new interface with options
+            # which checks whether packets have been send correctly and complete
+            # and in case requests missing or corrupted packets
+
+            def update_and_reconstruct_packets(*args):
               packets = self.stored_packets[key]
-
-              if data.max_packets == 1 and data.packet_number == 0:
-                self.replyQueue.put(self.success(pickle.loads(data.data)))
-                return
-
-              packets.packets[data.packet_number] = data
-              self.stored_packets[key]            = packets
-
-              self.replyQueue.put(self.success("Received package"))
-
-              pr_key = (p2pCommand.receive, user_id)
-
-              def update_and_reconstruct_packets(*args):
-                packets = self.stored_packets[key]
-                reconstructed, result = packets.reconstruct_data()
-                if reconstructed:
-                  self.replyQueue.put(self.success(result))
-                  pr = self.background_processes[pr_key]
-                  pr.finished.set()
-                  pr.cancel()
-                  del self.background_processes[pr_key]
-                else:
-                  pass
-                  #if not pr_key in self.background_processes:
-                    #self.start_background_process( pr_key,
-                                                   #update_and_reconstruct_packets,
-                                                   #5 )
-
-              if packets.max_packets == len(packets.packets):
-                update_and_reconstruct_packets()
-
+              reconstructed, result = packets.reconstruct_data()
+              if reconstructed:
+                self.replyQueue.put(self.success(result))
+                pr = self.background_processes[pr_key]
+                pr.finished.set()
+                pr.cancel()
+                del self.background_processes[pr_key]
               else:
-                #pass
-                if not pr_key in self.background_processes:
-                  self.start_background_process( pr_key,
-                                                 update_and_reconstruct_packets,
-                                                 5 )
+                pass
+                #if not pr_key in self.background_processes:
+                  #self.start_background_process( pr_key,
+                                                 #update_and_reconstruct_packets,
+                                                 #5 )
 
-        # raw data
-        else:
-          self.replyQueue.put(self.success(data))
-          return data
+            if packets.max_packets == len(packets.packets):
+              update_and_reconstruct_packets()
+
+            else:
+              #pass
+              if not pr_key in self.background_processes:
+                self.start_background_process( pr_key,
+                                               update_and_reconstruct_packets,
+                                               5 )
+
+      # raw data
+      else:
+        self.replyQueue.put(self.success(data))
+        return data
 
     else:
       self.replyQueue.put(self.error("Conflict in receive"))
-
-
 
 #====================#
 #  client main loop  #
@@ -355,7 +356,7 @@ class client(ez_process, threading.Thread):
     """
     while self.alive.isSet():
       try:
-        cmd = self.commandQueue.get(True, 0.1)
+        cmd = self.commandQueue.get(True, self.timeout)
         msg = self.handlers[cmd.msgType](cmd)
       except Queue.Empty as e:
         pass
@@ -372,7 +373,7 @@ class client(ez_process, threading.Thread):
           self.CLI()
         # socket activated -> there is incomming data
         elif i == self.sockfd:
-          self.commandQueue.put(p2pCommand(p2pCommand.receive))
+          self.commandQueue.put(p2pCommand('receive'))
 
       # check for messages in the replyQueue
       try:

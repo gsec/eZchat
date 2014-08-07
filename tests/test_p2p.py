@@ -9,7 +9,7 @@ class Test_p2p(object):
     self.server = client()
     self.server.start()
 
-    pr = p2pCommand(p2pCommand.servermode, (host, port))
+    pr = p2pCommand('servermode', (host, port))
     self.server.servermode(pr)
 
     host = "127.0.0.1"
@@ -20,24 +20,24 @@ class Test_p2p(object):
     bob_id = "bob"
     self.bob = client(bob_id)
     self.bob.start()
-    pr = p2pCommand(p2pCommand.connect_server, (host, port))
+    pr = p2pCommand('connect_server', (host, port))
     #pr = p2pCommand(1, (host, port))
     self.alice.connect_server(pr)
     self.alice.add_client("server", (host, port))
 
-    pr = p2pCommand(p2pCommand.connect_server, (host, port))
+    pr = p2pCommand('connect_server', (host, port))
     self.bob.connect_server(pr)
 
-    pr = p2pCommand(p2pCommand.ips_request, data = "server")
+    pr = p2pCommand('ips_request', data = "server")
     self.alice.ips_request(pr)
 
   def test_ping(self):
     sleep(0.5)
-    pr = p2pCommand(p2pCommand.ping_request, data = "bob")
+    pr = p2pCommand('ping_request', data = "bob")
     self.alice.ping_request(pr)
 
     sleep(0.5)
-    pr = p2pCommand(p2pCommand.shutdown)
+    pr = p2pCommand('shutdown')
     self.server.shutdown(pr)
     self.alice.shutdown(pr)
     self.bob.shutdown(pr)
