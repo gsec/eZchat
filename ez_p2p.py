@@ -216,7 +216,7 @@ class client(ez_process, threading.Thread):
         if not reconstructed:
           for packet_number in result:
             cmd = p2pCommand('packet_request',
-                             (packets.packets_hash, packet_number, key[0]))
+                             ((packets.packets_hash, packet_number), key[0]))
             self.commandQueue.put(cmd)
         else:
           print "package:", key, " successfully reconstructed"
@@ -239,12 +239,12 @@ class client(ez_process, threading.Thread):
         self.sent_packets[packets.packets_hash] = packets
 
         for packet_id in packets.packets:
-          #if packet_id != 5:
-          data = pickle.dumps(packets.packets[packet_id])
-          if len(data) > 2048:
-            self.replyQueue.put(self.error("data larger than 2048 bytes"))
-          else:
-            self.commandQueue.put(p2pCommand('send', (user_id, data)))
+          if packet_id != 5:
+            data = pickle.dumps(packets.packets[packet_id])
+            if len(data) > 2048:
+              self.replyQueue.put(self.error("data larger than 2048 bytes"))
+            else:
+              self.commandQueue.put(p2pCommand('send', (user_id, data)))
       #except:
         #self.replyQueue.put(self.error("Syntax error in command"))
 
@@ -300,6 +300,7 @@ class client(ez_process, threading.Thread):
               self.stored_packets[key].packets = {}
 
             packets = self.stored_packets[key]
+            packets.packets_hash = packets_hash
 
             if data.max_packets == 1 and data.packet_number == 0:
               self.replyQueue.put(self.success(pickle.loads(data.data)))

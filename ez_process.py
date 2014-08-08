@@ -15,12 +15,12 @@ import Queue, thread, threading
 #                               class p2pCommand                               #
 #==============================================================================#
 
-  # bcn: See method declaration of what, where? I don't see. what are the types?
 class p2pCommand(object):
   """
   A p2pCommand encapsulates commands which are then appended to the command
   queue ready for execution.
-  The msgType determines the data type. See method declaration.
+  The msgType is determined by the process,
+  e.g. ping_request cmd.data = user_id (string).
   """
   def __init__(self, msgType=None, data=None):
     self.msgType = msgType
@@ -40,8 +40,7 @@ class p2pReply(object):
   """
   error, success = range(2)
 
-  def __init__(self, replyType=None, data=None, clientID=None):
-    self.clientID  = clientID
+  def __init__(self, replyType=None, data=None):
     self.replyType = replyType
     self.data      = data
 
@@ -49,8 +48,6 @@ class p2pReply(object):
 #                                 class Timer                                  #
 #==============================================================================#
 
-# TODO: (bcn 2014-08-08) _Timer is actually a protected member that shouldn't be
-# used. Isn't there another class with the same functionality?
 class Timer(threading._Timer):
   """
   Timer instances are used in the client class to start timed non-blocking
@@ -79,7 +76,15 @@ class Timer(threading._Timer):
 
 class ez_process_base_meta(type):
   """
-  TODO: (bcn 2014-08-08) Explain me please.
+  The metaclass __init__ function is called after the class is created, but
+  before any class instance initialization. Any class with set
+  __metaclass__ attribute to ez_process_base_meta (which is equivalent to
+  inheriting the class ez_process_base) is extended by:
+
+  - self.handlers: dictionary storing all user-defined functions
+  - global attributes as class attributes
+
+  self.handlers is called in the client main loop in p2pclient
   """
   def __init__(cls, name, bases, dct):
     if not hasattr(cls, 'handlers'):
@@ -92,9 +97,7 @@ class ez_process_base_meta(type):
       # register global attributes and inherit them to child classes
       else:
         cls.attr = dct[attr]
-    # TODO: (bcn 2014-08-08) why do u return the init function instead of
-    # executing it? Looks invalid?!
-    return super(ez_process_base_meta, cls).__init__(name, bases, dct)
+    super(ez_process_base_meta, cls).__init__(name, bases, dct)
 
 class ez_process_base(object):
   __metaclass__ = ez_process_base_meta
@@ -448,15 +451,15 @@ class ez_contact(ez_process_base):
 #                                  ez_packet                                   #
 #==============================================================================#
 
-class ez_packet(object):
+class ez_packet(ez_process_base):
 
   def __init__(self, *args, **kwargs):
     super(ez_packet, self).__init__(*args, **kwargs)
 
   def send_packet(self, cmd):
-    packets_hash, packet_number, user_id = cmd.data
+    # cmd.data[-1] is the user_addr which is not needed
+    (packets_hash, packet_id), user_id = cmd.data[0]
     if packets_hash in self.sent_packets:
-      # TODO: (bcn 2014-08-08) This has to be wrong?! packet_id is never defined
       if packet_id in self.sent_packets[packets_hash].packets:
         data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
         if len(data) > 2048:
@@ -470,8 +473,7 @@ class ez_packet(object):
 
   def packet_request(self, cmd):
     packet_info, user_addr = cmd.data
-    print ("packet request from:", user_addr)
-    packet = {'send_packet': packet_info}
+    packet = {'send_packet': (packet_info, self.name)}
     msg    = pickle.dumps(packet)
     try:
       self.sockfd.sendto(msg, user_addr)
