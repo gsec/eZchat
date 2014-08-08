@@ -3,6 +3,10 @@ ASCI-ART-COMPETITION
 Please vote (+1, 0, -1), tweak or add your own :D. Most of these are from
 http://patorjk.com/software/taag/#p=testall&f=Slant&t=eZ%20chat
 
+#================#
+#  plain-italic  #
+#================#
+
 bcn: +1
 JNicL: +1
      _____         __          __
@@ -10,6 +14,10 @@ JNicL: +1
  / _ \/ /   / ___/ __ \/ __ `/ __/
 /  __/ /__ / /__/ / / / /_/ / /_
 \___/____/ \___/_/ /_/\__,_/\__/
+
+#=========#
+#  plain  #
+#=========#
 
 bcn: 0
 JNicL: 0
@@ -19,12 +27,21 @@ JNicL: 0
  |  __// /_  | (__| | | | (_| | |_
   \___/____|  \___|_| |_|\__,_|\__|
 
+#==========#
+#  grumpy  #
+#==========#
+
 bcn: 0
 JNicL: -1
       ____       _          _
  ___ |_  /  ___ | |_  ___ _| |_
 / ._> / /  / | '| . |<_> | | |
 \___./___| \_|_.|_|_|<___| |_|
+
+
+#==========#
+#  crpyto  #
+#==========#
 
 bcn: +1 (I like the crypto character of that one :D, maybe it can be made a bit
 more italic like the first one?)
@@ -38,11 +55,17 @@ JNicL: +1
 YM.    , AMV   ,M    YM.    , MS    MM  8M   MM   MM
  `Mbmmd'3M#momnEM     YMbmd'.JMML  JMML.`Moo9^Yo. `Mbmo
 
+#============#
+#  graffity  #
+#============#
 
 gsec: +1 a little big, but nice type
 anyway, are we keeping the name ?? Else that wouldn't make sense...
 JNicL: 0 It's a choice of style, so we can change the name to whatever we want.
          You havn't draw it urself right?
+bcn: 0 Yeah I would also say, it is more abort the style than about the name.
+Name discussion is in the issue. gsec can you also comment the ones above? Also
+with -1 if you don't like them.
                                                  _..._                                   
                                               .-'_..._''.                                
        __.....__                            .' .'      '.\  .                            
