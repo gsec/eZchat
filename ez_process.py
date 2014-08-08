@@ -111,6 +111,8 @@ class ez_process_base(object):
 class ez_background_process(ez_process_base):
 
   background_processes = {}
+  # TODO: (bcn 2014-08-09) In a class this could be deleted. Is it necessary for
+  # meta classes?!
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
@@ -162,7 +164,7 @@ class ez_ping(ez_background_process):
 #  ping methods  #
 #================#
 
-  def ping_request(self, cmd):
+  def ping_request(self, cmd, testing=False):
     """
     Starts a ping request. Client A must be connected to Client B, i.e. they
     must be both in clients user database, otherwise the ping process fails. To
@@ -176,6 +178,8 @@ class ez_ping(ez_background_process):
     if not process_id in self.background_processes:
       if not user_id in self.ips:
         self.replyQueue.put(self.error("user not in client list"))
+        if testing:
+          return str(user_id) + " is not in client list"
       else:
         master = self.ips[user_id]
         ping   = {'ping_reply': user_id}
@@ -192,10 +196,11 @@ class ez_ping(ez_background_process):
 
         except IOError as e:
           self.replyQueue.put(self.error(str(e)))
-          self.replyQueue.put(self.eror("ping unsuccessful"))
+          self.replyQueue.put(self.error("ping unsuccessful"))
     else:
-      self.replyQueue.put(self.error("cannot ping again, " +                   \
+      self.replyQueue.put(self.error("cannot ping again, " + \
                                      "still waiting for response"))
+
   def ping_reply(self, cmd):
     """
     Not to be called by the user, but automatically invoked.
@@ -554,7 +559,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
   def error(self, error_msg=None):
     return p2pReply(p2pReply.error, error_msg)
 
-
 #==================#
 #  connect_server  #
 #==================#
@@ -579,7 +583,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
     host, port = cmd.data
     self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
-
 
   def test_func(self, cmd):
     self.replyQueue.put(self.success("cmd.data:" + cmd.data))

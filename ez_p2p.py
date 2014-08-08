@@ -13,11 +13,11 @@ import socket, select
 import Queue, threading
 import cPickle as pickle
 
-from ez_process  import ez_process, p2pCommand, p2pReply
+from ez_process import ez_process, p2pCommand, p2pReply
 
-import ez_user     as eu
-import ez_packet   as ep
-import ez_message  as em
+import ez_user    as eu
+import ez_packet  as ep
+import ez_message as em
 
 CLIENT_TIMEOUT = 0.1
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from test_tools import *
 from time import sleep
 
@@ -20,21 +21,27 @@ class Test_p2p(object):
     bob_id = "bob"
     self.bob = client(bob_id)
     self.bob.start()
+
     pr = p2pCommand('connect_server', (host, port))
-    #pr = p2pCommand(1, (host, port))
     self.alice.connect_server(pr)
     self.alice.add_client("server", (host, port))
 
     pr = p2pCommand('connect_server', (host, port))
     self.bob.connect_server(pr)
+    # Why doesn't bob add_client("server",..) ?
 
-    pr = p2pCommand('ips_request', data = "server")
+    pr = p2pCommand('ips_request', data="server")
     self.alice.ips_request(pr)
+    print("setUp of Test_p2p done")
 
   def test_ping(self):
     sleep(0.25)
-    pr = p2pCommand('ping_request', data = "bob")
-    self.alice.ping_request(pr)
+    result = None
+    pr = p2pCommand('ping_request', data="bob")
+    result = self.alice.ping_request(pr, testing=True)
+    if result:
+      print(result)
+      print("How can this happen???")
 
     sleep(0.25)
     pr = p2pCommand('shutdown')
