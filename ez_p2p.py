@@ -357,7 +357,7 @@ class client(ez_process, threading.Thread):
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
-        msg = self.handlers[cmd.msgType](cmd)
+        msg = self.handlers[cmd.msgType](self, cmd)
       except Queue.Empty as e:
         pass
       readable = []

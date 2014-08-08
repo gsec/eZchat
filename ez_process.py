@@ -1,15 +1,14 @@
 #==============================================================================#
-#                                ez_prozess.py                                 #
+#                                ez_process.py                                 #
 #==============================================================================#
 
 #============#
 #  Includes  #
 #============#
 
-import sys, errno, time
+import sys, errno, time, types
 import cPickle as pickle
-
-import ez_user     as eu
+import ez_user as eu
 import Queue, thread, threading
 
 #==============================================================================#
@@ -27,7 +26,7 @@ class p2pCommand(object):
     self.data     = data
 
 #==============================================================================#
-#                              class ClientReply                               #
+#                                class p2pReply                                #
 #==============================================================================#
 
 class p2pReply(object):
@@ -72,6 +71,29 @@ class Timer(threading._Timer):
         self.finished.set()
 
 #==============================================================================#
+#                         class ez_process_base(_meta)                         #
+#==============================================================================#
+
+class ez_process_base_meta(type):
+  def __init__(cls, name, bases, dct):
+    if not hasattr(cls, 'handlers'):
+      cls.handlers = {}
+    for attr in filter(lambda x: not x.startswith('_'), dct):
+      # register process functionalities and inherit them to child classes
+      if isinstance(dct[attr],types.FunctionType):
+        assert(not attr in cls.handlers)
+        cls.handlers[attr] = dct[attr]
+      # register global attributes and inherit them to child classes
+      else:
+        cls.attr = dct[attr]
+    return super(ez_process_base_meta, cls).__init__(name, bases, dct)
+
+class ez_process_base(object):
+  __metaclass__ = ez_process_base_meta
+  def __init__(self, *args, **kwargs):
+    super(ez_process_base, self).__init__(*args, **kwargs)
+
+#==============================================================================#
 #                                   ez_ping                                    #
 #==============================================================================#
 
@@ -89,15 +111,9 @@ class Timer(threading._Timer):
 #                    `-> Time over -> ping failed                              #
 #------------------------------------------------------------------------------#
 
-class ez_ping(object):
+class ez_ping(ez_process_base):
 
   def __init__(self, *args, **kwargs):
-    self.handlers.update( {
-        'ping_request'   : self.ping_request,
-        'ping_reply'     : self.ping_reply,
-        'ping_success'   : self.ping_success,
-        'ping_background': self.ping_background
-        } )
     super(ez_ping, self).__init__(*args, **kwargs)
 
 #================#
@@ -234,14 +250,8 @@ class ez_ping(object):
 #                                                         add client to db     #
 #------------------------------------------------------------------------------#
 
-class ez_connect(object):
+class ez_connect(ez_process_base):
   def __init__(self, *args, **kwargs):
-    self.handlers.update( {
-        'connect':                  self.connect,
-        'connection_success':       self.connection_success,
-        'connection_request':       self.connection_request,
-        'connection_nat_traversal': self.connection_nat_traversal
-        } )
     super(ez_connect, self).__init__(*args, **kwargs)
 
 #============================#
@@ -353,19 +363,13 @@ class ez_connect(object):
     self.add_client(user_id, user_addr)
 
 
-
 #==============================================================================#
 #                                  ez_contact                                  #
 #==============================================================================#
 
-class ez_contact(object):
+class ez_contact(ez_process_base):
 
   def __init__(self, *args, **kwargs):
-    self.handlers.update( {
-        'contact_request_in' : self.contact_request_in,
-        'contact_request_out': self.contact_request_out,
-        'add_contact'        : self.add_contact
-        } )
     super(ez_contact, self).__init__(*args, **kwargs)
 
   def add_client(self, user_id, user_addr):
@@ -416,10 +420,6 @@ class ez_contact(object):
 class ez_packet(object):
 
   def __init__(self, *args, **kwargs):
-    self.handlers.update( {
-        'send_packet':    self.send_packet,
-        'packet_request': self.packet_request
-        } )
     super(ez_packet, self).__init__(*args, **kwargs)
 
   def send_packet(self, cmd):
@@ -461,10 +461,6 @@ class ez_relay(ez_connect):
 
   def __init__(self, *args, **kwargs):
 
-    self.handlers.update( {
-        'ips_request'  : self.ips_request,
-        'distributeIPs': self.distributeIPs
-        } )
     super(ez_relay, self).__init__(*args, **kwargs)
 
   def ips_request(self, cmd):
@@ -505,25 +501,13 @@ class ez_relay(ez_connect):
 #==============================================================================#
 
 class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
+
+  commandQueue = Queue.Queue()
+  replyQueue   = Queue.Queue()
+  background_processes = {}
+
   def __init__(self, *args, **kwargs):
-    self.handlers = {}
     super(ez_process, self).__init__(*args, **kwargs)
-
-    self.commandQueue = Queue.Queue()
-    self.replyQueue   = Queue.Queue()
-    self.background_processes = {}
-
-    # Storing client functionalities
-    self.handlers.update( {
-        'connect_server': self.connect_server,
-        'shutdown':       self.shutdown,
-        'send':           self.send,
-        'receive':        self.receive,
-        'servermode':     self.servermode,
-        'process':        self.process,
-        'test_func':      self.test_func
-        } )
-
 
   # TODO: nick sockfd? Do 07 Aug 2014 00:40:15 CEST
   # Bit of a hack here since I'm using the sockfd which does not exist for
@@ -576,28 +560,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
     self.sockfd.bind( (str(host), int(port) ) )
     self.replyQueue.put(self.success("listening socket"))
 
-
-
-      #relay_request = {p2pCommand.relay_request: other_users}
-      #msg           = pickle.dumps(relay_request)
-      #try:
-        #self.sockfd.sendto(msg, master)
-        #self.replyQueue.put(self.success("distributed IPs"))
-      #except IOError as e:
-        #self.replyQueue.put(self.error(str(e)))
-
-    #else:
-      #for user_id in self.ips:
-        #other_users  = { u_id: self.ips[u_id] for u_id in self.ips             \
-                         #if u_id != user_id }
-        #relay_request = {p2pCommand.relay_request: other_users}
-        #msg           = pickle.dumps(relay_request)
-        #master = self.ips[user_id]
-        #try:
-          #self.sockfd.sendto(msg, master)
-          #self.replyQueue.put(self.success("distributed IPs"))
-        #except IOError as e:
-          #self.replyQueue.put(self.error(str(e)))
 
   def test_func(self, cmd):
     self.replyQueue.put(self.success("cmd.data:", cmd.data))
