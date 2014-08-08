@@ -102,6 +102,37 @@ class ez_process_base(object):
     super(ez_process_base, self).__init__(*args, **kwargs)
 
 #==============================================================================#
+#                         class ez_background_process                          #
+#==============================================================================#
+
+class ez_background_process(ez_process_base):
+
+  background_processes = {}
+  def __init__(self, *args, **kwargs):
+    super(ez_background_process, self).__init__(*args, **kwargs)
+
+  def start_background_process(self, pr_key, proc, interval, *args, **kwargs):
+    pr = Timer(interval, proc, args, kwargs)
+    self.background_processes[pr_key] = pr
+    thread.start_new_thread(pr.run, ())
+
+  def stop_background_processes(self):
+    for pr_key in self.background_processes:
+      pr = self.background_processes[pr_key]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[pr_key]
+
+  def reset_background_process(self, pr_key):
+    if pr_key in self.background_processes:
+      pr = self.background_processes[pr_key]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[pr_key]
+      self.start_background_process(pr_key, pr.function, pr.interval,
+                                    self.commandQueue, self.ips.keys())
+
+#==============================================================================#
 #                                   ez_ping                                    #
 #==============================================================================#
 
@@ -119,7 +150,7 @@ class ez_process_base(object):
 #                    `-> Time over -> ping failed                              #
 #------------------------------------------------------------------------------#
 
-class ez_ping(ez_process_base):
+class ez_ping(ez_background_process):
 
   def __init__(self, *args, **kwargs):
     super(ez_ping, self).__init__(*args, **kwargs)
@@ -221,12 +252,7 @@ class ez_ping(ez_process_base):
         # Reset process. I wanted to avoid a while true loop as a background
         # process thats why the following steps are necessary. We might
         # implement a reset method.
-        pr = self.background_processes[process_id]
-        pr.finished.set()
-        pr.cancel()
-        del self.background_processes[process_id]
-        self.start_background_process(process_id, ping_background_func,
-                                      10, self.commandQueue, self.ips.keys())
+        self.reset_background_process(process_id)
 
     self.start_background_process(process_id, ping_background_func, 10,
                                   self.commandQueue, self.ips.keys())
@@ -255,7 +281,7 @@ class ez_ping(ez_process_base):
 #                                                         add client to db     #
 #------------------------------------------------------------------------------#
 
-class ez_connect(ez_process_base):
+class ez_connect(ez_background_process):
   def __init__(self, *args, **kwargs):
     super(ez_connect, self).__init__(*args, **kwargs)
 
@@ -363,7 +389,7 @@ class ez_connect(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("user: " + str(user_addr) +" with id: " +\
+    self.replyQueue.put(self.success("user: " + str(user_addr) +" with id: " + \
                                       user_id + " has connected"))
     self.add_client(user_id, user_addr)
 
@@ -510,7 +536,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
 
   commandQueue = Queue.Queue()
   replyQueue   = Queue.Queue()
-  background_processes = {}
 
   def __init__(self, *args, **kwargs):
     super(ez_process, self).__init__(*args, **kwargs)
@@ -520,20 +545,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
   # ez_process, but as I'm never calling an ez_process directly only through
   # inheritance everthing is fine as long as the child class has the sockfd
   # attribute.
-
-
-  def start_background_process(self, process_id, proc, interval, *args,
-                               **kwargs):
-    pr = Timer(interval, proc, args, kwargs)
-    self.background_processes[process_id] = pr
-    thread.start_new_thread(pr.run, ())
-
-  def stop_background_processes(self):
-    for process_id in self.background_processes:
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
 
   def success(self, success_msg=None):
     return p2pReply(p2pReply.success, success_msg)
