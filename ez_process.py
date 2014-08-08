@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-import sys, errno, time, types
+import types
 import cPickle as pickle
 import ez_user as eu
 import Queue, thread, threading
@@ -15,15 +15,16 @@ import Queue, thread, threading
 #                               class p2pCommand                               #
 #==============================================================================#
 
+  # bcn: See method declaration of what, where? I don't see. what are the types?
 class p2pCommand(object):
   """
   A p2pCommand encapsulates commands which are then appended to the command
   queue ready for execution.
   The msgType determines the data type. See method declaration.
   """
-  def __init__(self, msgType = None, data = None):
-    self.msgType  = msgType
-    self.data     = data
+  def __init__(self, msgType=None, data=None):
+    self.msgType = msgType
+    self.data    = data
 
 #==============================================================================#
 #                                class p2pReply                                #
@@ -39,7 +40,7 @@ class p2pReply(object):
   """
   error, success = range(2)
 
-  def __init__(self, replyType = None, data = None, clientID = None):
+  def __init__(self, replyType=None, data=None, clientID=None):
     self.clientID  = clientID
     self.replyType = replyType
     self.data      = data
@@ -48,6 +49,8 @@ class p2pReply(object):
 #                                 class Timer                                  #
 #==============================================================================#
 
+# TODO: (bcn 2014-08-08) _Timer is actually a protected member that shouldn't be
+# used. Isn't there another class with the same functionality?
 class Timer(threading._Timer):
   """
   Timer instances are used in the client class to start timed non-blocking
@@ -75,17 +78,22 @@ class Timer(threading._Timer):
 #==============================================================================#
 
 class ez_process_base_meta(type):
+  """
+  TODO: (bcn 2014-08-08) Explain me please.
+  """
   def __init__(cls, name, bases, dct):
     if not hasattr(cls, 'handlers'):
       cls.handlers = {}
-    for attr in filter(lambda x: not x.startswith('_'), dct):
+    for attr in [x for x in dct if not x.startswith('_')]:
       # register process functionalities and inherit them to child classes
-      if isinstance(dct[attr],types.FunctionType):
-        assert(not attr in cls.handlers)
+      if isinstance(dct[attr], types.FunctionType):
+        assert not attr in cls.handlers
         cls.handlers[attr] = dct[attr]
       # register global attributes and inherit them to child classes
       else:
         cls.attr = dct[attr]
+    # TODO: (bcn 2014-08-08) why do u return the init function instead of
+    # executing it? Looks invalid?!
     return super(ez_process_base_meta, cls).__init__(name, bases, dct)
 
 class ez_process_base(object):
@@ -130,23 +138,23 @@ class ez_ping(ez_process_base):
     - user_id = cmd.data
     """
     user_id = cmd.data
-    pr_key = ('ping_reply', user_id)
-    if not pr_key in self.background_processes:
+    process_id = ('ping_reply', user_id)
+    if not process_id in self.background_processes:
       if not user_id in self.ips:
         self.replyQueue.put(self.error("user not in client list"))
       else:
-        master  = self.ips[user_id]
-        ping    = {'ping_reply': user_id}
-        msg     = pickle.dumps(ping)
+        master = self.ips[user_id]
+        ping   = {'ping_reply': user_id}
+        msg    = pickle.dumps(ping)
         try:
           self.sockfd.sendto(msg, master)
 
           def ping_failed_func(self_timer):
             cmd = self.error("ping failed: " + user_id)
             self.replyQueue.put(cmd)
-            del self.background_processes[pr_key]
+            del self.background_processes[process_id]
 
-          self.start_background_process(pr_key, ping_failed_func, 5)
+          self.start_background_process(process_id, ping_failed_func, 5)
 
         except IOError as e:
           self.replyQueue.put(self.error(str(e)))
@@ -184,11 +192,11 @@ class ez_ping(ez_process_base):
     user_id, user_addr = cmd.data
     if user_id in self.ips:
       if self.ips[user_id] == user_addr:
-        pr_key = ('ping_reply', user_id)
-        pr = self.background_processes[pr_key]
+        process_id = ('ping_reply', user_id)
+        pr = self.background_processes[process_id]
         pr.finished.set()
         pr.cancel()
-        del self.background_processes[pr_key]
+        del self.background_processes[process_id]
         self.replyQueue.put(self.success("ping success: " + user_id))
         return True
 
@@ -196,13 +204,11 @@ class ez_ping(ez_process_base):
     return False
 
   def ping_background(self, cmd):
-    # the process id
-    pr_key = ('ping_reply', 'all')
+    process_id = ('ping_reply', 'all')
 
     # define the function called by the timer after the countdown
     # ping_background_func calls itself resulting in an endless ping chain.
     def ping_background_func(self_timer, queue, user_ids):
-      pr_key = ('ping_reply', 'all')
       # ping all users
       for user_id in user_ids:
         queue.put(p2pCommand('ping_request', user_id))
@@ -211,19 +217,18 @@ class ez_ping(ez_process_base):
       # the process might have been killed while this function called.
       # I don't know if this case can occur, so the if case is just to make it
       # safe
-      if pr_key in self.background_processes:
+      if process_id in self.background_processes:
         # Reset process. I wanted to avoid a while true loop as a background
         # process thats why the following steps are necessary. We might
         # implement a reset method.
-        pr = self.background_processes[pr_key]
+        pr = self.background_processes[process_id]
         pr.finished.set()
         pr.cancel()
-        del self.background_processes[pr_key]
-        self.start_background_process(pr_key, ping_background_func,
+        del self.background_processes[process_id]
+        self.start_background_process(process_id, ping_background_func,
                                       10, self.commandQueue, self.ips.keys())
 
-    # start the background process
-    self.start_background_process(pr_key, ping_background_func, 10,
+    self.start_background_process(process_id, ping_background_func, 10,
                                   self.commandQueue, self.ips.keys())
 
 
@@ -276,7 +281,7 @@ class ez_connect(ez_process_base):
         pass
       else:
         self.sockfd.sendto(msg, master)
-        cmd = self.success( "start connection  with :" + str(master) )
+        cmd = self.success("start connection with " + str(master))
         self.replyQueue.put(cmd)
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
@@ -296,8 +301,8 @@ class ez_connect(ez_process_base):
     - (user_id, (user_ip, user_port)) = cmd.data
     """
     user_id, user_addr = cmd.data
-    pr_key = ('connection_request', user_addr)
-    if not pr_key in self.background_processes:
+    process_id = ('connection_request', user_addr)
+    if not process_id in self.background_processes:
       con_holepunch = {'connection_nat_traversal': self.name}
       msg           = pickle.dumps(con_holepunch)
       try:
@@ -306,11 +311,11 @@ class ez_connect(ez_process_base):
         def connection_failed_func(self_timer):
           cmd = self.error("connection failed with: " + str(user_addr))
           self.replyQueue.put(cmd)
-          del self.background_processes[pr_key]
+          del self.background_processes[process_id]
 
-        self.start_background_process(pr_key, connection_failed_func, 5)
-        cmd = self.success( "connection request from user:" +                  \
-                            str(user_addr) +  " with id: "+ user_id )
+        self.start_background_process(process_id, connection_failed_func, 5)
+        cmd = self.success("connection request from user:" + \
+                           str(user_addr) + " with id: " + user_id)
 
         self.replyQueue.put(cmd)
 
@@ -334,7 +339,7 @@ class ez_connect(ez_process_base):
     con_success     = {'connection_success': self.name}
     msg             = pickle.dumps(con_success)
 
-    cmd = self.success( "nat traversal succeded: " + str(user_addr) )
+    cmd = self.success("nat traversal succeded: " + str(user_addr))
     self.add_client(user_id, user_addr)
 
     self.replyQueue.put(cmd)
@@ -351,14 +356,14 @@ class ez_connect(ez_process_base):
     - (user_id, (user_ip, user_port)) = cmd.data
     """
     user_id, user_addr = cmd.data
-    pr_key = ('connection_request', user_addr)
-    if pr_key in self.background_processes:
-      pr = self.background_processes[pr_key]
+    process_id = ('connection_request', user_addr)
+    if process_id in self.background_processes:
+      pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
-      del self.background_processes[pr_key]
+      del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success( "user: " + str(user_addr) +" with id: " +\
+    self.replyQueue.put(self.success("user: " + str(user_addr) +" with id: " +\
                                       user_id + " has connected"))
     self.add_client(user_id, user_addr)
 
@@ -405,8 +410,8 @@ class ez_contact(ez_process_base):
 
   def add_contact(self, cmd):
     new_user, _  = cmd.data
-    if not self.UserDatabase.in_DB(UID = new_user.UID):
-      self.myself  = eu.User(name = self.name)
+    if not self.UserDatabase.in_DB(UID=new_user.UID):
+      self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
       print "new_user:", new_user.name
     else:
@@ -425,6 +430,7 @@ class ez_packet(object):
   def send_packet(self, cmd):
     packets_hash, packet_number, user_id = cmd.data
     if packets_hash in self.sent_packets:
+      # TODO: (bcn 2014-08-08) This has to be wrong?! packet_id is never defined
       if packet_id in self.sent_packets[packets_hash].packets:
         data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
         if len(data) > 2048:
@@ -439,7 +445,7 @@ class ez_packet(object):
   def packet_request(self, cmd):
     packet_info, user_addr = cmd.data
     print ("packet request from:", user_addr)
-    packet  = {'send_packet': packet_info}
+    packet = {'send_packet': packet_info}
     msg    = pickle.dumps(packet)
     try:
       self.sockfd.sendto(msg, user_addr)
@@ -481,8 +487,8 @@ class ez_relay(ez_connect):
   def distributeIPs(self, cmd):
     if cmd.data != None:
       master = cmd.data[1]
-      other_users  = { u_id: self.ips[u_id] for u_id in self.ips               \
-                       if self.ips[u_id] != master }
+      other_users = {u_id: self.ips[u_id] for u_id in self.ips \
+                     if self.ips[u_id] != master}
 
       for other_id in other_users:
         relay_request  = {'connect': other_users[other_id]}
@@ -516,22 +522,23 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
   # attribute.
 
 
-  def start_background_process(self, pr_key, proc, interval, *args, **kwargs):
+  def start_background_process(self, process_id, proc, interval, *args,
+                               **kwargs):
     pr = Timer(interval, proc, args, kwargs)
-    self.background_processes[pr_key] = pr
+    self.background_processes[process_id] = pr
     thread.start_new_thread(pr.run, ())
 
   def stop_background_processes(self):
-    for pr_key in self.background_processes:
-      pr = self.background_processes[pr_key]
+    for process_id in self.background_processes:
+      pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
-      del self.background_processes[pr_key]
+      del self.background_processes[process_id]
 
-  def success(self, success_msg = None):
+  def success(self, success_msg=None):
     return p2pReply(p2pReply.success, success_msg)
 
-  def error(self, error_msg = None):
+  def error(self, error_msg=None):
     return p2pReply(p2pReply.error, error_msg)
 
 
@@ -557,16 +564,16 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
 
   def servermode(self, cmd):
     host, port = cmd.data
-    self.sockfd.bind( (str(host), int(port) ) )
+    self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
 
 
   def test_func(self, cmd):
-    self.replyQueue.put(self.success("cmd.data:", cmd.data))
+    self.replyQueue.put(self.success("cmd.data:" + cmd.data))
 
   def process(self, cmd):
     data, user_addr = cmd.data
-    self.replyQueue.put(self.success("cmd.data:", cmd.data))
+    self.replyQueue.put(self.success("cmd.data:" + cmd.data))
 
   def shutdown(self, cmd):
     if self.sockfd != None:

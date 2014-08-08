@@ -32,17 +32,12 @@ class Test_p2p(object):
     self.alice.ips_request(pr)
 
   def test_ping(self):
-    sleep(0.5)
+    sleep(0.25)
     pr = p2pCommand('ping_request', data = "bob")
     self.alice.ping_request(pr)
 
-    sleep(0.5)
+    sleep(0.25)
     pr = p2pCommand('shutdown')
     self.server.shutdown(pr)
     self.alice.shutdown(pr)
     self.bob.shutdown(pr)
-
-    # Please fix your shit
-    #eq_(ping, True)
-
-

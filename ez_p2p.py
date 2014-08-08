@@ -6,9 +6,9 @@
 #  Includes  #
 #============#
 #from __future__ import print_function
-import sys, time
+import sys
 import socket, select
-import Queue, thread, threading
+import Queue, threading
 import cPickle as pickle
 
 from ez_process  import ez_process, p2pCommand, p2pReply
@@ -38,7 +38,7 @@ class client(ez_process, threading.Thread):
   (IO + incomming packages), the user db and pulling commands/results from the
   queues.
   """
-  def __init__(self, name = "", fail_connect = False):
+  def __init__(self, name="", fail_connect=False):
     super(client, self).__init__()
 
     self.name = name
@@ -54,10 +54,10 @@ class client(ez_process, threading.Thread):
     self.enableCLI = True
 
     try:
-      self.sockfd = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-    except socket.eror, msg:
-      error_msg =  'Bind failed. Error Code: ' + str(msg[0]) + ' Message ' +   \
-                    msg[1]
+      self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    except socket.error, msg:
+      error_msg = 'Bind failed. Error Code: ' + str(msg[0]) + ' Message ' + \
+                  msg[1]
       self.replyQueue.put(self.error(error_msg))
       sys.exit()
 
@@ -67,7 +67,7 @@ class client(ez_process, threading.Thread):
     self.command_history = {}
 
     # sent_packets are cached in case they need to be send again
-    self.sent_packets   = {}
+    self.sent_packets = {}
 
     # received packets are cached in case packets belonging to a group of
     # packets is missing or packets being corrupted
@@ -76,15 +76,15 @@ class client(ez_process, threading.Thread):
     self.timeout = 0.1
 
     db_name = 'sqlite:///:' + self.name + 'memory:'
-    self.UserDatabase = eu.UserDatabase(localdb = db_name)
+    self.UserDatabase = eu.UserDatabase(localdb=db_name)
 
-    if not self.UserDatabase.in_DB(name = self.name):
+    if not self.UserDatabase.in_DB(name=self.name):
       print "new user created"
-      self.myself  = eu.User(name = self.name)
+      self.myself = eu.User(name=self.name)
       self.UserDatabase.add_entry(self.myself)
     else:
       print "retrieved user"
-      self.myself = self.UserDatabase.get_entry(name = self.name)
+      self.myself = self.UserDatabase.get_entry(name=self.name)
 
 #=======================#
 #  simple build-in cli  #
@@ -211,7 +211,7 @@ class client(ez_process, threading.Thread):
         if not reconstructed:
           for packet_number in result:
             cmd = p2pCommand('packet_request',
-                            (packets.packets_hash, packet_number, key[0]) )
+                             (packets.packets_hash, packet_number, key[0]))
             self.commandQueue.put(cmd)
         else:
           print "package:", key, " successfully reconstructed"
@@ -220,15 +220,16 @@ class client(ez_process, threading.Thread):
 #  send encrypted msg  #
 #======================#
     else:
+      # TODO: (bcn 2014-08-08) What will happen to this try except?
       #try:
         user_id, msg = data.split()
         if not user_id in self.ips:
           return
-        if not self.UserDatabase.in_DB(name = user_id):
+        if not self.UserDatabase.in_DB(name=user_id):
           return
 
         mx = em.Message(self.name, user_id, msg)
-        packets = ep.Packets(data = mx)
+        packets = ep.Packets(data=mx)
         print "packets.max_packets:", packets.max_packets
         self.sent_packets[packets.packets_hash] = packets
 
@@ -333,9 +334,9 @@ class client(ez_process, threading.Thread):
             else:
               #pass
               if not pr_key in self.background_processes:
-                self.start_background_process( pr_key,
-                                               update_and_reconstruct_packets,
-                                               5 )
+                self.start_background_process(pr_key,
+                                              update_and_reconstruct_packets,
+                                              5)
 
       # raw data
       else:
@@ -358,7 +359,7 @@ class client(ez_process, threading.Thread):
       try:
         cmd = self.commandQueue.get(True, self.timeout)
         msg = self.handlers[cmd.msgType](self, cmd)
-      except Queue.Empty as e:
+      except Queue.Empty:
         pass
       readable = []
       try:
@@ -371,7 +372,7 @@ class client(ez_process, threading.Thread):
       for i in readable:
         if i == 0:
           self.CLI()
-        # socket activated -> there is incomming data
+        # socket activated -> there is incoming data
         elif i == self.sockfd:
           self.commandQueue.put(p2pCommand('receive'))
 
