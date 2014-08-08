@@ -1,6 +1,8 @@
 #==============================================================================#
 #                                  ez_client                                   #
 #==============================================================================#
+# TODO: (bcn 2014-08-08) when this file only contains the client class, it
+# should be renamed to ez_client.py ?!
 
 #============#
 #  Includes  #
@@ -17,6 +19,7 @@ import ez_user     as eu
 import ez_packet   as ep
 import ez_message  as em
 
+CLIENT_TIMEOUT = 0.1
 
 #==============================================================================#
 #                                 class client                                 #
@@ -73,9 +76,11 @@ class client(ez_process, threading.Thread):
     # packets is missing or packets being corrupted
     self.stored_packets = {}
 
-    self.timeout = 0.1
+    self.timeout = CLIENT_TIMEOUT
 
-    db_name = 'sqlite:///:' + self.name + 'memory:'
+    # every new client gets a fresh database in memory for now. Should be made
+    # an argument to support test as well as use case
+    db_name = 'sqlite:///:memory:'
     self.UserDatabase = eu.UserDatabase(localdb=db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):

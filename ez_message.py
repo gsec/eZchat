@@ -14,9 +14,6 @@ import ez_database as ed
 #                                class Message                                 #
 #==============================================================================#
 
-crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode','ciphered_mac']
-components = ['time', 'recipient', 'UID'] + crypto_content
-
 class Message(object):
   """
   This is the object that will be permanently saved in the database.
@@ -24,11 +21,14 @@ class Message(object):
   Unencrypted is recipient, year-month, injection vector and crypt_mode.
   Crypted is the message as cipher(AES) and key as ciphered_key(RSA).
   """
+  crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode',
+                    'ciphered_mac']
+  components = ['time', 'recipient', 'UID'] + crypto_content
   def __init__(self, sender='', recipient='', content='',
-               dtime = datetime.now(), _dict=None):
+               dtime=datetime.now(), _dict=None):
     if _dict:
-      for x in components:
-        setattr(self, x, _dict[x])
+      for component in Message.components:
+        setattr(self, component, _dict[component])
     else:
       # todo: (bcn 2014-07-06) Isoformat is at least localization independent
       # but timezone information is still missing !
@@ -39,16 +39,17 @@ class Message(object):
       package = {'etime' : exact_time, 'sender' : sender,
                  'recipient' : recipient, 'content' : content}
       crypt_dict = ec.eZ_CryptoScheme(**package).encrypt_sign()
-      for x in crypto_content:
-        setattr(self, x, crypt_dict[x])
+      for crypto_component in Message.crypto_content:
+        setattr(self, crypto_component, crypt_dict[crypto_component])
 
   def __str__(self):
     """ Full representation including local database information """
-    lst = [str(k) + ' : ' + str(getattr(self, k)) for k in components]
+    lst = [str(k) + ' : ' + str(getattr(self, k)) for k in Message.components]
     return '-'*80 + '\n' + '\n'.join(lst)
 
   def clear_text(self):
-    crypt_dict = {x : getattr(self, x) for x in crypto_content}
+    """ Return the decrypted text, given the private key is found on disk """
+    crypt_dict = {x : getattr(self, x) for x in Message.crypto_content}
     crypt_dict.update({'recipient' : self.recipient})
     clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
     if clear_dict['authorized']:

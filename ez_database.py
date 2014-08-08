@@ -15,10 +15,10 @@ class Database(object):
   The Database class is a template for giving access to the SQL database. Also
   other databases like MySQL could be used.
   """
-  def __init__(self, table_name, constructor, localdb = 'sqlite:///ez.db'):
+  def __init__(self, table_name, constructor, localdb='sqlite:///ez.db'):
     self.localdb = localdb
-    self.db = dataset.connect(self.localdb)
-    self.table = self.db[table_name]
+    self.database = dataset.connect(self.localdb)
+    self.table = self.database[table_name]
     self.constructor = constructor
     self.table_name = table_name
 
@@ -28,13 +28,13 @@ class Database(object):
            self.entry_string()]
     return ' '.join(lst)
 
-  def entry_string (self):
+  def entry_string(self):
     """ Return a string of all entries """
     results = self.table.find(order_by=['-UID'])
     lst = [str(self.constructor(_dict=d)) for d in results]
     return ('\n' + '-'*80 + '\n').join(lst)
 
-  def in_DB (self, **kwargs):
+  def in_DB(self, **kwargs):
     """
     Returns boolean given keyword argument component=value. Example:
       table.in_DB(UID='123')
@@ -68,7 +68,7 @@ class Database(object):
       if out:
         return 'Added entry'
 
-  def update_entry(self, entry, out = False):
+  def update_entry(self, entry):
     """
     Update an entry. It is selected in the table according to entry.UID.
     """
@@ -82,11 +82,11 @@ class Database(object):
     dicts = [e.__dict__ for e in entries]
     self.table.insert_many(dicts, **kwargs)
 
-  def UID_list (self):
+  def UID_list(self):
     """ Return a list of the UIDs of all entries as strings """
     return [str(self.constructor(_dict=d).UID) for d in self.table]
 
-  def necessary_entries (self, lst):
+  def necessary_entries(self, lst):
     """
     Given a list of UIDs, return a list of UIDs that are not in this database
     """
