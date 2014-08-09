@@ -184,6 +184,31 @@ class client(ez_process, threading.Thread):
       else:
         print "package:", key, " successfully reconstructed"
 
+  def cmd_send(self, user_id, msg):
+    try:
+      if not self.UserDatabase.in_DB(name=user_id):
+        return
+
+      mx = em.Message(self.name, user_id, msg)
+      # store msg in db
+      self.MsgDatabase.add_entry(mx)
+
+      if not user_id in self.ips:
+        return
+
+      packets = ep.Packets(data=mx)
+      print "packets.max_packets:", packets.max_packets
+      self.sent_packets[packets.packets_hash] = packets
+
+      for packet_id in packets.packets:
+        if packet_id != 5:
+          data = pickle.dumps(packets.packets[packet_id])
+          if len(data) > 2048:
+            self.replyQueue.put(self.error("data larger than 2048 bytes"))
+          else:
+            self.commandQueue.put(p2pCommand('send', (user_id, data)))
+    except:
+      self.replyQueue.put(self.error("Syntax error in command"))
 
   def CLI(self):
     data = sys.stdin.readline()
