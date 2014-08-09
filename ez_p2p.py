@@ -340,11 +340,9 @@ class client(ez_process, threading.Thread):
                 if isinstance(result, types.ListType):
                   for res in result:
                     if isinstance(res, em.Message):
-                      if not self.MsgDatabase.in_DB(UID=res.UID):
-                        self.MsgDatabase.add_entry(res)
-                elif  isinstance(result, em.Message):
-                  if not self.MsgDatabase.in_DB(UID=res.UID):
-                    self.MsgDatabase.add_entry(result)
+                      self.MsgDatabase.add_entry(res)
+                elif isinstance(result, em.Message):
+                  self.MsgDatabase.add_entry(result)
 
                 self.replyQueue.put(self.success(result))
                 if pr_key in self.background_processes:
