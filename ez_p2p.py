@@ -8,7 +8,7 @@
 #  Includes  #
 #============#
 #from __future__ import print_function
-import sys
+import sys, types
 import socket, select
 import Queue, threading
 import cPickle as pickle
@@ -80,8 +80,11 @@ class client(ez_process, threading.Thread):
 
     # every new client gets a fresh database in memory for now. Should be made
     # an argument to support test as well as use case
-    db_name = 'sqlite:///:memory:'
-    self.UserDatabase = eu.UserDatabase(localdb=db_name)
+    #db_name = 'sqlite:///:' + self.name + 'memory:'
+    user_db_name = 'sqlite:///' + self.name + '_contacts:'
+    msg_db_name = 'sqlite:///' + self.name + '_messages:'
+    self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
+    self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):
       print "new user created"
@@ -179,6 +182,14 @@ class client(ez_process, threading.Thread):
       except:
         self.replyQueue.put(self.error("Syntax error in bp"))
 
+    elif "sync" in str(data[:-1]):
+
+      try:
+        _, user_id = data.split()
+        self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
+      except:
+        self.replyQueue.put(self.error("Syntax error in ips"))
+
 
 #==================================================#
 #  user requests connection with all online users  #
@@ -225,15 +236,18 @@ class client(ez_process, threading.Thread):
 #  send encrypted msg  #
 #======================#
     else:
-      # TODO: (bcn 2014-08-08) What will happen to this try except?
-      #try:
+      try:
         user_id, msg = data.split()
-        if not user_id in self.ips:
-          return
         if not self.UserDatabase.in_DB(name=user_id):
           return
 
         mx = em.Message(self.name, user_id, msg)
+        # store msg in db
+        self.MsgDatabase.add_entry(mx)
+
+        if not user_id in self.ips:
+          return
+
         packets = ep.Packets(data=mx)
         print "packets.max_packets:", packets.max_packets
         self.sent_packets[packets.packets_hash] = packets
@@ -245,8 +259,8 @@ class client(ez_process, threading.Thread):
               self.replyQueue.put(self.error("data larger than 2048 bytes"))
             else:
               self.commandQueue.put(p2pCommand('send', (user_id, data)))
-      #except:
-        #self.replyQueue.put(self.error("Syntax error in command"))
+      except:
+        self.replyQueue.put(self.error("Syntax error in command"))
 
 #===================#
 #  client receive   #
@@ -293,6 +307,7 @@ class client(ez_process, threading.Thread):
         for user_id in self.ips:
           # packages are dropped if not associated to a known user_id
           if user_addr == self.ips[user_id]:
+            print "user_id:", user_id
             key = (user_addr, packets_hash)
             if not key in self.stored_packets:
               self.stored_packets[key] = ep.Packets()
@@ -322,11 +337,21 @@ class client(ez_process, threading.Thread):
               packets = self.stored_packets[key]
               reconstructed, result = packets.reconstruct_data()
               if reconstructed:
+                if isinstance(result, types.ListType):
+                  for res in result:
+                    if isinstance(res, em.Message):
+                      if not self.MsgDatabase.in_DB(UID=res.UID):
+                        self.MsgDatabase.add_entry(res)
+                elif  isinstance(result, em.Message):
+                  if not self.MsgDatabase.in_DB(UID=res.UID):
+                    self.MsgDatabase.add_entry(result)
+
                 self.replyQueue.put(self.success(result))
-                pr = self.background_processes[pr_key]
-                pr.finished.set()
-                pr.cancel()
-                del self.background_processes[pr_key]
+                if pr_key in self.background_processes:
+                  pr = self.background_processes[pr_key]
+                  pr.finished.set()
+                  pr.cancel()
+                  del self.background_processes[pr_key]
               else:
                 pass
                 #if not pr_key in self.background_processes:

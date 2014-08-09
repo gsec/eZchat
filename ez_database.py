@@ -92,3 +92,9 @@ class Database(object):
     """
     return [entry for entry in lst if not self.in_DB(UID=entry)]
 
+  def complement_entries(self, lst):
+    """
+    Given a list of UIDs, return a list of UIDs that are not in lst
+    """
+    return [entry for entry in self.UID_list() if not entry in lst]
+

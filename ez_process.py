@@ -7,10 +7,12 @@
 #============#
 
 import types
-import cPickle as pickle
-import ez_user as eu
 import Queue, thread, threading
 
+
+import cPickle   as pickle
+import ez_user   as eu
+import ez_packet as ep
 #==============================================================================#
 #                               class p2pCommand                               #
 #==============================================================================#
@@ -434,7 +436,10 @@ class ez_contact(ez_process_base):
         self.replyQueue.put(self.error(str(e)))
 
   def contact_request_in(self, cmd):
+    # user asks for contact data. We might have an options here restricting the
+    # users being allowed to request contact data.
     user, user_addr = cmd.data
+
     myself    = {'add_contact': self.myself}
     msg       = pickle.dumps(myself)
     try:
@@ -452,6 +457,38 @@ class ez_contact(ez_process_base):
       print "user alrdy in database -> contact updated"
       self.myself = self.UserDatabase.update_entry(new_user)
 
+class ez_db_sync(ez_process_base):
+
+  def __init__(self, *args, **kwargs):
+    super(ez_db_sync, self).__init__(*args, **kwargs)
+
+  def db_sync_request_out(self, cmd):
+    user_id = cmd.data
+    if user_id in self.ips:
+      user_addr = self.ips[user_id]
+      data = (self.name, self.MsgDatabase.UID_list())
+      db_sync_request = {'db_sync_request_in': data}
+      msg             = pickle.dumps(db_sync_request)
+      try:
+        self.sockfd.sendto(msg, user_addr)
+      except IOError as e:
+        self.replyQueue.put(self.error(str(e)))
+
+  def db_sync_request_in(self, cmd):
+    (user_id, UID_list), _ = cmd.data
+    if user_id in self.ips:
+      user_addr = self.ips[user_id]
+      UIDs_to_sync = self.MsgDatabase.complement_entries(UID_list)
+      if len(UIDs_to_sync) != 0:
+        packets = ep.Packets(data = self.MsgDatabase.get_entries(UIDs_to_sync))
+        self.sent_packets[packets.packets_hash] = packets
+        for packet_id in packets.packets:
+          data = pickle.dumps(packets.packets[packet_id])
+          if len(data) > 2048:
+            self.replyQueue.put(self.error("data larger than 2048 bytes"))
+          else:
+            self.commandQueue.put(p2pCommand('send', (user_id, data)))
+
 #==============================================================================#
 #                                  ez_packet                                   #
 #==============================================================================#
@@ -462,7 +499,6 @@ class ez_packet(ez_process_base):
     super(ez_packet, self).__init__(*args, **kwargs)
 
   def send_packet(self, cmd):
-    # cmd.data[-1] is the user_addr which is not needed
     (packets_hash, packet_id), user_id = cmd.data[0]
     if packets_hash in self.sent_packets:
       if packet_id in self.sent_packets[packets_hash].packets:
@@ -539,7 +575,7 @@ class ez_relay(ez_connect):
 #                               class ez_process                               #
 #==============================================================================#
 
-class ez_process(ez_ping, ez_contact, ez_packet, ez_relay):
+class ez_process(ez_ping, ez_contact, ez_packet, ez_relay, ez_db_sync):
 
   commandQueue = Queue.Queue()
   replyQueue   = Queue.Queue()

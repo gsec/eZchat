@@ -35,7 +35,7 @@ class Test_p2p(object):
     print("setUp of Test_p2p done")
 
   def test_ping(self):
-    sleep(0.25)
+    sleep(1.25)
     result = None
     pr = p2pCommand('ping_request', data="bob")
     result = self.alice.ping_request(pr, testing=True)
@@ -43,7 +43,7 @@ class Test_p2p(object):
       print(result)
       print("How can this happen???")
 
-    sleep(0.25)
+    sleep(0.50)
     pr = p2pCommand('shutdown')
     self.server.shutdown(pr)
     self.alice.shutdown(pr)
