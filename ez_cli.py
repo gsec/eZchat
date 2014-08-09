@@ -9,7 +9,7 @@ from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
     CURSOR_UP, CURSOR_DOWN, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT)
 
 import signal
-
+import ez_p2p as ep
 
 #==============================================================================#
 #                                  VimButton                                   #
@@ -17,9 +17,6 @@ import signal
 
 class VimButton(urwid.Button):
   insert_mode, command_mode, visual_mode = range(3)
-
-  def __init__(self, *args, **kwargs):
-    self.__super.__init__(*args, **kwargs)
 
   def keypress(self, size, key):
     if key =='j':
@@ -38,7 +35,8 @@ class VimCommandLine(urwid.Edit):
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, *args, **kwargs):
-    self.__super.__init__(*args, **kwargs)
+    urwid.Edit.__init__(self, *args, **kwargs)
+    self.client = ep.client('test')
 
   def keypress(self, size, key):
     p = self.edit_pos
@@ -46,16 +44,32 @@ class VimCommandLine(urwid.Edit):
       urwid.emit_signal(self, 'command_line_exit', self, '')
       return
     elif key == 'enter':
-      self.evalutate_command()
+      self.evaluate_command()
       return
     # do not allow to delete :
     elif key != 'backspace' or p > 1:
       super(VimCommandLine, self).keypress(size, key)
 
-  def evalutate_command(self):
+  def evaluate_command(self):
     command = self.get_edit_text()[1:]
+    cmd_and_args = command.split()
+    command_dict = {"close" : self.client.cmd_close,
+                    "users" : self.client.cmd_users,
+                    "ping" : self.client.cmd_ping,
+                    "add" : self.client.cmd_add,
+                    "servermode" : self.client.cmd_servermode,
+                    "bg" : self.client.cmd_bg,
+                    "sync" : self.client.cmd_sync,
+                    "ips" : self.client.cmd_ips,
+                    "key" : self.client.cmd_key,
+                    "verify" : self.client.cmd_verify,
+                    "send" : self.client.cmd_send
+                   }
     if command == 'q' or command == 'quit':
       urwid.emit_signal(self, 'exit_ez_chat')
+    else:
+      command_dict[cmd_and_args[0]](*cmd_and_args[1:])
+
 
 #==============================================================================#
 #                                   VimEdit                                    #
@@ -67,7 +81,7 @@ class VimEdit(urwid.Edit):
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, **kwargs):
-    self.__super.__init__(**kwargs)
+    urwid.Edit.__init__(self, **kwargs)
     self.mode = VimEdit.insert_mode
     self.last_key = None
     self.double_press = False
@@ -219,7 +233,7 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
 
-    self.__super.__init__(self.vimedit_f, footer = self.commandline)
+    urwid.Frame.__init__(self, self.vimedit_f, footer=self.commandline)
 
 
     urwid.connect_signal(self.vimedit, 'done', self.mode_notifier)

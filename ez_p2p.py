@@ -106,6 +106,85 @@ class client(ez_process, threading.Thread):
 # The send command still uses direct access to the clients socket -> should be
 # done via commandQueue
 
+  def cmd_close(self):
+    self.enableCLI = False
+    self.commandQueue.put(p2pCommand('shutdown'))
+    return
+
+  def cmd_users(self):
+    print "online users"
+    for user in self.ips:
+      print "user:", user, self.ips[user]
+    print "contacts"
+    UIDs = self.UserDatabase.UID_list()
+    for entry in self.UserDatabase.get_entries(UIDs):
+      print "contact:", entry.name
+
+  def cmd_ping(self, user_id):
+    print 'Trying to ping', user_id
+    try:
+      self.commandQueue.put(p2pCommand('ping_request', user_id))
+    except:
+      self.replyQueue.put(self.error("Syntax error in ping"))
+
+  def cmd_add(self, user_id, host, port):
+      try:
+        self.add_client((str(host), int(port)), user_id)
+        self.commandQueue.put(p2pCommand('ping_request', user_id))
+      except:
+        self.replyQueue.put(self.error("Syntax error in user"))
+
+  def cmd_servermode(self, host, port):
+    try:
+      self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
+    except:
+      self.replyQueue.put(self.error("Syntax error in servermode"))
+
+  def cmd_bg(self):
+    """ Show background processes """
+    try:
+      print ("background_processes:", self.background_processes)
+    except:
+      self.replyQueue.put(self.error("Syntax error in bp"))
+
+  def cmd_sync(self, user_id):
+    try:
+      self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
+    except:
+      self.replyQueue.put(self.error("Syntax error in ips"))
+
+  def cmd_ips(self, users):
+    try:
+      if len(users) > 1:
+        for user_id in users:
+          self.commandQueue.put(p2pCommand('ips_request', (user_id)))
+      else:
+        # TODO: (bcn 2014-08-09) looks strange
+        for user_id in self.ips:
+          self.commandQueue.put(p2pCommand('ips_request', (user_id)))
+
+    except:
+      self.replyQueue.put(self.error("Syntax error in ips"))
+
+  def cmd_key(self, user_id):
+    try:
+      self.commandQueue.put(p2pCommand('contact_request_out', (user_id)))
+    except:
+      self.replyQueue.put(self.error("Syntax error in key"))
+
+  def cmd_verify(self):
+    for key in self.stored_packets:
+      packets = self.stored_packets[key]
+      reconstructed, result = packets.reconstruct_data()
+      if not reconstructed:
+        for packet_number in result:
+          cmd = p2pCommand('packet_request',
+                           ((packets.packets_hash, packet_number), key[0]))
+          self.commandQueue.put(cmd)
+      else:
+        print "package:", key, " successfully reconstructed"
+
+
   def CLI(self):
     data = sys.stdin.readline()
     if not data:
@@ -183,7 +262,6 @@ class client(ez_process, threading.Thread):
         self.replyQueue.put(self.error("Syntax error in bp"))
 
     elif "sync" in str(data[:-1]):
-
       try:
         _, user_id = data.split()
         self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
