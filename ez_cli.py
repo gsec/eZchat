@@ -287,7 +287,7 @@ def received_output(data):
 
 write_fd = loop.watch_pipe(received_output)
 proc = subprocess.Popen(
-    ['python', '-u', run_me, sys.argv[1], sys.argv[2], sys.argv[3]],
+    ['python', '-u', run_me, sys.argv[1]],
     stdout=write_fd,
     close_fds=True)
 
