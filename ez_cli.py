@@ -1,7 +1,6 @@
-#==============================================================================#
+# encoding=utf-8 ==============================================================#
 #                                  ez_cli.py                                   #
 #==============================================================================#
-
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
@@ -16,6 +15,7 @@ import ez_p2p as ep
 #==============================================================================#
 
 class VimButton(urwid.Button):
+  """TODO: Explain me..."""
   insert_mode, command_mode, visual_mode = range(3)
 
   def keypress(self, size, key):
@@ -24,13 +24,14 @@ class VimButton(urwid.Button):
     elif key == 'k':
       return 'up'
     else:
-      super(VimButton, self).keypress(size, key)
+      urwid.Button.keypress(size, key)
 
 #==============================================================================#
 #                                VimCommandLine                                #
 #==============================================================================#
 
 class VimCommandLine(urwid.Edit):
+  """Evaluates commands that are typed in the lowest line of the CLI."""
   signals = ['command_line_exit', 'exit_ez_chat']
   insert_mode, command_mode, visual_mode = range(3)
 
@@ -52,6 +53,38 @@ class VimCommandLine(urwid.Edit):
                          "q" : self.cmd_close
                         }
 
+  def cmd_close(self):
+    urwid.emit_signal(self, 'exit_ez_chat')
+
+  def tab_completion(self):
+    cmd = self.get_edit_text()[1:]
+    matches = [key for key in self.command_dict if key.startswith(cmd)]
+    if len(matches) == 1:
+      self.set_edit_text(':' + matches[0] + ' ')
+      p = self.edit_pos
+      p = move_next_char(self.edit_text, len(self.edit_text), p)
+      self.set_edit_pos(p)
+    else:
+      print '\n'
+      print ' '.join(matches)
+
+  def evaluate_command(self):
+    try:
+      command = self.get_edit_text()[1:]
+      cmd_and_args = command.split()
+      try:
+        self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
+      except KeyError:
+        print '\n'
+        print 'Command not known'
+      except TypeError as e:
+        print '\n'
+        print str(e)
+        print self.command_dict[cmd_and_args[0]].__doc__
+    except IndexError:
+      urwid.emit_signal(self, 'command_line_exit', self, '')
+      return
+
   def keypress(self, size, key):
     p = self.edit_pos
     if key == 'esc':
@@ -61,33 +94,10 @@ class VimCommandLine(urwid.Edit):
       self.evaluate_command()
       return
     elif key == 'tab':
-      command = self.get_edit_text()[1:]
-      self.tab_completion(command)
-    # do not allow to delete :
+      self.tab_completion()
+    # do not allow to delete `:`
     elif key != 'backspace' or p > 1:
       urwid.Edit.keypress(self, size, key)
-
-  def cmd_close(self):
-    urwid.emit_signal(self, 'exit_ez_chat')
-
-  def tab_completion(self, cmd):
-    matches = [key for key in self.command_dict if key.startswith(cmd)]
-    if len(matches) == 1:
-      self.set_edit_text(':' + matches[0] + ' ')
-      p = self.edit_pos
-      p = move_next_char(self.edit_text,len(self.edit_text),p)
-      self.set_edit_pos(p)
-    else:
-      print '\n'
-      print ' '.join(matches)
-
-  def evaluate_command(self):
-    command = self.get_edit_text()[1:]
-    cmd_and_args = command.split()
-    try:
-      self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
-    except KeyError:
-      pass
 
 #==============================================================================#
 #                                   VimEdit                                    #
@@ -175,20 +185,17 @@ class VimEdit(urwid.Edit):
       self.set_edit_pos(p)
       return
 
-    elif key == 'o' and self.mode == VimEdit.command_mode:
+    elif key in ('o', 'O') and self.mode == VimEdit.command_mode:
       self.mode = VimEdit.insert_mode
       urwid.emit_signal(self, 'insert_mode', self, 'insert mode')
-      x,y = self.get_cursor_coords((maxcol,))
+      x, y = self.get_cursor_coords((maxcol,))
+      shift = -1 if key == 'O' else 0
+      y = y + shift
       text = self.get_edit_text()
       text = text.split('\n')
-      if len(text) > 1:
-        text_last = ['\n'] + [u + '\n' for u in text[y:-1]] + [text[-1]]
-      else:
-        text_last = ['']
-      text = [u + '\n' for u in text[0:y]] + [' '] + text_last
-
-      text = "".join(text)
-      super(VimEdit, self).set_edit_text(text)
+      text.insert(y - 1, '')
+      text = '\n'.join(text)
+      self.set_edit_text(text)
       self.move_cursor_to_coords((maxcol,), 'left', y + 1)
       return
 
@@ -243,7 +250,7 @@ class VimEdit(urwid.Edit):
 class ez_cli_urwid(urwid.Frame):
 
   def __init__(self, *args, **kwargs):
-    self.vimedit       = VimEdit(caption = ('VimEdit', u"Vim Mode FTW!\n"),
+    self.vimedit       = VimEdit(caption = ('VimEdit', u"eZchat\n\n"),
                             multiline = True)
     self.vimedit.mode = VimEdit.insert_mode
     self.commandline   = VimCommandLine(u'')

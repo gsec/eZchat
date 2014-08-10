@@ -121,6 +121,7 @@ class client(ez_process, threading.Thread):
       print "contact:", entry.name
 
   def cmd_ping(self, user_id):
+    """Ping a user given its ID."""
     print 'Trying to ping', user_id
     try:
       self.commandQueue.put(p2pCommand('ping_request', user_id))
