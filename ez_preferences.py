@@ -6,6 +6,7 @@ from os import path, makedirs
 from sys import exit
 
 key_location = 'tests'
+command_history = '.cmd_history'
 
 def check_key_location():
   """
