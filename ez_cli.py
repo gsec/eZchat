@@ -37,6 +37,20 @@ class VimCommandLine(urwid.Edit):
   def __init__(self, *args, **kwargs):
     urwid.Edit.__init__(self, *args, **kwargs)
     self.client = ep.client('test')
+    self.command_dict = {"close" : self.client.cmd_close,
+                         "users" : self.client.cmd_users,
+                         "ping" : self.client.cmd_ping,
+                         "add" : self.client.cmd_add,
+                         "servermode" : self.client.cmd_servermode,
+                         "bg" : self.client.cmd_bg,
+                         "sync" : self.client.cmd_sync,
+                         "ips" : self.client.cmd_ips,
+                         "key" : self.client.cmd_key,
+                         "verify" : self.client.cmd_verify,
+                         "send" : self.client.cmd_send,
+                         "quit" : self.cmd_close,
+                         "q" : self.cmd_close
+                        }
 
   def keypress(self, size, key):
     p = self.edit_pos
@@ -46,30 +60,34 @@ class VimCommandLine(urwid.Edit):
     elif key == 'enter':
       self.evaluate_command()
       return
+    elif key == 'tab':
+      command = self.get_edit_text()[1:]
+      self.tab_completion(command)
     # do not allow to delete :
     elif key != 'backspace' or p > 1:
-      super(VimCommandLine, self).keypress(size, key)
+      urwid.Edit.keypress(self, size, key)
+
+  def cmd_close(self):
+    urwid.emit_signal(self, 'exit_ez_chat')
+
+  def tab_completion(self, cmd):
+    matches = [key for key in self.command_dict if key.startswith(cmd)]
+    if len(matches) == 1:
+      self.set_edit_text(':' + matches[0] + ' ')
+      p = self.edit_pos
+      p = move_next_char(self.edit_text,len(self.edit_text),p)
+      self.set_edit_pos(p)
+    else:
+      print '\n'
+      print ' '.join(matches)
 
   def evaluate_command(self):
     command = self.get_edit_text()[1:]
     cmd_and_args = command.split()
-    command_dict = {"close" : self.client.cmd_close,
-                    "users" : self.client.cmd_users,
-                    "ping" : self.client.cmd_ping,
-                    "add" : self.client.cmd_add,
-                    "servermode" : self.client.cmd_servermode,
-                    "bg" : self.client.cmd_bg,
-                    "sync" : self.client.cmd_sync,
-                    "ips" : self.client.cmd_ips,
-                    "key" : self.client.cmd_key,
-                    "verify" : self.client.cmd_verify,
-                    "send" : self.client.cmd_send
-                   }
-    if command == 'q' or command == 'quit':
-      urwid.emit_signal(self, 'exit_ez_chat')
-    else:
-      command_dict[cmd_and_args[0]](*cmd_and_args[1:])
-
+    try:
+      self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
+    except KeyError:
+      pass
 
 #==============================================================================#
 #                                   VimEdit                                    #
@@ -101,12 +119,12 @@ class VimEdit(urwid.Edit):
         self.insert_text(key)
       else:
         urwid.emit_signal(self, 'done', self, self.get_edit_text())
-        super(VimEdit, self).set_edit_text('')
+        self.set_edit_text('')
       return
     elif key == ':' and self.mode == VimEdit.command_mode:
       if self.mode == VimEdit.command_mode:
         urwid.emit_signal(self, 'command_line', self, ':')
-        super(VimEdit, self).set_edit_text('')
+        self.set_edit_text('')
       return
 
     # command mode
@@ -114,7 +132,8 @@ class VimEdit(urwid.Edit):
       self.last_key = key
       self.mode = VimEdit.command_mode
       urwid.emit_signal(self, 'command_mode', self, 'command mode')
-      if p==0: return key
+      # ?
+      #if p==0: return key
       p = move_prev_char(self.edit_text,0,p)
       self.set_edit_pos(p)
 
