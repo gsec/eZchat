@@ -2,7 +2,7 @@
 #                                  ez_cli.py                                   #
 #==============================================================================#
 
-
+import sys, types
 import urwid
 from urwid.util import move_next_char, move_prev_char
 from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
@@ -10,6 +10,15 @@ from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
 
 import signal
 import ez_p2p as ep
+
+import Queue, threading
+from thread import start_new_thread
+
+
+# imports related to the inclusion of the chat client
+import client as cl
+import subprocess, os
+run_me = os.path.join(os.path.dirname(sys.argv[0]), 'client.py')
 
 #==============================================================================#
 #                                  VimButton                                   #
@@ -30,13 +39,14 @@ class VimButton(urwid.Button):
 #                                VimCommandLine                                #
 #==============================================================================#
 
-class VimCommandLine(urwid.Edit):
+class VimCommandLine(urwid.Edit, threading.Thread):
   signals = ['command_line_exit', 'exit_ez_chat']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, *args, **kwargs):
     urwid.Edit.__init__(self, *args, **kwargs)
-    self.client = ep.client('test')
+    #start_new_thread(self.client.start,())
+    #self.client.start()
 
   def keypress(self, size, key):
     p = self.edit_pos
@@ -45,7 +55,7 @@ class VimCommandLine(urwid.Edit):
       return
     elif key == 'enter':
       self.evaluate_command()
-      return
+      #return
     # do not allow to delete :
     elif key != 'backspace' or p > 1:
       super(VimCommandLine, self).keypress(size, key)
@@ -53,21 +63,24 @@ class VimCommandLine(urwid.Edit):
   def evaluate_command(self):
     command = self.get_edit_text()[1:]
     cmd_and_args = command.split()
-    command_dict = {"close" : self.client.cmd_close,
-                    "users" : self.client.cmd_users,
-                    "ping" : self.client.cmd_ping,
-                    "add" : self.client.cmd_add,
-                    "servermode" : self.client.cmd_servermode,
-                    "bg" : self.client.cmd_bg,
-                    "sync" : self.client.cmd_sync,
-                    "ips" : self.client.cmd_ips,
-                    "key" : self.client.cmd_key,
-                    "verify" : self.client.cmd_verify,
-                    "send" : self.client.cmd_send
+    command_dict = {"close" : cl.cl.cmd_close,
+                    "users" : cl.cl.cmd_users,
+                    "ping" : cl.cl.cmd_ping,
+                    "add" : cl.cl.cmd_add,
+                    "servermode" : cl.cl.cmd_servermode,
+                    "connect" : cl.cl.cmd_connect,
+                    "bg" : cl.cl.cmd_bg,
+                    "sync" : cl.cl.cmd_sync,
+                    "ips" : cl.cl.cmd_ips,
+                    "key" : cl.cl.cmd_key,
+                    "verify" : cl.cl.cmd_verify,
+                    "send" : cl.cl.cmd_send
                    }
+    #self.client.cmd_connect("127.0.0.1", 1234)
     if command == 'q' or command == 'quit':
       urwid.emit_signal(self, 'exit_ez_chat')
     else:
+      print "command:", command
       command_dict[cmd_and_args[0]](*cmd_and_args[1:])
 
 
@@ -224,11 +237,14 @@ class VimEdit(urwid.Edit):
 class ez_cli_urwid(urwid.Frame):
 
   def __init__(self, *args, **kwargs):
-    self.vimedit       = VimEdit(caption = ('VimEdit', u"Vim Mode FTW!\n"),
-                            multiline = True)
+
+    self.vimedit      = VimEdit(caption = ('VimEdit', u"Vim Mode FTW!\n"),
+                                multiline = True)
     self.vimedit.mode = VimEdit.insert_mode
-    self.commandline   = VimCommandLine(u'')
+    self.commandline  = VimCommandLine()
+
     self.commandline.set_edit_text(u'insert mode')
+
     self.button        = VimButton(u'Exit')
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
@@ -258,8 +274,21 @@ class ez_cli_urwid(urwid.Frame):
     self.set_focus('body')
 
   def exit(self, *args):
+    cl.cl.cmd_close()
     raise urwid.ExitMainLoop()
 
 
+#print "sys.argv[1]:", sys.argv[1]
 ez_cli = ez_cli_urwid()
-urwid.MainLoop(ez_cli).run()
+loop = urwid.MainLoop(ez_cli)
+
+def received_output(data):
+    ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
+
+write_fd = loop.watch_pipe(received_output)
+proc = subprocess.Popen(
+    ['python', '-u', run_me, sys.argv[1], sys.argv[2], sys.argv[3]],
+    stdout=write_fd,
+    close_fds=True)
+
+loop.run()

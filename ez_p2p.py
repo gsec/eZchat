@@ -54,7 +54,7 @@ class client(ez_process, threading.Thread):
     self.alive.set()
 
     # internal cli enabled
-    self.enableCLI = True
+    self.enableCLI = False
 
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -139,6 +139,14 @@ class client(ez_process, threading.Thread):
       self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
     except:
       self.replyQueue.put(self.error("Syntax error in servermode"))
+
+  def cmd_connect(self, host, port):
+    master = (host, port)
+    try:
+      self.commandQueue.put(p2pCommand('connect_server', master))
+      self.add_client("server", master)
+    except:
+      self.replyQueue.put(self.error("Syntax error in connect"))
 
   def cmd_bg(self):
     """ Show background processes """
