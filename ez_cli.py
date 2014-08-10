@@ -35,9 +35,10 @@ class VimCommandLine(urwid.Edit):
   signals = ['command_line_exit', 'exit_ez_chat']
   insert_mode, command_mode, visual_mode = range(3)
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, vimedit, *args, **kwargs):
     urwid.Edit.__init__(self, *args, **kwargs)
     self.client = ep.client('test')
+    self.vimedit = vimedit
     self.command_dict = {"close" : self.client.cmd_close,
                          "users" : self.client.cmd_users,
                          "ping" : self.client.cmd_ping,
@@ -50,8 +51,14 @@ class VimCommandLine(urwid.Edit):
                          "verify" : self.client.cmd_verify,
                          "send" : self.client.cmd_send,
                          "quit" : self.cmd_close,
-                         "q" : self.cmd_close
+                         "q" : self.cmd_close,
+                         "show" : self.cmd_show
                         }
+
+  def cmd_show(self, file_name):
+    with open(str(file_name)) as f:
+      self.vimedit.set_edit_text(f.read())
+    self.vimedit.initialized = True
 
   def cmd_close(self):
     urwid.emit_signal(self, 'exit_ez_chat')
@@ -115,6 +122,7 @@ class VimEdit(urwid.Edit):
     self.mode = VimEdit.insert_mode
     self.last_key = None
     self.double_press = False
+    self.initialized = None
     self.command_dict = {':' : self.cmd_enter_cmdline,
                          'x' : self.cmd_delete_one,
                          'd' : self.cmd_delete,
@@ -208,6 +216,9 @@ class VimEdit(urwid.Edit):
   def keypress(self, size, key):
     (self.maxcol,) = size
     self.p = self.edit_pos
+    if self.initialized:
+      self.set_edit_text('')
+      self.initialized = False
     if key == self.last_key:
       self.last_key = None
       self.double_press = True
@@ -250,10 +261,10 @@ class ez_cli_urwid(urwid.Frame):
   """Main CLI Frame."""
 
   def __init__(self, *args, **kwargs):
-    self.vimedit       = VimEdit(caption = ('VimEdit', u"eZchat\n\n"),
-                            multiline = True)
+    self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
+                                 multiline = True)
     self.vimedit.mode = VimEdit.insert_mode
-    self.commandline   = VimCommandLine(u'')
+    self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
     self.button        = VimButton(u'Exit')
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
@@ -269,17 +280,18 @@ class ez_cli_urwid(urwid.Frame):
                          self.command_line_exit)
     urwid.connect_signal(self.commandline, 'exit_ez_chat', self.exit)
     signal.signal(signal.SIGINT, self.exit)
+    self.commandline.cmd_show('logo')
 
   def mode_notifier(self, edit, new_edit_text):
-    self.commandline.set_edit_text(u"%s" % new_edit_text)
+    self.commandline.set_edit_text(str(new_edit_text))
 
   def command_line_mode(self, edit, new_edit_text):
-    self.commandline.set_edit_text(u":")
+    self.commandline.set_edit_text(':')
     self.commandline.set_edit_pos(1)
     self.set_focus('footer')
 
   def command_line_exit(self, edit, new_edit_text):
-    self.commandline.set_edit_text(u"command mode")
+    self.commandline.set_edit_text('command mode')
     self.set_focus('body')
 
   def exit(self, *args):
