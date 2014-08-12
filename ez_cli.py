@@ -136,6 +136,7 @@ class VimCommandLine(urwid.Edit):
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
       f.write('\n'.join(self.command_lines))
+    #cl.cl.cmd_close()
     urwid.emit_signal(self, 'exit_ez_chat')
 
   def __close__(self):
@@ -415,8 +416,12 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.commandline, 'command_line_exit',
                          self.command_line_exit)
     urwid.connect_signal(self.commandline, 'exit_ez_chat', self.exit)
-    signal.signal(signal.SIGINT, self.exit)
+    signal.signal(signal.SIGINT, self.__close__)
     self.commandline.cmd_show('logo')
+
+  def __close__(self, *args):
+    self.commandline.cmd_close()
+    self.exit()
 
   def mode_notifier(self, edit, new_edit_text):
     self.commandline.set_edit_text(str(new_edit_text))
