@@ -1,25 +1,42 @@
-'''
-ez_gui creates a simple chatdialog. To show and run the chatdialog, create an instance of QtGui.QApplication and ez_gui.ez_gui. QtGui.QApplication.exec_() will run the clientmainloop. For example:
+# encoding=utf-8 ==============================================================#
+#                                   ez_gui                                     #
+#==============================================================================#
 
-import sys
-import ez_gui
-from PyQt4 import QtCore, QtGui
+#ez_gui creates a simple chatdialog. To show and run the chatdialog, create an
+#instance of QtGui.QApplication and ez_gui.ez_gui. QtGui.QApplication.exec_()
+#will run the clientmainloop.
 
-app = QtGui.QApplication.(sys.argv)
-win = ez_gui.ez_gui()
-sys.exit(app.exec_())
+#For example:
+
+#  import sys
+#  import ez_gui
+#  from PyQt4 import QtCore, QtGui
+
+#  app = QtGui.QApplication.(sys.argv)
+#  win = ez_gui.ez_gui()
+#  sys.exit(app.exec_())
 
 
-If you want to run eZ_chat with a graphic user interface, follow further steps:
-TODO:
-    -ez_p2p.Client.CLI() needs to be changed. data has to be a functionargument (watch ez_gui.ez_gui.gui_onSend())
-    -delete the mainloop in ez_p2p.Client.run(). QtGui.QApplication.exec_() will do this job
-    -to print statusmessages in ez_p2p.Client, use ez_gui.ez_gui.gui_printStatus() instead of print
-    -if a chatmessage was recieved in the clientthread, use ez_gui.ez_gui.gui_onRecv() to print it
-'''
-
+#If you want to run eZ_chat with a graphic user interface, follow further steps:
+#TODO:
+#   -ez_p2p.Client.CLI() needs to be changed. data has to be a functionargument
+#      (watch ez_gui.ez_gui.gui_onSend())
+#
+#   -delete the mainloop in ez_p2p.Client.run(). QtGui.QApplication.exec_() will
+#      do this job
+#
+#   -to print statusmessages in ez_p2p.Client, use
+#      ez_gui.ez_gui.gui_printStatus() instead of print
+#
+#   -if a chatmessage was recieved in the clientthread, use
+#      ez_gui.ez_gui.gui_onRecv() to print it
+#
+#============#
+#  Includes  #
+#============#
 from PyQt4 import QtCore, QtGui
 #import ez_p2p
+#-------------------------------------------------------------------------------
 
 try:
   _fromUtf8 = QtCore.QString.fromUtf8
@@ -117,4 +134,3 @@ class ez_gui(Ui_gui_mainwindow_setup, QtGui.QDialog):
       self.textShow.insertPlainText(statusmsg[i] + ' ')
     self.textShow.insertPlainText('\n')
     self.textShow.moveCursor(QtGui.QTextCursor.End)
-
