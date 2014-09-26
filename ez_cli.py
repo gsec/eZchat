@@ -145,12 +145,11 @@ class VimCommandLine(urwid.Edit):
 
   def tab_completion(self):
     cmd = self.get_edit_text()[1:]
-    matches = [key for key in self.command_dict if key.startswith(cmd)]
+    matches = [key for key in self.command_dict if key.startswith(cmd.strip())]
     if len(matches) == 1:
-      self.set_edit_text(':' + matches[0] + ' ')
-      p = self.edit_pos
-      p = move_next_char(self.edit_text, len(self.edit_text), p)
-      self.set_edit_pos(p)
+      line = ':' + matches[0] + ' '
+      self.set_edit_text(line[:])
+      self.set_edit_pos(len(line)-1)
     else:
       print '\n'
       print ' '.join(matches)
@@ -199,7 +198,6 @@ class VimCommandLine(urwid.Edit):
 
   def keypress(self, size, key):
     p = self.edit_pos
-    print "p:", p
     if key == 'esc':
       urwid.emit_signal(self, 'command_line_exit', self, '')
       return
@@ -379,7 +377,7 @@ class ez_cli_urwid(urwid.Frame):
   def __init__(self, *args, **kwargs):
     self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
                                  multiline = True)
-    self.vimedit.mode = VimEdit.insert_mode
+    self.vimedit.mode  = VimEdit.insert_mode
     self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
     self.button        = VimButton(u'Exit')
@@ -458,10 +456,10 @@ loop = urwid.MainLoop(ez_cli, palette)
 def received_output(data):
   ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
 
-#write_fd = loop.watch_pipe(received_output)
-#proc = subprocess.Popen(
-    #['python', '-u', client_path, sys.argv[1]],
-    #stdout=write_fd,
-    #close_fds=True)
+write_fd = loop.watch_pipe(received_output)
+proc = subprocess.Popen(
+    ['python', '-u', client_path, sys.argv[1]],
+    stdout=write_fd,
+    close_fds=True)
 
 loop.run()
