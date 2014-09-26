@@ -260,9 +260,8 @@ class VimEdit(urwid.Edit):
   def cmd_delete_one(self):
     self.pref_col_maxcol = None, None
     p = self.edit_pos
-    #if not self._delete_highlighted():
     self.set_edit_text(self.edit_text[:p] + self.edit_text[self.edit_pos + 1:])
-    self.set_edit_pos(p)
+    self.cmd_move_left(pressed = 'x')
     return
 
   def cmd_delete(self):
@@ -271,8 +270,12 @@ class VimEdit(urwid.Edit):
       x, y = self.get_cursor_coords((self.maxcol,))
       text = text.split('\n')
       text.pop(y-2)
+      # tweak which beavior u want, the +1 feels better ( makes a difference
+      # when deleting the whole line and the cursor is at the last character)
+      x_pos = sum([len(u) for u in text[:y-2]])+1
       text = '\n'.join(text)
       self.set_edit_text(text)
+      self.set_edit_pos(x_pos)
 
   def cmd_insert(self):
     self.mode = VimEdit.insert_mode
@@ -312,11 +315,10 @@ class VimEdit(urwid.Edit):
     self.set_edit_pos(p)
 
   def cmd_move_down(self, shift=1):
-    #self.highlight = None
+    self.highlight = None
     x, y = self.get_cursor_coords((self.maxcol,))
     pref_col = self.get_pref_col((self.maxcol,))
     y += shift
-    # ?
     if not self.move_cursor_to_coords((self.maxcol,), pref_col, y):
       if shift == 1:
         return 'down'
@@ -356,13 +358,15 @@ class VimEdit(urwid.Edit):
         pass
 
     # enter command mode
+    # TODO: nick  Fr 26 Sep 2014 21:39:56 CEST
+    # esc should behave as 'x', then go to command_mode.
+    # need to check if last operation was appending out of command mode which is
+    # yet not possible
     elif key == 'esc':
       self.last_key = key
       self.mode = VimEdit.command_mode
       urwid.emit_signal(self, 'command_mode', self, 'command mode')
-      #self.cmd_move_left(pressed = key)
-      #p = move_prev_char(self.edit_text, 0, self.p)
-      #self.set_edit_pos(p)
+      self.cmd_move_left(pressed = key)
 
     elif self.mode == VimEdit.insert_mode:
       urwid.Edit.keypress(self, size, key)
