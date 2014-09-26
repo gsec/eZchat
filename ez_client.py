@@ -6,5 +6,5 @@ try:
 except (IndexError, ValueError):
   print ("usage: %s <id>" % sys.argv[0])
   sys.exit(65)
-cl = client(sys.argv[1])
+cl = client(name = sys.argv[1])
 cl.start()
