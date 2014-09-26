@@ -92,7 +92,8 @@ class VimCommandLine(urwid.Edit):
       self.command_lines = []
     self.command_counter = len(self.command_lines)
     self.command_dict = {"close" : cl.cl.cmd_close,
-                         "users" : cl.cl.cmd_users,
+                         "contacs" : cl.cl.cmd_get_contact_names,
+                         "users" : cl.cl.cmd_get_online_users,
                          "ping" : cl.cl.cmd_ping,
                          "add" : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
@@ -102,7 +103,7 @@ class VimCommandLine(urwid.Edit):
                          "ips" : cl.cl.cmd_ips,
                          "key" : cl.cl.cmd_key,
                          "verify" : cl.cl.cmd_verify,
-                         "send" : cl.cl.cmd_send,
+                         "send" : cl.cl.cmd_send_msg,
                          "quit" : self.cmd_close,
                          "q" : self.cmd_close,
                          "show" : self.cmd_show,
@@ -198,6 +199,7 @@ class VimCommandLine(urwid.Edit):
 
   def keypress(self, size, key):
     p = self.edit_pos
+    print "p:", p
     if key == 'esc':
       urwid.emit_signal(self, 'command_line_exit', self, '')
       return
@@ -281,7 +283,7 @@ class VimEdit(urwid.Edit):
 
   def cmd_append(self):
     self.cmd_insert()
-    if self.p >= self.maxcol: return
+    if self.p >= len(self.edit_text): return
     p = move_next_char(self.edit_text, self.p, len(self.edit_text))
     self.set_edit_pos(p)
     return
@@ -301,11 +303,13 @@ class VimEdit(urwid.Edit):
   def cmd_newline_O(self):
     self.cmd_newline(shift=-1)
 
-  def cmd_move_left(self):
+  def cmd_move_left(self, pressed = CURSOR_LEFT):
+    if self.p==0: return pressed
     p = move_prev_char(self.edit_text,0,self.p)
     self.set_edit_pos(p)
 
   def cmd_move_right(self):
+    if self.p >= len(self.edit_text): return CURSOR_RIGHT
     p = move_next_char(self.edit_text,self.p,len(self.edit_text))
     self.set_edit_pos(p)
 
@@ -358,8 +362,9 @@ class VimEdit(urwid.Edit):
       self.last_key = key
       self.mode = VimEdit.command_mode
       urwid.emit_signal(self, 'command_mode', self, 'command mode')
-      p = move_prev_char(self.edit_text, 0, self.p)
-      self.set_edit_pos(p)
+      #self.cmd_move_left(pressed = key)
+      #p = move_prev_char(self.edit_text, 0, self.p)
+      #self.set_edit_pos(p)
 
     elif self.mode == VimEdit.insert_mode:
       urwid.Edit.keypress(self, size, key)
@@ -453,10 +458,10 @@ loop = urwid.MainLoop(ez_cli, palette)
 def received_output(data):
   ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
 
-write_fd = loop.watch_pipe(received_output)
-proc = subprocess.Popen(
-    ['python', '-u', client_path, sys.argv[1]],
-    stdout=write_fd,
-    close_fds=True)
+#write_fd = loop.watch_pipe(received_output)
+#proc = subprocess.Popen(
+    #['python', '-u', client_path, sys.argv[1]],
+    #stdout=write_fd,
+    #close_fds=True)
 
 loop.run()
