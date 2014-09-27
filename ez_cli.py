@@ -36,6 +36,30 @@ class VimButton(urwid.Button):
     else:
       urwid.Button.keypress(size, key)
 
+
+#==============================================================================#
+#                                  VimMsgBox                                   #
+#==============================================================================#
+
+class VimMsgBox(urwid.ListBox):
+
+  """Prototype for our message box"""
+
+  def __init__(self, content):
+    slw = []
+    for item in content[:-1]:
+      slw.extend([urwid.Text(item),urwid.Divider()])
+    slw.append(urwid.Text(content[-1]))
+
+    slw = urwid.SimpleListWalker([urwid.AttrMap(w,
+            None, 'reveal focus') for w in slw])
+
+    urwid.ListBox.__init__(self, slw)
+
+
+
+
+
 #==============================================================================#
 #                                  VimListBox                                  #
 #==============================================================================#
@@ -102,7 +126,7 @@ class VimCommandLine(urwid.Edit):
                          "sync" : cl.cl.cmd_sync,
                          "ips" : cl.cl.cmd_ips,
                          "key" : cl.cl.cmd_key,
-                         "verify" : cl.cl.cmd_verify,
+                         #"verify" : cl.cl.cmd_verify,
                          "send" : cl.cl.cmd_send_msg,
                          "quit" : self.cmd_close,
                          "q" : self.cmd_close,
@@ -382,10 +406,19 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
                                  multiline = True)
     self.vimedit.mode  = VimEdit.insert_mode
+    self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
+
+    self.vimmsgbox     = VimMsgBox(['msg1: foo', 'msg2: bar'])
+    self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
+
+    # combine vimedit and vimmsgbox to vimbox
+    self.vimmsgbox = urwid.BoxAdapter(self.vimmsgbox, 10)
+    self.vimbox = urwid.Pile([self.vimedit, self.vimmsgbox])
+    self.vimbox_f = urwid.Filler(self.vimbox, valign = 'top')
+
     self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
     self.button        = VimButton(u'Exit')
-    self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
 
     focus_map = {
@@ -410,8 +443,9 @@ class ez_cli_urwid(urwid.Frame):
         self.focus_position = 0
 
 
+
     self.top = HorizontalBoxes()
-    self.top.open_box(self.vimedit_f, 100)
+    self.top.open_box(self.vimbox_f, 100)
     self.top_f = urwid.Filler(self.top, 'top', 20)
 
     urwid.Frame.__init__(self, self.top_f, footer=self.commandline)
