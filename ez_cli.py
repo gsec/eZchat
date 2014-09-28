@@ -97,6 +97,12 @@ class VimListBox(urwid.ListBox):
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
 
+
+class VimStatusline(urwid.Text):
+    def __init__(self):
+        """@todo: to be defined1. """
+
+
 #==============================================================================#
 #                                VimCommandLine                                #
 #==============================================================================#
@@ -407,14 +413,15 @@ class ez_cli_urwid(urwid.Frame):
                                  multiline = True)
     self.vimedit.mode  = VimEdit.insert_mode
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
+    self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, 10)
 
     self.vimmsgbox     = VimMsgBox(['msg1: foo', 'msg2: bar'])
     self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox = urwid.BoxAdapter(self.vimmsgbox, 10)
-    self.vimbox = urwid.Pile([self.vimedit, self.vimmsgbox])
-    self.vimbox_f = urwid.Filler(self.vimbox, valign = 'top')
+    self.vimbox    = urwid.Pile([self.vimedit_b, self.vimmsgbox])
+    self.vimbox_f  = urwid.Filler(self.vimbox, valign = 'top')
 
     self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
@@ -466,6 +473,7 @@ class ez_cli_urwid(urwid.Frame):
 
   def mode_notifier(self, edit, new_edit_text):
     self.commandline.set_edit_text(str(new_edit_text))
+    #edit.set_edit_text(str(new_edit_text))
 
   def command_line_mode(self, edit, new_edit_text):
     self.commandline.set_edit_text(':')
