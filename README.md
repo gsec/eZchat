@@ -41,4 +41,4 @@ As we are still in heavy development, you might want to check
 [Travis](https://travis-ci.org/gsec/eZchat) to see the current build status of
 the continuous integration server.
 
-Finally, you can dive in the doc strings and inheritance diagrams over at [ReadtheDocs](ezchat.readthedocs.org)
+Finally, you can dive in the doc strings and inheritance diagrams over at [ReadtheDocs](http://ezchat.readthedocs.org)
