@@ -3,6 +3,11 @@ history.json
 *.db
 deps.*
 
+# sphinx documentation specifics
+_build
+_static
+_templates
+
 # rsa keys
 *.priv
 *.pub

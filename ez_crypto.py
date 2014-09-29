@@ -134,9 +134,12 @@ class eZ_RSA(CryptoBaseClass):
     if testing:
       return private_key, public_key
     else: #pragma : no cover
-      with open(self.priv_key_loc(user), 'w') as priv_file:
-        priv_file.write(private_key.exportKey())
-      return public_key.exportKey()
+      try:
+        with open(self.priv_key_loc(user), 'w') as priv_file:
+          priv_file.write(private_key.exportKey())
+        return public_key.exportKey()
+      except IOError:
+        return None
 
   def encrypt(self, public_key, plaintext):
     """

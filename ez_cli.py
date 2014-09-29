@@ -19,8 +19,6 @@ from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
 
 import ez_preferences as ep
 import ez_client as cl
-client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
-
 
 #==============================================================================#
 #                                  VimMsgBox                                   #
@@ -476,20 +474,23 @@ class ez_cli_urwid(urwid.Frame):
 #                               GLOBAL INSTANCES                               #
 #==============================================================================#
 
-ez_cli = ez_cli_urwid()
-palette = [
-    ('online', 'light green', 'dark green'),
-    ('offline', 'dark red', 'light red'),
-    ]
-loop = urwid.MainLoop(ez_cli, palette)
+if __name__ == "__main__":
+  cl.init_client()
+  client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
+  ez_cli = ez_cli_urwid()
+  palette = [
+      ('online', 'light green', 'dark green'),
+      ('offline', 'dark red', 'light red'),
+      ]
+  loop = urwid.MainLoop(ez_cli, palette)
 
-def received_output(data):
-  ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
+  def received_output(data):
+    ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
 
-write_fd = loop.watch_pipe(received_output)
-proc = subprocess.Popen(
-    ['python', '-u', client_path, sys.argv[1]],
-    stdout=write_fd,
-    close_fds=True)
+  write_fd = loop.watch_pipe(received_output)
+  proc = subprocess.Popen(
+      ['python', '-u', client_path, sys.argv[1]],
+      stdout=write_fd,
+      close_fds=True)
 
-loop.run()
+  loop.run()
