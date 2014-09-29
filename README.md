@@ -1,4 +1,4 @@
-eZchat [![Build Status](https://travis-ci.org/gsec/eZchat.svg?branch=master)](https://travis-ci.org/gsec/eZchat)
+eZchat [![Build Status](https://travis-ci.org/gsec/eZchat.svg?branch=master)](https://travis-ci.org/gsec/eZchat)[![Documentation Status](https://readthedocs.org/projects/ezchat/badge/?version=latest)](https://readthedocs.org/projects/ezchat/?badge=latest)
 =======
 Manifesto
 --------------------------------------------------------------------------------
@@ -40,3 +40,5 @@ Guidelines](https://github.com/gsec/eZchat/wiki/Developer-Guidelines).
 As we are still in heavy development, you might want to check
 [Travis](https://travis-ci.org/gsec/eZchat) to see the current build status of
 the continuous integration server.
+
+Finally, you can dive in the doc strings and inheritance diagrams over at [ReadtheDocs](ezchat.readthedocs.org)
