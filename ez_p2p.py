@@ -16,7 +16,6 @@ import cPickle as pickle
 from ez_process      import p2pCommand, p2pReply
 from ez_user_methods import ez_user_methods
 
-#import ez_user    as eu
 
 CLIENT_TIMEOUT = 0.1
 
@@ -43,7 +42,7 @@ class client(ez_user_methods, threading.Thread):
   def __init__(self, fail_connect=False, **kwargs):
     threading.Thread.__init__(self)
     super(client, self).__init__(**kwargs)
-    #ez_user_methods.__init__(**kwargs)
+    #ez_user_methods.__init__(self, **kwargs)
     #threading.Thread.__init__()
 
     # used to simulate udp-holepunching where one of the clients connection

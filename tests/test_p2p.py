@@ -6,8 +6,8 @@ from ez_p2p import client, p2pCommand
 
 class Test_p2p(object):
   def setUp(self):
-    host, port = ("", 1234)
-    self.server = client()
+    host, port = ("", 1235)
+    self.server = client(name = 'server')
     self.server.start()
 
     pr = p2pCommand('servermode', (host, port))
@@ -16,10 +16,11 @@ class Test_p2p(object):
     host = "127.0.0.1"
 
     alice_id = "alice"
-    self.alice = client(alice_id)
+    self.alice = client(name = alice_id)
     self.alice.start()
+
     bob_id = "bob"
-    self.bob = client(bob_id)
+    self.bob = client(name = bob_id)
     self.bob.start()
 
     pr = p2pCommand('connect_server', (host, port))
@@ -29,6 +30,8 @@ class Test_p2p(object):
     pr = p2pCommand('connect_server', (host, port))
     self.bob.connect_server(pr)
     # Why doesn't bob add_client("server",..) ?
+    # Bob does not need to add the client as he is not requesting to establish a
+    # connection with alice (which is done via the server)
 
     pr = p2pCommand('ips_request', data="server")
     self.alice.ips_request(pr)
@@ -39,11 +42,7 @@ class Test_p2p(object):
     result = None
     pr = p2pCommand('ping_request', data="bob")
     result = self.alice.ping_request(pr, testing=True)
-    if result:
-      print(result)
-      print("How can this happen???")
-
-    sleep(0.50)
+    eq_(result, None)
     pr = p2pCommand('shutdown')
     self.server.shutdown(pr)
     self.alice.shutdown(pr)

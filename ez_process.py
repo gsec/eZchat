@@ -96,9 +96,11 @@ class ez_process_base_meta(type):
       if isinstance(dct[attr], types.FunctionType):
         assert not attr in cls.handlers
         cls.handlers[attr] = dct[attr]
+
       # register global attributes and inherit them to child classes
       else:
         cls.attr = dct[attr]
+
     super(ez_process_base_meta, cls).__init__(name, bases, dct)
 
 class ez_process_base(object):
@@ -115,6 +117,9 @@ class ez_background_process(ez_process_base):
   background_processes = {}
   # TODO: (bcn 2014-08-09) In a class this could be deleted. Is it necessary for
   # meta classes?!
+  # -What do u mean?
+  # - Background_processes keeps track of all processes -> needed
+  # - super initialization is necessary -> needed
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
@@ -216,7 +221,6 @@ class ez_ping(ez_background_process):
     self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
     ping   = {'ping_success': user_id}
     msg    = pickle.dumps(ping)
-    #time.sleep(3)
     try:
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
@@ -541,7 +545,7 @@ class ez_relay(ez_connect):
   def ips_request(self, cmd):
     user_id = cmd.data
     if not user_id in self.ips:
-      self.replyQueue.put(self.error("user not in client list"))
+      print "self.ips:", self.ips
     else:
       master  = self.ips[user_id]
       ping    = {'distributeIPs': user_id}
