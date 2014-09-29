@@ -17,8 +17,14 @@ class ez_user_methods(ez_process):
   UI. It also takes care of the user and message database.
   """
   def __init__(self, **kwargs):
-    assert('name' in kwargs)
+    assert('name' in kwargs)    # random assert? this should be handled e.g.:
     self.name = kwargs['name']
+    #try:
+      #self.name = kwargs['name']
+    #except KeyError:
+      #print "No Name Specified! Setting name to default"
+      #self.name = "somerandomguy"
+
     super(ez_user_methods, self).__init__()
 
     # every new client gets a fresh database in memory for now. Should be made

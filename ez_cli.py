@@ -10,6 +10,7 @@
 import sys, types
 import signal
 import subprocess, os
+from time import sleep
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
@@ -20,44 +21,21 @@ import ez_preferences as ep
 import ez_client as cl
 client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
 
-#==============================================================================#
-#                                  VimButton                                   #
-#==============================================================================#
-
-class VimButton(urwid.Button):
-  """TODO: Explain me..."""
-  insert_mode, command_mode, visual_mode = range(3)
-
-  def keypress(self, size, key):
-    if key =='j':
-      return 'down'
-    elif key == 'k':
-      return 'up'
-    else:
-      urwid.Button.keypress(size, key)
-
 
 #==============================================================================#
 #                                  VimMsgBox                                   #
 #==============================================================================#
 
 class VimMsgBox(urwid.ListBox):
-
   """Prototype for our message box"""
-
   def __init__(self, content):
     slw = []
     for item in content[:-1]:
       slw.extend([urwid.Text(item),urwid.Divider()])
     slw.append(urwid.Text(content[-1]))
-
     slw = urwid.SimpleListWalker([urwid.AttrMap(w,
             None, 'reveal focus') for w in slw])
-
     urwid.ListBox.__init__(self, slw)
-
-
-
 
 
 #==============================================================================#
@@ -73,8 +51,7 @@ class VimListBox(urwid.ListBox):
                          'down' : self.cmd_move_down,
                          'up' : self.cmd_move_up,
                          'q': self.cmd_close_list,
-
-                         # blocking the left & right arrow key.
+                         # Blocking left & right arrow key.
                          'left' : self.cmd_unhandled,
                          'right' : self.cmd_unhandled,
                          }
@@ -98,6 +75,10 @@ class VimListBox(urwid.ListBox):
       return urwid.ListBox.keypress(self, size, key)
 
 
+#==============================================================================#
+#                                VimStatusLine                                 #
+#==============================================================================#
+
 class VimStatusline(urwid.Text):
     def __init__(self):
         """@todo: to be defined1. """
@@ -108,7 +89,9 @@ class VimStatusline(urwid.Text):
 #==============================================================================#
 
 class VimCommandLine(urwid.Edit):
-  """Evaluates commands that are typed in the lowest line of the CLI."""
+  """
+  Evaluates commands that are typed in command mode.
+  """
   signals = ['command_line_exit', 'exit_ez_chat']
   insert_mode, command_mode, visual_mode = range(3)
 
@@ -122,7 +105,7 @@ class VimCommandLine(urwid.Edit):
       self.command_lines = []
     self.command_counter = len(self.command_lines)
     self.command_dict = {"close" : cl.cl.cmd_close,
-                         "contacs" : cl.cl.cmd_get_contact_names,
+                         "contacts" : cl.cl.cmd_get_contact_names,
                          "users" : cl.cl.cmd_get_online_users,
                          "ping" : cl.cl.cmd_ping,
                          "add" : cl.cl.cmd_add,
@@ -149,11 +132,11 @@ class VimCommandLine(urwid.Edit):
       print "File not found"
 
   def cmd_open(self, *args):
-    assert(args[0] == 'contacts')
+    #assert(args[0] == 'contacts') # what is intended here? seems wrong
     def contact_list(user_ids):
-      contacts = [urwid.Text("contacts")]
+      contacts = [urwid.Text("Contacts:")]
       for user_id in user_ids:
-        on  = urwid.Text(("online",u"ON"))
+        on  = urwid.Text(("online", u"ON"))
         off = urwid.Text(("offline", u"OFF"))
         contacts += [urwid.Columns([urwid.CheckBox(user_id), off])]
       return VimListBox(urwid.SimpleListWalker(contacts))
@@ -173,8 +156,7 @@ class VimCommandLine(urwid.Edit):
   def __close__(self):
     self.cmd_close()
 
-  def tab_completion(self):
-    cmd = self.get_edit_text()[1:]
+  def tab_completion(self, cmd):
     matches = [key for key in self.command_dict if key.startswith(cmd.strip())]
     if len(matches) == 1:
       line = ':' + matches[0] + ' '
@@ -184,27 +166,28 @@ class VimCommandLine(urwid.Edit):
       print '\n'
       print ' '.join(matches)
 
-
-  def evaluate_command(self):
+  def evaluate_command(self, cmd):
+    cmd_and_args = cmd.split()
     try:
-      command = self.get_edit_text()[1:]
-      cmd_and_args = command.split()
-      try:
-        self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
-        self.save_command(command)
-        urwid.emit_signal(self, 'command_line_exit', self, '')
-      # Unkown command
-      except KeyError:
-        print '\n'
-        print 'Command not known'
-      # Arguments have wrong type
-      except TypeError as e:
-        print '\n'
-        print str(e)
-        print self.command_dict[cmd_and_args[0]].__doc__
+      self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
+      self.save_command(cmd)
+      urwid.emit_signal(self, 'command_line_exit', self, '')
     # Empty cmdline
     except IndexError:
-      urwid.emit_signal(self, 'command_line_exit', self, '')
+      #urwid.emit_signal(self, 'command_line_exit', self, '')
+      print (' <Esc> for normal mode')
+      sleep(0.8)
+    # Unkown command
+    except KeyError:
+      #print '\n'
+      print '\nCommand not known'
+      sleep(0.8)
+    # Arguments have wrong type
+    except TypeError as e:
+      print '\n'
+      print str(e)
+      raw_input(self.command_dict[cmd_and_args[0]].__doc__)
+    self.set_edit_text(':' + cmd)
 
   def save_command(self, command):
     self.checkcache = True
@@ -228,11 +211,13 @@ class VimCommandLine(urwid.Edit):
 
   def keypress(self, size, key):
     p = self.edit_pos
+    cmd = self.get_edit_text()[1:]
+
     if key == 'esc':
       urwid.emit_signal(self, 'command_line_exit', self, '')
       return
     elif key == 'enter':
-      self.evaluate_command()
+      self.evaluate_command(cmd)
       return
     elif key == 'up':
       self.get_last_command()
@@ -241,7 +226,7 @@ class VimCommandLine(urwid.Edit):
       self.get_next_command()
       return
     elif key == 'tab':
-      self.tab_completion()
+      self.tab_completion(cmd)
       return
     # do not allow to delete `:`
     elif key != 'backspace' or p > 1:
@@ -291,7 +276,7 @@ class VimEdit(urwid.Edit):
     self.pref_col_maxcol = None, None
     p = self.edit_pos
     self.set_edit_text(self.edit_text[:p] + self.edit_text[self.edit_pos + 1:])
-    self.cmd_move_left(pressed = 'x')
+    #self.cmd_move_left(pressed = 'x')    # cursor stay in pos -> like vim
     return
 
   def cmd_delete(self):
@@ -334,7 +319,7 @@ class VimEdit(urwid.Edit):
   def cmd_newline_O(self):
     self.cmd_newline(shift=-1)
 
-  def cmd_move_left(self, pressed = CURSOR_LEFT):
+  def cmd_move_left(self, pressed=CURSOR_LEFT):
     if self.p==0: return pressed
     p = move_prev_char(self.edit_text,0,self.p)
     self.set_edit_pos(p)
@@ -425,7 +410,6 @@ class ez_cli_urwid(urwid.Frame):
 
     self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
-    self.button        = VimButton(u'Exit')
     self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
 
     focus_map = {
