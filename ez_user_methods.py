@@ -135,3 +135,29 @@ class ez_user_methods(ez_process):
     except:
       self.replyQueue.put(self.error("Syntax error in command"))
 
+
+  def ping_background(self, cmd):
+    process_id = ('ping_reply', 'all')
+
+    # define the function called by the timer after the countdown
+    # ping_background_func calls itself resulting in an endless ping chain.
+    def ping_background_func(self_timer, queue, user_ids):
+      # ping all users
+      for user_id in user_ids:
+        queue.put(p2pCommand('ping_request', user_id))
+
+      # check if the process still running, i.e. that it has not been killed
+      # the process might have been killed while this function called.
+      # I don't know if this case can occur, so the if case is just to make it
+      # safe
+      if process_id in self.background_processes:
+        # Reset process. I wanted to avoid a while true loop as a background
+        # process thats why the following steps are necessary. We might
+        # implement a reset method.
+        self.reset_background_process(process_id)
+    bgp = p2pCommand('start_background_process',
+                     (process_id, ping_background_func, 10,
+                     (self.commandQueue, self.ips.keys())))
+    #self.start_background_process(process_id, ping_background_func, 10,
+                                  #self.commandQueue, self.ips.keys())
+

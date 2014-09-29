@@ -7,10 +7,10 @@ if __name__ == "__main__":
   except (IndexError, ValueError):
     print ("usage: %s <host> <port>" % sys.argv[0])
     sys.exit(65)
-  cl = client("server")
+  cl = client(name = "server")
   cl.enableCLI = True
-  cl.start()
   cl.commandQueue.put(p2pCommand('servermode', master))
+  cl.start()
   #while True:
     #pass
 

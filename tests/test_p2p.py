@@ -42,8 +42,8 @@ class Test_p2p(object):
     result = None
     pr = p2pCommand('ping_request', data="bob")
     result = self.alice.ping_request(pr, testing=True)
-    eq_(result, None)
     pr = p2pCommand('shutdown')
     self.server.shutdown(pr)
     self.alice.shutdown(pr)
     self.bob.shutdown(pr)
+    eq_(result, None)

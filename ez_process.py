@@ -123,26 +123,46 @@ class ez_background_process(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
-  def start_background_process(self, pr_key, proc, interval, *args, **kwargs):
-    pr = Timer(interval, proc, args, kwargs)
-    self.background_processes[pr_key] = pr
+  #def start_background_process(self, process_id, callback,
+                               #interval, *args, **kwargs):
+
+  def start_background_process(self, cmd):
+    process_id = cmd.data[0]
+    if len(cmd.data) > 1:
+      callback = cmd.data[1]
+    if len(cmd.data) > 2:
+      interval = cmd.data[2]
+    else:
+      interval = 5
+    if len(cmd.data) == 4:
+      callback_args = cmd.data[3]
+    else:
+      callback_args = ()
+
+    #pr = Timer(interval, callback, *args, **kwargs)
+    pr = Timer(interval, callback, *callback_args)
+    self.background_processes[process_id] = pr
     thread.start_new_thread(pr.run, ())
 
   def stop_background_processes(self):
-    for pr_key in self.background_processes:
-      pr = self.background_processes[pr_key]
+    for process_id in self.background_processes:
+      pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
-      del self.background_processes[pr_key]
+      del self.background_processes[process_id]
 
-  def reset_background_process(self, pr_key):
-    if pr_key in self.background_processes:
-      pr = self.background_processes[pr_key]
+  def reset_background_process(self, process_id):
+    if process_id in self.background_processes:
+      pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
-      del self.background_processes[pr_key]
-      self.start_background_process(pr_key, pr.function, pr.interval,
-                                    self.commandQueue, self.ips.keys())
+      del self.background_processes[process_id]
+      bgp = p2pCommand('start_background_process',
+            (process_id, pr.function, pr.interval,
+              (self.commandQueue, self.ips.keys())))
+      self.commandQueue.put(bgp)
+      #self.start_background_process(process_id, pr.function, pr.interval,
+                                    #self.commandQueue, self.ips.keys())
 
 #==============================================================================#
 #                                   ez_ping                                    #
@@ -198,8 +218,10 @@ class ez_ping(ez_background_process):
             cmd = self.error("ping failed: " + user_id)
             self.replyQueue.put(cmd)
             del self.background_processes[process_id]
-
-          self.start_background_process(process_id, ping_failed_func, 5)
+          bgp = p2pCommand('start_background_process',
+                            (process_id, ping_failed_func, 5))
+          self.commandQueue.put(bgp)
+          #self.start_background_process(process_id, ping_failed_func, 5)
 
         except IOError as e:
           self.replyQueue.put(self.error(str(e)))
@@ -248,28 +270,7 @@ class ez_ping(ez_background_process):
     self.replyQueue.put(self.error("ping failed: " + user_id))
     return False
 
-  def ping_background(self, cmd):
-    process_id = ('ping_reply', 'all')
 
-    # define the function called by the timer after the countdown
-    # ping_background_func calls itself resulting in an endless ping chain.
-    def ping_background_func(self_timer, queue, user_ids):
-      # ping all users
-      for user_id in user_ids:
-        queue.put(p2pCommand('ping_request', user_id))
-
-      # check if the process still running, i.e. that it has not been killed
-      # the process might have been killed while this function called.
-      # I don't know if this case can occur, so the if case is just to make it
-      # safe
-      if process_id in self.background_processes:
-        # Reset process. I wanted to avoid a while true loop as a background
-        # process thats why the following steps are necessary. We might
-        # implement a reset method.
-        self.reset_background_process(process_id)
-
-    self.start_background_process(process_id, ping_background_func, 10,
-                                  self.commandQueue, self.ips.keys())
 
 
 #==============================================================================#
@@ -352,8 +353,10 @@ class ez_connect(ez_background_process):
           cmd = self.error("connection failed with: " + str(user_addr))
           self.replyQueue.put(cmd)
           del self.background_processes[process_id]
-
-        self.start_background_process(process_id, connection_failed_func, 5)
+        bgp = p2pCommand('start_background_process',
+                          (process_id, connection_failed_func, 5))
+        self.commandQueue.put(bgp)
+        #self.start_background_process(process_id, connection_failed_func, 5)
         cmd = self.success("connection request from user:" + \
                            str(user_addr) + " with id: " + user_id)
 
@@ -493,37 +496,6 @@ class ez_db_sync(ez_process_base):
           else:
             self.commandQueue.put(p2pCommand('send', (user_id, data)))
 
-#==============================================================================#
-#                                  ez_packet                                   #
-#==============================================================================#
-
-class ez_packet(ez_process_base):
-
-  def __init__(self, *args, **kwargs):
-    super(ez_packet, self).__init__(*args, **kwargs)
-
-  def send_packet(self, cmd):
-    (packets_hash, packet_id), user_id = cmd.data[0]
-    if packets_hash in self.sent_packets:
-      if packet_id in self.sent_packets[packets_hash].packets:
-        data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
-        if len(data) > 2048:
-          self.replyQueue.put(self.error("data larger than 2048 bytes"))
-        else:
-          self.commandQueue.put(p2pCommand('send', (user_id, data)))
-      else:
-        p2pReply(p2pReply.error, "packet_id not in sent_packets")
-    else:
-      p2pReply(p2pReply.error, "packet not in sent_packets")
-
-  def packet_request(self, cmd):
-    packet_info, user_addr = cmd.data
-    packet = {'send_packet': (packet_info, self.name)}
-    msg    = pickle.dumps(packet)
-    try:
-      self.sockfd.sendto(msg, user_addr)
-    except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
 
 #==============================================================================#
 #                                class ez_relay                                #
@@ -579,7 +551,7 @@ class ez_relay(ez_connect):
 #                               class ez_process                               #
 #==============================================================================#
 
-class ez_process(ez_ping, ez_contact, ez_packet, ez_relay, ez_db_sync):
+class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
 
   commandQueue = Queue.Queue()
   replyQueue   = Queue.Queue()
@@ -610,7 +582,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay, ez_db_sync):
 
     - (host_ip, host_port) = cmd.data
     """
-    print "connect server"
     master       = cmd.data
     conn_success = {'connection_success': self.name}
     msg          = pickle.dumps(conn_success)
@@ -624,13 +595,6 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay, ez_db_sync):
     self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
 
-  def test_func(self, cmd):
-    self.replyQueue.put(self.success("cmd.data:" + cmd.data))
-
-  def process(self, cmd):
-    data, user_addr = cmd.data
-    self.replyQueue.put(self.success("cmd.data:" + cmd.data))
-
   def shutdown(self, cmd):
     if self.sockfd != None:
       self.sockfd.close()
@@ -641,7 +605,7 @@ class ez_process(ez_ping, ez_contact, ez_packet, ez_relay, ez_db_sync):
 
     if user_id in self.ips:
       user_addr = self.ips[user_id]
-      msg = cmd.data[1]
+      msg       = cmd.data[1]
       try:
         self.sockfd.sendto(msg, user_addr)
       except IOError as e:
