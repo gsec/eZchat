@@ -69,7 +69,14 @@ class Timer(threading._Timer):
     while not self.finished.isSet():
       self.finished.wait(self.interval)
       if not self.finished.isSet():
-        self.function(self, *self.args, **self.kwargs)
+        if hasattr(self, 'callback_args') and hasattr(self, 'callback_kwargs'):
+          self.function(self, *self.callback_args, **self.kwargs)
+        elif hasattr(self, 'callback_args'):
+          self.function(self, *self.callback_args)
+        elif hasattr(self, 'callback_kwargs'):
+          self.function(self, **self.kwargs)
+        else:
+          self.function(self)
         self.finished.set()
 
 #==============================================================================#
@@ -123,25 +130,62 @@ class ez_background_process(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
-  #def start_background_process(self, process_id, callback,
-                               #interval, *args, **kwargs):
-
   def start_background_process(self, cmd):
-    process_id = cmd.data[0]
-    if len(cmd.data) > 1:
-      callback = cmd.data[1]
-    if len(cmd.data) > 2:
-      interval = cmd.data[2]
+    """
+    A background process is defined by a
+    - process_id: which can be a number, string, tuple of numbers/strings ...
+    - callback:   function which is called after a time interval
+    - interval:   time in seconds until the callback
+    optional
+    - callback_args, callback_kwargs: arguments which are passed to callback
+
+    The background process information must be stored in a dictionary where the
+    keywords process_id and callback are mandatory. A background process is
+    invoked via the commandQueue, e.g. :
+
+    my_background_process = p2pCommand('start_background_process',
+                            {'process_id'    : my_process_id,
+                             'callback'      : my_func,
+                             'interval'      : my_time,
+                             'callback_args' : (my_arg1, my_arg2, ...})
+
+    commandQueue.put(my_background_process)
+
+    A background process ends after callback has been called and is reset. A
+    continous call of a user-defined callback can be achieved by defining the
+    callback recursively. (See ping_background)
+    """
+    # Registering mandatory arguments
+    try:
+      assert('process_id' in cmd.data)
+      process_id = cmd.data['process_id']
+    except:
+      print "no process_id given for background processes"
+      return
+
+    try:
+      assert('callback' in cmd.data)
+      callback = cmd.data['callback']
+    except:
+      print "no callback given for background processes"
+      return
+
+    # Default value of the time period is 5 seconds
+    if 'interval' in cmd.data:
+      interval = cmd.data['interval']
     else:
       interval = 5
-    if len(cmd.data) == 4:
-      callback_args = cmd.data[3]
-    else:
-      callback_args = ()
 
-    #pr = Timer(interval, callback, *args, **kwargs)
-    pr = Timer(interval, callback, *callback_args)
+    # generate Timer instance
+    pr = Timer(interval, callback)
+    # and add possibly callback args and kwargs
+    if 'callback_args' in cmd.data:
+      pr.callback_args = cmd.data['callback_args']
+    if 'callback_kwargs' in cmd.data:
+      pr.callback_kwargs = cmd.data['callback_kwargs']
+    # register the process
     self.background_processes[process_id] = pr
+    # start the background process
     thread.start_new_thread(pr.run, ())
 
   def stop_background_processes(self):
@@ -151,18 +195,14 @@ class ez_background_process(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-  def reset_background_process(self, process_id):
+  def reset_background_process(self, process_id, process_cmd = None):
     if process_id in self.background_processes:
       pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
       del self.background_processes[process_id]
-      bgp = p2pCommand('start_background_process',
-            (process_id, pr.function, pr.interval,
-              (self.commandQueue, self.ips.keys())))
-      self.commandQueue.put(bgp)
-      #self.start_background_process(process_id, pr.function, pr.interval,
-                                    #self.commandQueue, self.ips.keys())
+      if process_cmd != None:
+        self.commandQueue.put(process_cmd)
 
 #==============================================================================#
 #                                   ez_ping                                    #
@@ -218,8 +258,11 @@ class ez_ping(ez_background_process):
             cmd = self.error("ping failed: " + user_id)
             self.replyQueue.put(cmd)
             del self.background_processes[process_id]
+
           bgp = p2pCommand('start_background_process',
-                            (process_id, ping_failed_func, 5))
+                {'process_id'    : process_id,
+                 'callback'      : ping_failed_func,
+                 'interval'      : 5})
           self.commandQueue.put(bgp)
           #self.start_background_process(process_id, ping_failed_func, 5)
 
@@ -353,11 +396,13 @@ class ez_connect(ez_background_process):
           cmd = self.error("connection failed with: " + str(user_addr))
           self.replyQueue.put(cmd)
           del self.background_processes[process_id]
+
         bgp = p2pCommand('start_background_process',
-                          (process_id, connection_failed_func, 5))
+              {'process_id'    : process_id,
+               'callback'      : connection_failed_func,
+               'interval'      : 5})
         self.commandQueue.put(bgp)
-        #self.start_background_process(process_id, connection_failed_func, 5)
-        cmd = self.success("connection request from user:" + \
+        cmd = self.success("connection request from user:" +
                            str(user_addr) + " with id: " + user_id)
 
         self.replyQueue.put(cmd)

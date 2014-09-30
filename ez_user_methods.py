@@ -141,8 +141,9 @@ class ez_user_methods(ez_process):
 
     # define the function called by the timer after the countdown
     # ping_background_func calls itself resulting in an endless ping chain.
-    def ping_background_func(self_timer, queue, user_ids):
+    def ping_background_func(self_timer, queue, user_ips):
       # ping all users
+      user_ids = user_ips.keys()
       for user_id in user_ids:
         queue.put(p2pCommand('ping_request', user_id))
 
@@ -154,10 +155,17 @@ class ez_user_methods(ez_process):
         # Reset process. I wanted to avoid a while true loop as a background
         # process thats why the following steps are necessary. We might
         # implement a reset method.
-        self.reset_background_process(process_id)
+        bgp2 = p2pCommand('start_background_process',
+            {'process_id'    : process_id,
+             'callback'      : ping_background_func,
+             'interval'      : 1,
+             'callback_args' : (queue, user_ips, )})
+        self.reset_background_process(process_id, process_cmd = bgp2)
+
     bgp = p2pCommand('start_background_process',
-                     (process_id, ping_background_func, 10,
-                     (self.commandQueue, self.ips.keys())))
-    #self.start_background_process(process_id, ping_background_func, 10,
-                                  #self.commandQueue, self.ips.keys())
+            {'process_id'    : process_id,
+             'callback'      : ping_background_func,
+             'interval'      : 1,
+             'callback_args' : (self.commandQueue, self.ips, )})
+    self.commandQueue.put(bgp)
 
