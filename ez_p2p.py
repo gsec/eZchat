@@ -113,8 +113,10 @@ class client(ez_user_methods, threading.Thread):
 #================#
     elif "ping" in str(data[:-1]):
       try:
-        _, user_id = data.split()
-        self.commandQueue.put(p2pCommand('ping_request', user_id))
+        #_, user_id = data.split()
+        bp_ping = p2pCommand('ping_background')
+        self.commandQueue.put(bp_ping)
+        #self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in ping"))
 
@@ -124,7 +126,7 @@ class client(ez_user_methods, threading.Thread):
     elif "add" in str(data[:-1]):
       try:
         _, user_id, host, port = data.split()
-        self.add_client((str(host), int(port)), user_id)
+        self.add_client(user_id, (str(host), int(port)))
         self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in user"))
