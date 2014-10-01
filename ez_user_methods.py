@@ -18,14 +18,8 @@ class ez_user_methods(ez_process):
   """
   def __init__(self, **kwargs):
     super(ez_user_methods, self).__init__()
-    assert('name' in kwargs)    # random assert? this should be handled e.g.:
+    assert('name' in kwargs)
     self.name = kwargs['name']
-    #try:
-      #self.name = kwargs['name']
-    #except KeyError:
-      #print "No Name Specified! Setting name to default"
-      #self.name = "somerandomguy"
-
 
     # every new client gets a fresh database in memory for now. Should be made
     # an argument to support test as well as use case
@@ -144,23 +138,20 @@ class ez_user_methods(ez_process):
     def ping_background_func(self_timer, queue, user_ips):
       # ping all users
       user_ids = user_ips.keys()
+
+      # custom success_callback
+      def success_ping_all():
+        print "background ping successful"
+
       for user_id in user_ids:
-        queue.put(p2pCommand('ping_request', user_id))
+        cmd_dct = {'user_id': user_id, 'success_callback': success_ping_all}
+        queue.put(p2pCommand('ping_request', cmd_dct))
 
       # check if the process still running, i.e. that it has not been killed
       # the process might have been killed while this function called.
-      # I don't know if this case can occur, so the if case is just to make it
-      # safe
       if process_id in self.background_processes:
-        # Reset process. I wanted to avoid a while true loop as a background
-        # process thats why the following steps are necessary. We might
-        # implement a reset method.
-        bgp2 = p2pCommand('start_background_process',
-            {'process_id'    : process_id,
-             'callback'      : ping_background_func,
-             'interval'      : 1,
-             'callback_args' : (queue, user_ips, )})
-        self.reset_background_process(process_id, process_cmd = bgp2)
+        # Reset process.
+        self.reset_background_process(process_id)
 
     bgp = p2pCommand('start_background_process',
             {'process_id'    : process_id,

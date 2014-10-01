@@ -42,8 +42,6 @@ class client(ez_user_methods, threading.Thread):
   def __init__(self, fail_connect=False, **kwargs):
     threading.Thread.__init__(self)
     super(client, self).__init__(**kwargs)
-    #ez_user_methods.__init__(self, **kwargs)
-    #threading.Thread.__init__()
 
     # used to simulate udp-holepunching where one of the clients connection
     # request is declient by the others client NAT
