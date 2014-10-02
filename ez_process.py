@@ -407,7 +407,12 @@ class ez_connect(ez_background_process):
 
     - (user_ip, user_port) = cmd.data
     """
-    master, _    = cmd.data
+    try:
+      master = cmd.data['master']
+    except:
+      print "master not properly specified in connect"
+
+    #cmd_dct      = {'user_id': self.name}
     conn_request = {'connection_request': self.name}
     msg          = pickle.dumps(conn_request)
     try:
@@ -434,7 +439,13 @@ class ez_connect(ez_background_process):
 
     - (user_id, (user_ip, user_port)) = cmd.data
     """
-    user_id, user_addr = cmd.data
+    try:
+      user_id = cmd.data['user_id']
+      user_addr = (cmd.data['host'], cmd.data['port'])
+    except:
+      print "user_id/host/port not properly specified in connection_request"
+      return
+
     process_id = ('connection_request', user_addr)
     if not process_id in self.background_processes:
       con_holepunch = {'connection_nat_traversal': self.name}
@@ -478,7 +489,8 @@ class ez_connect(ez_background_process):
     msg             = pickle.dumps(con_success)
 
     cmd = self.success("nat traversal succeded: " + str(user_addr))
-    self.add_client(user_id, user_addr)
+    cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
+    self.add_client(**cmd_dct)
 
     self.replyQueue.put(cmd)
     self.sockfd.sendto(msg, user_addr)
@@ -493,7 +505,14 @@ class ez_connect(ez_background_process):
 
     - (user_id, (user_ip, user_port)) = cmd.data
     """
-    user_id, user_addr = cmd.data
+    try:
+      user_id = cmd.data['user_id']
+      host    = cmd.data['host']
+      port    = cmd.data['port']
+    except:
+      print "user_id, host, port not properly specified in connection_success"
+
+    user_addr = (host, port)
     process_id = ('connection_request', user_addr)
     if process_id in self.background_processes:
       pr = self.background_processes[process_id]
@@ -503,7 +522,9 @@ class ez_connect(ez_background_process):
 
     self.replyQueue.put(self.success("user: " + str(user_addr) +" with id: " + \
                                       user_id + " has connected"))
-    self.add_client(user_id, user_addr)
+
+    cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
+    self.add_client(**cmd_dct)
 
 
 #==============================================================================#
@@ -515,9 +536,15 @@ class ez_contact(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_contact, self).__init__(*args, **kwargs)
 
-  def add_client(self, user_id, user_addr):
-    self.ips[user_id]  = user_addr
-    user_ip, user_port = user_addr
+  def add_client(self, **kwargs):
+    """
+    Adds a new client to the clients ip base
+    """
+    try:
+      user_id = kwargs['user_id']
+      self.ips[user_id] = (kwargs['host'], int(kwargs['port']))
+    except:
+      print "user_id/host/port not properly specified in add_client"
 
   def remove_client(self, user_id):
     if user_id in self.ips:
@@ -527,10 +554,22 @@ class ez_contact(ez_process_base):
       self.replyQueue.put(p2pReply(p2pReply.error, "user not found/removed"))
 
   def contact_request_out(self, cmd):
-    user_id = cmd.data
+    """
+    Method for exchanging public keys. Mandatory arguments:
+
+    - cmd.data['user_id'] = user_id
+    """
+    try:
+      assert('user_id' in cmd.data)
+      user_id = cmd.data['user_id']
+    except:
+      print "user_id not in ip list"
+
     if user_id in self.ips:
       user_addr = self.ips[user_id]
-      contact_request = {'contact_request_in': self.myself}
+      cmd_dct = {'user': self.myself}
+      #contact_request = {'contact_request_in': self.myself}
+      contact_request = {'contact_request_in': cmd_dct}
       msg             = pickle.dumps(contact_request)
       try:
         self.sockfd.sendto(msg, user_addr)
@@ -540,17 +579,24 @@ class ez_contact(ez_process_base):
   def contact_request_in(self, cmd):
     # user asks for contact data. We might have an options here restricting the
     # users being allowed to request contact data.
-    user, user_addr = cmd.data
-
-    myself    = {'add_contact': self.myself}
-    msg       = pickle.dumps(myself)
+    #user, user_addr = cmd.data
     try:
-      self.sockfd.sendto(msg, user_addr)
+      user = cmd.data['user']
+      host = cmd.data['host']
+      port = cmd.data['port']
+    except:
+      print "user/host/port not properly specified in contact_request_in"
+
+    myself = {'add_contact': self.myself}
+    msg    = pickle.dumps(myself)
+    try:
+      self.sockfd.sendto(msg, (host, port))
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
   def add_contact(self, cmd):
     new_user, _  = cmd.data
+    print "cmd.data:", cmd.data
     if not self.UserDatabase.in_DB(UID=new_user.UID):
       self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
@@ -591,8 +637,6 @@ class ez_db_sync(ez_process_base):
           else:
             cmd_data = {'user_id': user_id, 'data':data}
             self.commandQueue.put(p2pCommand('send', cmd_data))
-            #self.commandQueue.put(p2pCommand('send', (user_id, data)))
-
 
 #==============================================================================#
 #                                class ez_relay                                #
@@ -612,12 +656,18 @@ class ez_relay(ez_connect):
     super(ez_relay, self).__init__(*args, **kwargs)
 
   def ips_request(self, cmd):
-    user_id = cmd.data
+    try:
+      user_id = cmd.data['user_id']
+    except:
+      print "user id not properly specified in ips_request"
+
     if not user_id in self.ips:
       print "self.ips:", self.ips
     else:
       master  = self.ips[user_id]
-      ping    = {'distributeIPs': user_id}
+      print "self.ips:", self.ips
+      cmd_dct = {'user_id': user_id}
+      ping    = {'distributeIPs': cmd_dct}
       msg     = pickle.dumps(ping)
       try:
         self.sockfd.sendto(msg, master)
@@ -627,22 +677,30 @@ class ez_relay(ez_connect):
         self.replyQueue.put(self.error("ips_request unsuccessful"))
 
   def distributeIPs(self, cmd):
-    if cmd.data != None:
-      master = cmd.data[1]
-      other_users = {u_id: self.ips[u_id] for u_id in self.ips \
-                     if self.ips[u_id] != master}
+    try:
+      user_id = cmd.data['user_id']
+      host    = cmd.data['host']
+      port    = cmd.data['port']
+    except:
+      print "user_id, host, port not properly specified in distributeIPs"
 
-      for other_id in other_users:
-        relay_request  = {'connect': other_users[other_id]}
-        relay_request2 = {'connect': master}
-        msg            = pickle.dumps(relay_request)
-        msg2           = pickle.dumps(relay_request2)
-        try:
-          self.sockfd.sendto(msg, master)
-          self.sockfd.sendto(msg2, other_users[other_id])
-          self.replyQueue.put(self.success("distributed IPs"))
-        except IOError as e:
-          self.replyQueue.put(self.error(str(e)))
+    master = (host, port)
+    other_users = {u_id: self.ips[u_id] for u_id in self.ips \
+                   if self.ips[u_id] != master}
+
+    for other_id in other_users:
+      cmd_dct_A = {'master': other_users[other_id]}
+      cmd_dct_B = {'master': master}
+      relay_request  = {'connect': cmd_dct_A}
+      relay_request2 = {'connect': cmd_dct_B}
+      msg            = pickle.dumps(relay_request)
+      msg2           = pickle.dumps(relay_request2)
+      try:
+        self.sockfd.sendto(msg, master)
+        self.sockfd.sendto(msg2, other_users[other_id])
+        self.replyQueue.put(self.success("distributed IPs"))
+      except IOError as e:
+        self.replyQueue.put(self.error(str(e)))
 
 #==============================================================================#
 #                               class ez_process                               #
@@ -679,8 +737,22 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
 
     - (host_ip, host_port) = cmd.data
     """
-    master       = cmd.data
-    conn_success = {'connection_success': self.name}
+    try:
+      assert('host' in cmd.data)
+      host = cmd.data['host']
+    except:
+      print "no host specified in servermode"
+      return
+    try:
+      assert('port' in cmd.data)
+      port = int(cmd.data['port'])
+    except:
+      print "no port specified in servermode"
+      return
+
+    master       = (host, port)
+    cmd_dct      = {'user_id': self.name}
+    conn_success = {'connection_success': cmd_dct}
     msg          = pickle.dumps(conn_success)
     try:
       self.sockfd.sendto(msg, master)
@@ -688,7 +760,26 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
       self.replyQueue.put(self.error(str(e)))
 
   def servermode(self, cmd):
-    host, port = cmd.data
+    """
+    Start listening on port. Mandatory arguments:
+
+    - cmd.data['host'] = host
+    - cmd.data['port'] = port
+    """
+    try:
+      assert('host' in cmd.data)
+      host = cmd.data['host']
+    except:
+      print "no host specified in servermode"
+      return
+
+    try:
+      assert('port' in cmd.data)
+      port = cmd.data['port']
+    except:
+      print "no port specified in servermode"
+      return
+
     self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
 
@@ -698,6 +789,12 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
     self.alive.clear()
 
   def send(self, cmd):
+    """
+    Send data to a user. Mandatory arguments:
+
+    - cmd.data['user_id'] = user_id
+    - cmd.data['data']    = data
+    """
     try:
       assert('user_id' in cmd.data)
       user_id = cmd.data['user_id']

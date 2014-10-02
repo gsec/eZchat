@@ -164,10 +164,12 @@ class client(ez_user_methods, threading.Thread):
       try:
         if len(users) > 1:
           for user_id in users[1:]:
-            self.commandQueue.put(p2pCommand('ips_request', (user_id)))
+            cmd_dct = {'user_id': user_id}
+            self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
         else:
           for user_id in self.ips:
-            self.commandQueue.put(p2pCommand('ips_request', (user_id)))
+            cmd_dct = {'user_id': user_id}
+            self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
 
       except:
         self.replyQueue.put(self.error("Syntax error in ips"))
@@ -178,7 +180,8 @@ class client(ez_user_methods, threading.Thread):
     elif "key" in str(data[:-1]):
       try:
         _, user_id = data.split()
-        self.commandQueue.put(p2pCommand('contact_request_out', (user_id)))
+        cmd_dct = {'user_id': user_id}
+        self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
       except:
         self.replyQueue.put(self.error("Syntax error in key"))
 
@@ -254,7 +257,12 @@ class client(ez_user_methods, threading.Thread):
       # send packages etc.
       if isinstance(data, dict):
         for command in data:
-          user_cmd = p2pCommand(command, (data[command], user_addr))
+          cmd_dct = data[command]
+          print "command:", command
+          print "cmd_dct:", cmd_dct
+          cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
+          #user_cmd = p2pCommand(command, (data[command], user_addr))
+          user_cmd = p2pCommand(command, cmd_dct)
           self.commandQueue.put(user_cmd)
 
       # raw data

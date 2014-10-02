@@ -54,20 +54,23 @@ class ez_user_methods(ez_process):
   def cmd_ping(self, user_id):
     """Ping a user given his ID."""
     try:
-      self.commandQueue.put(p2pCommand('ping_request', user_id))
+      cmd_dct = {'user_id': user_id}
+      self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
     except:
       self.replyQueue.put(self.error("Syntax error in ping"))
 
   def cmd_add(self, user_id, host, port):
       try:
         self.add_client((str(host), int(port)), user_id)
-        self.commandQueue.put(p2pCommand('ping_request', user_id))
+        cmd_dct = {'user_id': user_id}
+        self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
       except:
         self.replyQueue.put(self.error("Syntax error in user"))
 
   def cmd_servermode(self, host, port):
     try:
-      self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
+      cmd_dct = {'host': host, 'port': port}
+      self.commandQueue.put(p2pCommand('servermode', cmd_dct))
     except:
       self.replyQueue.put(self.error("Syntax error in servermode"))
 
@@ -104,7 +107,8 @@ class ez_user_methods(ez_process):
 
   def cmd_key(self, user_id):
     try:
-      self.commandQueue.put(p2pCommand('contact_request_out', (user_id)))
+      cmd_dct = {'user_id': user_id}
+      self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
     except:
       self.replyQueue.put(self.error("Syntax error in key"))
 
