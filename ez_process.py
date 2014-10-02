@@ -20,8 +20,13 @@ import ez_packet as ep
 class p2pCommand(object):
   """
   A p2pCommand encapsulates commands which are then appended to the command
-  queue ready for execution.
-  The msgType is determined by the process.
+  queue for execution. The msgType is the string of the function which must
+  match a key in the client handler functions (see ez_process_base_meta). Data
+  is must be a dictionary and has to be filled with key,value pairs as required
+  by the handler function.
+
+  - msgType: type = str
+  - data   : type = dict
   """
   def __init__(self, msgType=None, data=None):
     self.msgType = msgType
@@ -52,13 +57,14 @@ class p2pReply(object):
 class Timer(threading._Timer):
   """
   Timer instances are used in the client class to start timed non-blocking
-  background processes.
+  background processes. The class is not intended to be used directly by the
+  user, and measures have been taken to facilitate the use of timed operations.
+  See background_processes on how to use timed operations.
 
-  - Abort a ping request after a certain time
-  - Abort a connection request after a certain time
-  - Verify if missing packets must be requested
+  Sofar Timer is used for:
+  - Aborting a ping request after a certain time
+  - Aborting a connection request after a certain time
 
-  For more details consider the client class
   """
   def __init__(self, *args, **kwargs):
     threading._Timer.__init__(self, *args, **kwargs)
@@ -67,7 +73,9 @@ class Timer(threading._Timer):
   def run(self):
     while not self.finished.isSet():
       self.finished.wait(self.interval)
+      # the time has expired and the callback function is called
       if not self.finished.isSet():
+        # background processes provides methods to store args and kwargs
         if hasattr(self, 'callback_args') and hasattr(self, 'callback_kwargs'):
           self.function(self, *self.callback_args, **self.kwargs)
         elif hasattr(self, 'callback_args'):
@@ -86,8 +94,8 @@ class ez_process_base_meta(type):
   """
   The metaclass __init__ function is called after the class is created, but
   before any class instance initialization. Any class with set
-  __metaclass__ attribute to ez_process_base_meta (which is equivalent to
-  inheriting the class ez_process_base) is extended by:
+  __metaclass__ attribute to ez_process_base_meta which is equivalent to
+  inheriting the class ez_process_base is extended by:
 
   - self.handlers: dictionary storing all user-defined functions
   - global attributes as class attributes
@@ -111,8 +119,6 @@ class ez_process_base_meta(type):
 
 class ez_process_base(object):
   __metaclass__ = ez_process_base_meta
-  def __init__(self, *args, **kwargs):
-    super(ez_process_base, self).__init__(*args, **kwargs)
 
 #==============================================================================#
 #                         class ez_background_process                          #
@@ -360,9 +366,6 @@ class ez_ping(ez_background_process):
     self.replyQueue.put(self.error("ping failed: " + user_id))
     return False
 
-
-
-
 #==============================================================================#
 #                                  ez_connect                                  #
 #==============================================================================#
@@ -586,7 +589,9 @@ class ez_db_sync(ez_process_base):
           if len(data) > 2048:
             self.replyQueue.put(self.error("data larger than 2048 bytes"))
           else:
-            self.commandQueue.put(p2pCommand('send', (user_id, data)))
+            cmd_data = {'user_id': user_id, 'data':data}
+            self.commandQueue.put(p2pCommand('send', cmd_data))
+            #self.commandQueue.put(p2pCommand('send', (user_id, data)))
 
 
 #==============================================================================#
@@ -693,13 +698,22 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
     self.alive.clear()
 
   def send(self, cmd):
-    user_id = cmd.data[0]
+    try:
+      assert('user_id' in cmd.data)
+      user_id = cmd.data['user_id']
+    except:
+      print "user not registered"
+
+    try:
+      assert('data' in cmd.data)
+      data = cmd.data['data']
+    except:
+      print "No data which could be sent"
 
     if user_id in self.ips:
       user_addr = self.ips[user_id]
-      msg       = cmd.data[1]
       try:
-        self.sockfd.sendto(msg, user_addr)
+        self.sockfd.sendto(data, user_addr)
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
 

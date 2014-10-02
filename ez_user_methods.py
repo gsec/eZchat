@@ -124,7 +124,8 @@ class ez_user_methods(ez_process):
         return
 
       data = pickle.dumps(mx)
-      self.commandQueue.put(p2pCommand('send', (user_id, data)))
+      cmd_data = {'user_id': user_id, 'data':data}
+      self.commandQueue.put(p2pCommand('send', cmd_data))
 
     except:
       self.replyQueue.put(self.error("Syntax error in command"))

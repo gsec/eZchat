@@ -15,7 +15,7 @@ import cPickle as pickle
 
 from ez_process      import p2pCommand, p2pReply
 from ez_user_methods import ez_user_methods
-
+import ez_message  as em
 
 CLIENT_TIMEOUT = 0.1
 
@@ -214,7 +214,8 @@ class client(ez_user_methods, threading.Thread):
           return
 
         data = pickle.dumps(mx)
-        self.commandQueue.put(p2pCommand('send', (user_id, data)))
+        cmd_data = {'user_id': user_id, 'data':data}
+        self.commandQueue.put(p2pCommand('send', cmd_data))
 
       except:
         self.replyQueue.put(self.error("Syntax error in command"))
