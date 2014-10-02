@@ -15,6 +15,7 @@ import cPickle as pickle
 
 from ez_process      import p2pCommand, p2pReply
 from ez_user_methods import ez_user_methods
+from ez_process      import ez_process_base
 import ez_message  as em
 
 CLIENT_TIMEOUT = 0.1
@@ -42,6 +43,13 @@ class client(ez_user_methods, threading.Thread):
   def __init__(self, fail_connect=False, **kwargs):
     threading.Thread.__init__(self)
     super(client, self).__init__(**kwargs)
+    #print "self.handlers:", self.handlers
+
+    #assert('add_client' in self.handlers)
+    #setattr(self, 'add_client', self.handlers['add_client'])
+    #assert('reset_background_process' in self.handlers)
+    #setattr(self,'reset_background_process',
+                  #self.handlers['reset_background_process'])
 
     # used to simulate udp-holepunching where one of the clients connection
     # request is declient by the others client NAT
@@ -124,7 +132,7 @@ class client(ez_user_methods, threading.Thread):
     elif "add" in str(data[:-1]):
       try:
         _, user_id, host, port = data.split()
-        self.add_client(user_id, (str(host), int(port)))
+        self.handlers['add_client'](user_id, (str(host), int(port)))
         self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in user"))

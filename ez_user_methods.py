@@ -91,7 +91,8 @@ class ez_user_methods(ez_process):
 
   def cmd_sync(self, user_id):
     try:
-      self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
+      cmd_dct = {'user_id': user_id}
+      self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
     except:
       self.replyQueue.put(self.error("Syntax error in ips"))
 
@@ -101,7 +102,8 @@ class ez_user_methods(ez_process):
         if not self.UserDatabase.in_DB(name=user_id):
           # raise error
           pass
-        self.commandQueue.put(p2pCommand('ips_request', (user_id)))
+        cmd_dct = {'user_id': user_id}
+        self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
     except:
       self.replyQueue.put(self.error("Syntax error in ips"))
 
@@ -156,7 +158,7 @@ class ez_user_methods(ez_process):
       # the process might have been killed while this function called.
       if process_id in self.background_processes:
         # Reset process.
-        self.reset_background_process(process_id)
+        self.reset_background_process(self, process_id)
 
     bgp = p2pCommand('start_background_process',
             {'process_id'    : process_id,

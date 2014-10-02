@@ -120,6 +120,26 @@ class ez_process_base_meta(type):
 class ez_process_base(object):
   __metaclass__ = ez_process_base_meta
 
+  commandQueue = Queue.Queue()
+  replyQueue   = Queue.Queue()
+
+  background_processes    = {}
+  background_process_cmds = {}
+  success_callback = {}
+
+  #def __init__(self, **kwargs):
+    #self.myself = None
+    #assert('name' in kwargs)
+    #self.name = kwargs['name']
+
+  def success(self, success_msg=None):
+    return p2pReply(p2pReply.success, success_msg)
+
+  def error(self, error_msg=None):
+    return p2pReply(p2pReply.error, error_msg)
+
+
+
 #==============================================================================#
 #                         class ez_background_process                          #
 #==============================================================================#
@@ -156,8 +176,6 @@ class ez_background_process(ez_process_base):
   (See ping_background)
   """
 
-  background_processes    = {}
-  background_process_cmds = {}
   # TODO: (bcn 2014-08-09) In a class this could be deleted. Is it necessary for
   # meta classes?!
   # -What do u mean?
@@ -260,7 +278,6 @@ class ez_background_process(ez_process_base):
 class ez_ping(ez_background_process):
 
 
-  success_callback = {}
 
   def __init__(self, *args, **kwargs):
     super(ez_ping, self).__init__(*args, **kwargs)
@@ -304,9 +321,10 @@ class ez_ping(ez_background_process):
         if testing:
           return str(user_id) + " is not in client list"
       else:
-        master = self.ips[user_id]
-        ping   = {'ping_reply': user_id}
-        msg    = pickle.dumps(ping)
+        master  = self.ips[user_id]
+        cmd_dct = {'user_id': user_id}
+        ping    = {'ping_reply': cmd_dct}
+        msg     = pickle.dumps(ping)
         try:
           self.sockfd.sendto(msg, master)
           bgp = p2pCommand('start_background_process',
@@ -330,11 +348,16 @@ class ez_ping(ez_background_process):
 
     - (user_id, (user_ip, user_port)) = cmd.data
     """
-    user_id, user_addr = cmd.data
+    try:
+      user_id = cmd.data['user_id']
+      user_addr = (cmd.data['host'], cmd.data['port'])
+    except:
+      print "user_id/host/port not properly specified in ping_reply"
 
     self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
-    ping   = {'ping_success': user_id}
-    msg    = pickle.dumps(ping)
+    cmd_dct = {'user_id': user_id}
+    ping    = {'ping_success': cmd_dct}
+    msg     = pickle.dumps(ping)
     try:
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
@@ -348,7 +371,13 @@ class ez_ping(ez_background_process):
 
     - (user_id, (user_ip, user_port)) = cmd.data
     """
-    user_id, user_addr = cmd.data
+    try:
+      user_id = cmd.data['user_id']
+      user_addr = (cmd.data['host'], cmd.data['port'])
+    except:
+      print "user_id/host/port not properly specified in ping_reply"
+
+    #user_id, user_addr = cmd.data
     if user_id in self.ips:
       if self.ips[user_id] == user_addr:
         process_id = ('ping_reply', user_id)
@@ -412,8 +441,8 @@ class ez_connect(ez_background_process):
     except:
       print "master not properly specified in connect"
 
-    #cmd_dct      = {'user_id': self.name}
-    conn_request = {'connection_request': self.name}
+    cmd_dct      = {'user_id': self.name}
+    conn_request = {'connection_request': cmd_dct}
     msg          = pickle.dumps(conn_request)
     try:
       if self.fail_connect:
@@ -448,7 +477,9 @@ class ez_connect(ez_background_process):
 
     process_id = ('connection_request', user_addr)
     if not process_id in self.background_processes:
-      con_holepunch = {'connection_nat_traversal': self.name}
+      cmd_dct = {'user_id': self.name}
+      #con_holepunch = {'connection_nat_traversal': self.name}
+      con_holepunch = {'connection_nat_traversal': cmd_dct}
       msg           = pickle.dumps(con_holepunch)
       try:
         self.sockfd.sendto(msg, user_addr)
@@ -484,8 +515,17 @@ class ez_connect(ez_background_process):
 
     - (user_id, (user_ip, user_port)) = cmd.data
     """
-    user_id, user_addr = cmd.data
-    con_success     = {'connection_success': self.name}
+    #try:
+      #user_id, user_addr = cmd.data
+    try:
+      user_id   = cmd.data['user_id']
+      user_addr = (cmd.data['host'], cmd.data['port'])
+    except:
+      print ("user_id/host/port not properly specified in" +
+             "connection_nat_traversal")
+      return
+    cmd_dct = {'user_id': self.name}
+    con_success     = {'connection_success': cmd_dct}
     msg             = pickle.dumps(con_success)
 
     cmd = self.success("nat traversal succeded: " + str(user_addr))
@@ -538,7 +578,9 @@ class ez_contact(ez_process_base):
 
   def add_client(self, **kwargs):
     """
-    Adds a new client to the clients ip base
+    Adds a new client to the clients ip base.
+
+    - cmd.data['user_id'] = user_id
     """
     try:
       user_id = kwargs['user_id']
@@ -555,7 +597,7 @@ class ez_contact(ez_process_base):
 
   def contact_request_out(self, cmd):
     """
-    Method for exchanging public keys. Mandatory arguments:
+    Method for exchanging public keys.
 
     - cmd.data['user_id'] = user_id
     """
@@ -568,7 +610,6 @@ class ez_contact(ez_process_base):
     if user_id in self.ips:
       user_addr = self.ips[user_id]
       cmd_dct = {'user': self.myself}
-      #contact_request = {'contact_request_in': self.myself}
       contact_request = {'contact_request_in': cmd_dct}
       msg             = pickle.dumps(contact_request)
       try:
@@ -577,9 +618,13 @@ class ez_contact(ez_process_base):
         self.replyQueue.put(self.error(str(e)))
 
   def contact_request_in(self, cmd):
-    # user asks for contact data. We might have an options here restricting the
-    # users being allowed to request contact data.
-    #user, user_addr = cmd.data
+    """
+    User asks for contact data. We might have an options here restricting the
+    users being allowed to request contact data.
+
+    - cmd.data['user'] = user (User class instance)
+    - host, port automatically filled by the receive method (see ez_p2p.py)
+    """
     try:
       user = cmd.data['user']
       host = cmd.data['host']
@@ -587,7 +632,8 @@ class ez_contact(ez_process_base):
     except:
       print "user/host/port not properly specified in contact_request_in"
 
-    myself = {'add_contact': self.myself}
+    cmd_dct = {'user': self.myself}
+    myself = {'add_contact': cmd_dct}
     msg    = pickle.dumps(myself)
     try:
       self.sockfd.sendto(msg, (host, port))
@@ -595,8 +641,11 @@ class ez_contact(ez_process_base):
       self.replyQueue.put(self.error(str(e)))
 
   def add_contact(self, cmd):
-    new_user, _  = cmd.data
-    print "cmd.data:", cmd.data
+    try:
+      new_user = cmd.data['user']
+    except:
+      print "user not properly specified in add_contact"
+
     if not self.UserDatabase.in_DB(UID=new_user.UID):
       self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
@@ -614,8 +663,9 @@ class ez_db_sync(ez_process_base):
     user_id = cmd.data
     if user_id in self.ips:
       user_addr = self.ips[user_id]
-      data = (self.name, self.MsgDatabase.UID_list())
-      db_sync_request = {'db_sync_request_in': data}
+      #data = (self.name, self.MsgDatabase.UID_list())
+      cmd_dct = {'user_id': self.name, 'UID_list': self.MsgDatabase.UID_list()}
+      db_sync_request = {'db_sync_request_in': cmd_dct}
       msg             = pickle.dumps(db_sync_request)
       try:
         self.sockfd.sendto(msg, user_addr)
@@ -623,7 +673,13 @@ class ez_db_sync(ez_process_base):
         self.replyQueue.put(self.error(str(e)))
 
   def db_sync_request_in(self, cmd):
-    (user_id, UID_list), _ = cmd.data
+    try:
+      user_id  = cmd.data['user_id']
+      UID_list = cmd.data['UID_list']
+    except:
+      print "user_id/UID_list not properly specified in db_sync_request_in"
+      return
+
     if user_id in self.ips:
       user_addr = self.ips[user_id]
       UIDs_to_sync = self.MsgDatabase.complement_entries(UID_list)
@@ -635,8 +691,8 @@ class ez_db_sync(ez_process_base):
           if len(data) > 2048:
             self.replyQueue.put(self.error("data larger than 2048 bytes"))
           else:
-            cmd_data = {'user_id': user_id, 'data':data}
-            self.commandQueue.put(p2pCommand('send', cmd_data))
+            cmd_dct = {'user_id': user_id, 'data':data}
+            self.commandQueue.put(p2pCommand('send', cmd_dct))
 
 #==============================================================================#
 #                                class ez_relay                                #
@@ -660,6 +716,7 @@ class ez_relay(ez_connect):
       user_id = cmd.data['user_id']
     except:
       print "user id not properly specified in ips_request"
+      return
 
     if not user_id in self.ips:
       print "self.ips:", self.ips
@@ -708,8 +765,6 @@ class ez_relay(ez_connect):
 
 class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
 
-  commandQueue = Queue.Queue()
-  replyQueue   = Queue.Queue()
 
   def __init__(self, *args, **kwargs):
     super(ez_process, self).__init__(*args, **kwargs)
@@ -719,12 +774,6 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
   # ez_process, but as I'm never calling an ez_process directly only through
   # inheritance everthing is fine as long as the child class has the sockfd
   # attribute.
-
-  def success(self, success_msg=None):
-    return p2pReply(p2pReply.success, success_msg)
-
-  def error(self, error_msg=None):
-    return p2pReply(p2pReply.error, error_msg)
 
 #==================#
 #  connect_server  #
