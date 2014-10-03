@@ -17,8 +17,11 @@ from urwid.util import move_next_char, move_prev_char
 from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
     CURSOR_UP, CURSOR_DOWN, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT)
 
+from ez_process import p2pReply
+
 import ez_preferences as ep
 import ez_client as cl
+import ez_pipe   as pipe
 
 #==============================================================================#
 #                                  VimMsgBox                                   #
@@ -487,9 +490,9 @@ class ez_cli_urwid(urwid.Frame):
     #self.vimbox.set_focus(1)
 
     self.statusline    = VimStatusline()
-    #self.statusline.update_content('test')
-    #self.statusline.update_content('test')
-    #self.statusline.update_content('test')
+    self.statusline.update_content('')
+    self.statusline.update_content('')
+    self.statusline.update_content('')
     #self.statusline.update_content('test')
     self.statusline_b  = urwid.BoxAdapter(self.statusline, 4)
     self.commandline   = VimCommandLine(self.vimedit, u'')
@@ -582,24 +585,35 @@ class ez_cli_urwid(urwid.Frame):
 #                               GLOBAL INSTANCES                               #
 #==============================================================================#
 
-if __name__ == "__main__":
-  #cl.init_client()
-  client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
-  ez_cli = ez_cli_urwid()
-  palette = [
-      ('online', 'light green', 'dark green'),
-      ('offline', 'dark red', 'light red'),
-      ]
-  loop = urwid.MainLoop(ez_cli, palette)
+#if __name__ == "__main__":
+#cl.init_client()
+client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
+ez_cli = ez_cli_urwid()
+palette = [
+    ('online', 'light green', 'dark green'),
+    ('offline', 'dark red', 'light red'),
+    ]
+loop = urwid.MainLoop(ez_cli, palette)
 
-  def received_output(data):
+def received_output(data):
+  if 'reply' in data.strip():
+    try:
+      reply = cl.cl.replyQueue.get(block=False)
+      while reply:
+        status = "success" if reply.replyType == p2pReply.success else "ERROR"
+        ez_cli.status_update(
+                ( data.strip() + 'Client reply %s: %s' % (status, reply.data)))
+        reply = cl.cl.replyQueue.get(block=False)
+    except:
+      pass
+  else:
     ez_cli.statusline.update_content(data)
-    #ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
+  return True
 
-  write_fd = loop.watch_pipe(received_output)
-  proc = subprocess.Popen(
-      ['python', '-u', client_path, sys.argv[1]],
-      stdout=write_fd,
-      close_fds=True)
+pipe.pipe = loop.watch_pipe(received_output)
+proc = subprocess.Popen(
+    ['python', '-u', client_path, sys.argv[1]],
+    stdout=pipe.pipe,
+    close_fds=True)
 
-  loop.run()
+loop.run()

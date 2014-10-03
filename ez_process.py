@@ -7,12 +7,12 @@
 #============#
 
 import types
-import Queue, thread, threading
-
+import Queue, thread, threading, os
 
 import cPickle   as pickle
 import ez_user   as eu
 import ez_packet as ep
+import ez_pipe   as pipe
 #==============================================================================#
 #                               class p2pCommand                               #
 #==============================================================================#
@@ -121,13 +121,30 @@ class ez_process_base(object):
   __metaclass__ = ez_process_base_meta
 
   commandQueue = Queue.Queue()
-  replyQueue   = Queue.Queue()
+
+
+
 
   background_processes    = {}
   background_process_cmds = {}
   success_callback = {}
 
-  #def __init__(self, **kwargs):
+  def __init__(self, **kwargs):
+    if 'write_to_pipe' in kwargs:
+      class RQueue(Queue.Queue):
+        def __init__(self, write_to_pipe = False, *args, **kwargs):
+          Queue.Queue.__init__(self, *args, **kwargs)
+          self.write_to_pipe = write_to_pipe
+
+        def put(self, cmd):
+          Queue.Queue.put(self, cmd)
+          if self.write_to_pipe:
+            os.write(pipe.pipe, 'reply')
+
+      self.replyQueue = RQueue(write_to_pipe = kwargs['write_to_pipe'])
+    else:
+      self.replyQueue = Queue.Queue()
+    #pass
     #self.myself = None
     #assert('name' in kwargs)
     #self.name = kwargs['name']
@@ -592,8 +609,12 @@ class ez_contact(ez_process_base):
     if user_id in self.ips:
       del self.ips[user_id]
       self.replyQueue.put(p2pReply(p2pReply.success, "removed user"))
+      #print "reply"
+      #os.write(pipe.pipe, 'reply')
     else:
       self.replyQueue.put(p2pReply(p2pReply.error, "user not found/removed"))
+      #print "reply"
+      #os.write(pipe.pipe, 'reply')
 
   def contact_request_out(self, cmd):
     """
@@ -616,6 +637,8 @@ class ez_contact(ez_process_base):
         self.sockfd.sendto(msg, user_addr)
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
+        #print "reply"
+        #os.write(pipe.pipe, 'reply')
 
   def contact_request_in(self, cmd):
     """
@@ -639,6 +662,8 @@ class ez_contact(ez_process_base):
       self.sockfd.sendto(msg, (host, port))
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
+      #print "reply"
+      #os.write(pipe.pipe, 'reply')
 
   def add_contact(self, cmd):
     try:
@@ -722,7 +747,6 @@ class ez_relay(ez_connect):
       print "self.ips:", self.ips
     else:
       master  = self.ips[user_id]
-      print "self.ips:", self.ips
       cmd_dct = {'user_id': user_id}
       ping    = {'distributeIPs': cmd_dct}
       msg     = pickle.dumps(ping)
@@ -790,7 +814,7 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
       assert('host' in cmd.data)
       host = cmd.data['host']
     except:
-      print "no host specified in servermode"
+      print "no host specified in connect_server"
       return
     try:
       assert('port' in cmd.data)

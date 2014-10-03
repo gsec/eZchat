@@ -43,13 +43,6 @@ class client(ez_user_methods, threading.Thread):
   def __init__(self, fail_connect=False, **kwargs):
     threading.Thread.__init__(self)
     super(client, self).__init__(**kwargs)
-    #print "self.handlers:", self.handlers
-
-    #assert('add_client' in self.handlers)
-    #setattr(self, 'add_client', self.handlers['add_client'])
-    #assert('reset_background_process' in self.handlers)
-    #setattr(self,'reset_background_process',
-                  #self.handlers['reset_background_process'])
 
     # used to simulate udp-holepunching where one of the clients connection
     # request is declient by the others client NAT
@@ -61,6 +54,7 @@ class client(ez_user_methods, threading.Thread):
 
     # internal cli enabled
     self.enableCLI = False
+
 
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -124,7 +118,8 @@ class client(ez_user_methods, threading.Thread):
         self.commandQueue.put(bp_ping)
         #self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
-        self.replyQueue.put(self.error("Syntax error in ping"))
+        #self.replyQueue.put(self.error("Syntax error in ping"))
+        print "reply"
 
 #============================#
 #  add user to online users  #
@@ -136,6 +131,7 @@ class client(ez_user_methods, threading.Thread):
         self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in user"))
+        print "reply"
 
 #===================#
 #  start listening  #
@@ -146,6 +142,7 @@ class client(ez_user_methods, threading.Thread):
         self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
       except:
         self.replyQueue.put(self.error("Syntax error in servermode"))
+        print "reply"
 
 #=====================================#
 #  show running background processes  #
@@ -155,6 +152,7 @@ class client(ez_user_methods, threading.Thread):
         print ("background_processes:", self.background_processes)
       except:
         self.replyQueue.put(self.error("Syntax error in bp"))
+        print "reply"
 
     elif "sync" in str(data[:-1]):
       try:
@@ -162,6 +160,7 @@ class client(ez_user_methods, threading.Thread):
         self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
       except:
         self.replyQueue.put(self.error("Syntax error in ips"))
+        print "reply"
 
 
 #==================================================#
@@ -181,6 +180,7 @@ class client(ez_user_methods, threading.Thread):
 
       except:
         self.replyQueue.put(self.error("Syntax error in ips"))
+        print "reply"
 
 #============================#
 #  add user to contact list  #
@@ -192,6 +192,7 @@ class client(ez_user_methods, threading.Thread):
         self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
       except:
         self.replyQueue.put(self.error("Syntax error in key"))
+        print "reply"
 
 #========================#
 #  verify send packages  #
@@ -230,6 +231,7 @@ class client(ez_user_methods, threading.Thread):
 
       except:
         self.replyQueue.put(self.error("Syntax error in command"))
+        print "reply"
 
 #===================#
 #  client receive   #
@@ -257,6 +259,7 @@ class client(ez_user_methods, threading.Thread):
         data = pickle.loads(sdata)
       except:
         self.replyQueue.put(self.error("data not pickled -> rejected"))
+        print "reply"
 
       # TODO: nick new interface here Do 07 Aug 2014 12:59:17 CEST
       # it shouldn't be possible that every user can start commands on other
@@ -266,8 +269,8 @@ class client(ez_user_methods, threading.Thread):
       if isinstance(data, dict):
         for command in data:
           cmd_dct = data[command]
-          print "command:", command
-          print "cmd_dct:", cmd_dct
+          #print "command:", command
+          #print "cmd_dct:", cmd_dct
           cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
           #user_cmd = p2pCommand(command, (data[command], user_addr))
           user_cmd = p2pCommand(command, cmd_dct)
@@ -276,10 +279,12 @@ class client(ez_user_methods, threading.Thread):
       # raw data
       else:
         self.replyQueue.put(self.success(data))
+        print "reply"
         return data
 
     else:
       self.replyQueue.put(self.error("Conflict in receive"))
+      print "reply"
 
 #====================#
 #  client main loop  #
@@ -312,9 +317,10 @@ class client(ez_user_methods, threading.Thread):
           self.commandQueue.put(p2pCommand('receive'))
 
       # check for messages in the replyQueue
-      try:
-        reply = self.replyQueue.get(block=False)
-        status = "success" if reply.replyType == p2pReply.success else "ERROR"
-        print ('Client reply %s: %s' % (status, reply.data))
-      except Queue.Empty:
-        pass
+      if self.enableCLI:
+        try:
+          reply = self.replyQueue.get(block=False)
+          status = "success" if reply.replyType == p2pReply.success else "ERROR"
+          print ('Client reply %s: %s' % (status, reply.data))
+        except Queue.Empty:
+          pass

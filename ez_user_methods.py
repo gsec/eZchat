@@ -6,6 +6,9 @@
 #  Includes  #
 #============#
 
+import os
+#import ez_cli     as cli
+import ez_pipe    as pipe
 import ez_user    as eu
 import ez_message as em
 from ez_process import ez_process, p2pCommand, p2pReply
@@ -17,7 +20,7 @@ class ez_user_methods(ez_process):
   UI. It also takes care of the user and message database.
   """
   def __init__(self, **kwargs):
-    super(ez_user_methods, self).__init__()
+    super(ez_user_methods, self).__init__(**kwargs)
     assert('name' in kwargs)
     self.name = kwargs['name']
 
@@ -30,11 +33,18 @@ class ez_user_methods(ez_process):
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):
-      print "new user created"
+      #self.replyQueue.put(self.success("New user created"))
+      #os.write(pipe.pipe, 'reply')
       self.myself = eu.User(name=self.name)
       self.UserDatabase.add_entry(self.myself)
     else:
-      print "retrieved user"
+      #self.replyQueue.put(self.success("Retrieved user"))
+      #print "reply"
+      #print "pipe.pipe:", pipe.pipe
+      #os.write(pipe.pipe, 'reply')
+
+      #self.replyQueue.put(self.success("test"))
+      #print "reply"
       self.myself = self.UserDatabase.get_entry(name=self.name)
 
   def cmd_close(self):
@@ -75,10 +85,12 @@ class ez_user_methods(ez_process):
       self.replyQueue.put(self.error("Syntax error in servermode"))
 
   def cmd_connect(self, host, port):
-    master = (host, int(port))
+    #master = (host, int(port))
+    cmd_dct = {'host': host, 'port':int(port)}
     try:
-      self.commandQueue.put(p2pCommand('connect_server', master))
-      self.add_client("server", master)
+      self.commandQueue.put(p2pCommand('connect_server', cmd_dct))
+      cmd_dct['user_id'] = 'server'
+      self.add_client(**cmd_dct)
     except:
       self.replyQueue.put(self.error("Syntax error in connect"))
 
@@ -135,7 +147,6 @@ class ez_user_methods(ez_process):
 
     except:
       self.replyQueue.put(self.error("Syntax error in command"))
-
 
   def ping_background(self, cmd):
     process_id = ('ping_reply', 'all')
