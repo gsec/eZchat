@@ -209,16 +209,40 @@ class VimCommandLine(urwid.Edit):
       print "File not found"
 
   def cmd_open(self, *args):
-    #assert(args[0] == 'contacts') # what is intended here? seems wrong
+    # what is intended here? seems wrong
+    # JNicL - Sa 04 Okt 2014 00:02:08 CEST
+    # Not Wrong. The following works only for `:open contacts`. We will have to
+    # introduce other scenarios as we might want to open other windows, e.g.
+    # settings.
+    assert(args[0] == 'contacts')
     def contact_list(user_ids):
       contacts = [urwid.Text("Contacts:")]
-      for user_id in user_ids:
+      for user in user_ids:
+        user_id = user[0]
         on  = urwid.Text(("online", u"ON"))
         off = urwid.Text(("offline", u"OFF"))
-        contacts += [urwid.Columns([urwid.CheckBox(user_id), off])]
+        status = on if user[1] else off
+        contacts += [urwid.Columns([urwid.CheckBox(user_id), status])]
       return VimListBox(urwid.SimpleListWalker(contacts))
+    # get contact list
+    UIDs = cl.cl.UserDatabase.UID_list()
+    if len(UIDs) > 0:
+      contacts = [str(entry.name) for entry in
+                  cl.cl.UserDatabase.get_entries(UIDs) if not cl.cl.name ==
+                  entry.name]
+    else:
+      contacts = []
 
-    lst = contact_list(["Alice", "Bob"])
+    # append all users online
+    if len(cl.cl.ips.keys()) > 0:
+      for user in cl.cl.ips.keys():
+        if not (user in contacts or user == cl.cl.name):
+          contacts.append(user)
+    # construct user/online list
+    if len(contacts) > 0:
+      contacts = [(contact, contact in cl.cl.ips) for contact in contacts]
+
+    lst = contact_list(contacts)
     #lst_f = urwid.Filler(lst, valign = 'top')
     ez_cli.top.open_box(lst, 50)
     #ez_cli.top.open_box(contacts_f)
