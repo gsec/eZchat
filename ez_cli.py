@@ -26,14 +26,77 @@ import ez_client as cl
 
 class VimMsgBox(urwid.ListBox):
   """Prototype for our message box"""
-  def __init__(self, content):
+
+  signals = ['exit_msgbox', 'status_update']
+  def __init__(self, content = [], file_name = None, divider = True):
+    if file_name != None:
+      try:
+        with open(str(file_name)) as f:
+          content = f.readlines()
+          divider = False
+          for i, con in enumerate(content):
+            content[i] = con.replace('\n','')
+          self.logo_displayed = True
+      except IOError:
+        print "File not found"
     slw = []
     for item in content[:-1]:
-      slw.extend([urwid.Text(item),urwid.Divider()])
+      if divider:
+        slw.extend([urwid.Text(item),urwid.Divider()])
+      else:
+        slw.extend([urwid.Text(item)])
     slw.append(urwid.Text(content[-1]))
-    slw = urwid.SimpleListWalker([urwid.AttrMap(w,
+    slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
             None, 'reveal focus') for w in slw])
     urwid.ListBox.__init__(self, slw)
+
+    self.command_dict = {'j' : self.cmd_move_down,
+                         'k' : self.cmd_move_up,
+                         'down' : self.cmd_exit_msgbox,
+                         'up' : self.cmd_unhandled,
+                         'q': self.cmd_close_list,
+                         # Blocking left & right arrow key.
+                         'left' : self.cmd_unhandled,
+                         'right' : self.cmd_unhandled,
+                         }
+
+  def cmd_unhandled(self, *args):
+    pass
+
+  def update_content(self, content):
+    self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
+    #slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
+            #None, 'reveal focus') for w in slw])
+    #self.body = slw
+
+  def cmd_exit_msgbox(self, *args):
+    if self.logo_displayed:
+      slw = urwid.SimpleFocusListWalker([])
+      self.body = slw
+      #self.update_content('test')
+      self.logo_displayed = False
+
+    urwid.emit_signal(self, 'exit_msgbox')
+
+  def cmd_move_up(self, size):
+    urwid.ListBox.keypress(self, size, 'up')
+
+  def cmd_move_down(self, size):
+    urwid.ListBox.keypress(self, size, 'down')
+
+  def cmd_close_list(self, *args):
+    ez_cli.top.close_box()
+
+  def keypress(self, size, key):
+    # press any key to skip logo
+    if self.logo_displayed:
+      self.cmd_exit_msgbox()
+      return
+    try:
+      return self.command_dict[key](size)
+    except KeyError:
+      return urwid.ListBox.keypress(self, size, key)
+
 
 
 #==============================================================================#
@@ -77,9 +140,22 @@ class VimListBox(urwid.ListBox):
 #                                VimStatusLine                                 #
 #==============================================================================#
 
-class VimStatusline(urwid.Text):
-    def __init__(self):
-        """@todo: to be defined1. """
+class VimStatusline(urwid.ListBox):
+  """Prototype for our message box"""
+
+  def __init__(self):
+    slw = urwid.SimpleFocusListWalker([])
+    urwid.ListBox.__init__(self, slw)
+
+  def cmd_unhandled(self, *args):
+    pass
+
+  def update_content(self, content):
+    self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
+
+#class VimStatusline(urwid.Text):
+    #def __init__(self):
+        #"""@todo: to be defined1. """
 
 
 #==============================================================================#
@@ -90,7 +166,7 @@ class VimCommandLine(urwid.Edit):
   """
   Evaluates commands that are typed in command mode.
   """
-  signals = ['command_line_exit', 'exit_ez_chat']
+  signals = ['command_line_exit', 'exit_ez_chat', 'status_update']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, vimedit, *args, **kwargs):
@@ -155,14 +231,16 @@ class VimCommandLine(urwid.Edit):
     self.cmd_close()
 
   def tab_completion(self, cmd):
+    cmd = self.get_edit_text()[1:]
     matches = [key for key in self.command_dict if key.startswith(cmd.strip())]
     if len(matches) == 1:
       line = ':' + matches[0] + ' '
       self.set_edit_text(line[:])
       self.set_edit_pos(len(line)-1)
     else:
-      print '\n'
-      print ' '.join(matches)
+      urwid.emit_signal(self, 'status_update', ' '.join(matches))
+      #print '\n'
+      #print ' '.join(matches)
 
   def evaluate_command(self, cmd):
     cmd_and_args = cmd.split()
@@ -398,17 +476,33 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, 10)
 
-    self.vimmsgbox     = VimMsgBox(['msg1: foo', 'msg2: bar'])
+    #self.vimmsgbox     = VimMsgBox(['msg1: foo', 'msg2: bar'])
+    self.vimmsgbox     = VimMsgBox(file_name = 'logo')
     self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
-    self.vimmsgbox = urwid.BoxAdapter(self.vimmsgbox, 10)
-    self.vimbox    = urwid.Pile([self.vimedit_b, self.vimmsgbox])
-    self.vimbox_f  = urwid.Filler(self.vimbox, valign = 'top')
+    self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, 25)
+    self.vimbox      = urwid.Pile([self.vimmsgbox_b, self.vimedit])
+    self.vimbox_f    = urwid.Filler(self.vimbox, valign = 'top')
+    #self.vimbox.set_focus(1)
 
+    self.statusline    = VimStatusline()
+    #self.statusline.update_content('test')
+    #self.statusline.update_content('test')
+    #self.statusline.update_content('test')
+    #self.statusline.update_content('test')
+    self.statusline_b  = urwid.BoxAdapter(self.statusline, 4)
     self.commandline   = VimCommandLine(self.vimedit, u'')
     self.commandline.set_edit_text(u'insert mode')
-    self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
+
+    #self.commandline_b = urwid.BoxAdapter(self.commandline, 1)
+    #self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
+
+
+    self.command_and_status = urwid.Pile([self.statusline_b,
+                                          self.commandline])
+
+    #self.command_and_status = urwid.Pile([ self.commandline])
 
     focus_map = {
     'heading': 'focus heading',
@@ -431,13 +525,11 @@ class ez_cli_urwid(urwid.Frame):
         del self.contents[1]
         self.focus_position = 0
 
-
-
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
     self.top_f = urwid.Filler(self.top, 'top', 20)
 
-    urwid.Frame.__init__(self, self.top_f, footer=self.commandline)
+    urwid.Frame.__init__(self, self.top_f, footer=self.command_and_status)
 
     urwid.connect_signal(self.vimedit, 'done', self.mode_notifier)
     urwid.connect_signal(self.vimedit, 'insert_mode', self.mode_notifier)
@@ -445,9 +537,18 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.vimedit, 'command_line', self.command_line_mode)
     urwid.connect_signal(self.commandline, 'command_line_exit',
                          self.command_line_exit)
+
+    urwid.connect_signal(self.commandline, 'status_update',
+                         self.status_update)
     urwid.connect_signal(self.commandline, 'exit_ez_chat', self.exit)
+    urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
     signal.signal(signal.SIGINT, self.__close__)
-    self.commandline.cmd_show('logo')
+
+  def status_update(self, content):
+    self.statusline.update_content(content)
+    focus = self.statusline.body.get_focus()[1]
+    self.statusline.body.set_focus(focus+1)
+    #self.statusline.set_focus(3)
 
   def __close__(self, *args):
     self.commandline.cmd_close()
@@ -457,7 +558,14 @@ class ez_cli_urwid(urwid.Frame):
     self.commandline.set_edit_text(str(new_edit_text))
     #edit.set_edit_text(str(new_edit_text))
 
+  def enter_msgbox(self):
+    self.vimbox.set_focus(0)
+
+  def exit_msgbox(self):
+    self.vimbox.set_focus(1)
+
   def command_line_mode(self, edit, new_edit_text):
+    self.command_and_status.set_focus(1)
     self.commandline.set_edit_text(':')
     self.commandline.set_edit_pos(1)
     self.set_focus('footer')
@@ -475,7 +583,7 @@ class ez_cli_urwid(urwid.Frame):
 #==============================================================================#
 
 if __name__ == "__main__":
-  cl.init_client()
+  #cl.init_client()
   client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
   ez_cli = ez_cli_urwid()
   palette = [
@@ -485,7 +593,8 @@ if __name__ == "__main__":
   loop = urwid.MainLoop(ez_cli, palette)
 
   def received_output(data):
-    ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
+    ez_cli.statusline.update_content(data)
+    #ez_cli.vimedit.set_edit_text(ez_cli.vimedit.get_edit_text() + data)
 
   write_fd = loop.watch_pipe(received_output)
   proc = subprocess.Popen(
