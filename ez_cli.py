@@ -623,19 +623,25 @@ def received_output(data):
                 p2pReply.msg:     'msg'
                 }
   if 'status' in data.strip():
-    #try:
       reply = cl.cl.replyQueue.get(block=False)
-      if ((reply.replyType == p2pReply.success) or
-          (reply.replyType == p2pReply.error)):
-        status = "success" if reply.replyType == p2pReply.success else "ERROR"
-        ez_cli.status_update(
-                  ('Client reply %s: %s' % (status, reply.data)))
-      elif reply.replyType == p2pReply.msg:
-        if reply.data.recipient == cl.cl.name:
-          reply.data.clear_text()
-          #ez_cli.vimmsgbox.update_content(str(reply.data))
-    #except:
-      #pass
+      while reply:
+        if ((reply.replyType == p2pReply.success) or
+            (reply.replyType == p2pReply.error)):
+          status = "success" if reply.replyType == p2pReply.success else "ERROR"
+          ez_cli.status_update(
+                    ('Client reply %s: %s' % (status, reply.data)))
+        elif reply.replyType == p2pReply.msg:
+          ez_cli.status_update( ('Client reply: msg' ))
+          #if reply.data.recipient == cl.cl.name:
+          #reply.data.clear_text()
+          ez_cli.status_update( ('Client reply: ' + reply.data.clear_text() ))
+          ez_cli.vimmsgbox.update_content(str(reply.data.clear_text()))
+        else:
+          ez_cli.status_update( ('Client reply: nada' ))
+        try:
+          reply = cl.cl.replyQueue.get(block=False)
+        except:
+          reply = None
   else:
     ez_cli.statusline.update_content(data)
   return True

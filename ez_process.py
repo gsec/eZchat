@@ -631,7 +631,8 @@ class ez_contact(ez_process_base):
       assert('user_id' in cmd.data)
       user_id = cmd.data['user_id']
     except:
-      print "user_id not in ip list"
+      self.replyQueue.put(self.error("user_id not in ip list"))
+      return
 
     if user_id in self.ips:
       user_addr = self.ips[user_id]
@@ -640,6 +641,8 @@ class ez_contact(ez_process_base):
       msg             = pickle.dumps(contact_request)
       try:
         self.sockfd.sendto(msg, user_addr)
+        self.replyQueue.put(self.success("sent contact request: " +
+          str(self.myself.UID)))
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
         #print "reply"
@@ -660,9 +663,15 @@ class ez_contact(ez_process_base):
     except:
       print "user/host/port not properly specified in contact_request_in"
 
+    self.replyQueue.put(self.success("received contact request"))
+    #self.myself = eu.User(name=self.name)
+    assert(self.myself != None)
+
+    self.replyQueue.put(self.success("sent contact data: " +
+                                      str(self.myself.UID)))
     cmd_dct = {'user': self.myself}
-    myself = {'add_contact': cmd_dct}
-    msg    = pickle.dumps(myself)
+    myself  = {'add_contact': cmd_dct}
+    msg     = pickle.dumps(myself)
     try:
       self.sockfd.sendto(msg, (host, port))
     except IOError as e:
@@ -674,15 +683,16 @@ class ez_contact(ez_process_base):
     try:
       new_user = cmd.data['user']
     except:
-      print "user not properly specified in add_contact"
-
+      self.replyQueue.put(self.error("User not properly specified " +
+                                     "in add_contact"))
     if not self.UserDatabase.in_DB(UID=new_user.UID):
-      self.myself  = eu.User(name=self.name)
+      #self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
-      print "new_user:", new_user.name
+      self.replyQueue.put(self.success("new contact registered: " + new_user.UID))
     else:
-      print "user alrdy in database -> contact updated"
-      self.myself = self.UserDatabase.update_entry(new_user)
+      self.replyQueue.put(self.success("User already in database. " +
+                                       "Contact updated."))
+      #self.myself = self.UserDatabase.update_entry(new_user)
 
 class ez_db_sync(ez_process_base):
 

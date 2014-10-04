@@ -14,6 +14,7 @@ import Queue, threading
 import cPickle as pickle
 
 from ez_process      import p2pCommand, p2pReply
+from datetime import datetime
 from ez_user_methods import ez_user_methods
 from ez_process      import ez_process_base
 import ez_message  as em
@@ -210,9 +211,7 @@ class client(ez_user_methods, threading.Thread):
         user_id, msg = data.split()
         if not self.UserDatabase.in_DB(name=user_id):
           return
-
         mx = em.Message(self.name, user_id, msg)
-        # store msg in db
         self.MsgDatabase.add_entry(mx)
 
         if not user_id in self.ips:
@@ -245,7 +244,7 @@ class client(ez_user_methods, threading.Thread):
       readable = None
     if not readable:
       return
-    sdata, user_addr = self.sockfd.recvfrom(2048)
+    sdata, user_addr = self.sockfd.recvfrom(4048)
     if sdata != None:
       try:
         data = pickle.loads(sdata)
@@ -260,17 +259,17 @@ class client(ez_user_methods, threading.Thread):
       if isinstance(data, dict):
         for command in data:
           cmd_dct = data[command]
-          #print "command:", command
-          #print "cmd_dct:", cmd_dct
           cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
-          #user_cmd = p2pCommand(command, (data[command], user_addr))
           user_cmd = p2pCommand(command, cmd_dct)
           self.commandQueue.put(user_cmd)
 
       elif isinstance(data, em.Message):
         self.replyQueue.put(self.success("received msg"))
         self.MsgDatabase.add_entry(data)
-        self.replyQueue.put(self.msg(data))
+        #print "bytes(data):", bytes(data)
+        #print "sys.getsizeof(data):", sys.getsizeof(data)
+        #print "data.clear_text():", data.clear_text()
+        #self.replyQueue.put(self.msg(data))
       else:
       # raw data
         self.replyQueue.put(self.success(data))
