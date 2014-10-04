@@ -100,6 +100,8 @@ class VimMsgBox(urwid.ListBox):
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
 
+  def update_content(self, content):
+    self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
 
 #==============================================================================#
@@ -616,16 +618,24 @@ class ez_cli_urwid(urwid.Frame):
 
 client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
 def received_output(data):
-  if 'reply' in data.strip():
-    try:
+  categories = {p2pReply.success: 'success',
+                p2pReply.error:   'error',
+                p2pReply.msg:     'msg'
+                }
+  if 'status' in data.strip():
+    #try:
       reply = cl.cl.replyQueue.get(block=False)
-      while reply:
+      if ((reply.replyType == p2pReply.success) or
+          (reply.replyType == p2pReply.error)):
         status = "success" if reply.replyType == p2pReply.success else "ERROR"
         ez_cli.status_update(
-                ( data.strip() + 'Client reply %s: %s' % (status, reply.data)))
-        reply = cl.cl.replyQueue.get(block=False)
-    except:
-      pass
+                  ('Client reply %s: %s' % (status, reply.data)))
+      elif reply.replyType == p2pReply.msg:
+        if reply.data.recipient == cl.cl.name:
+          reply.data.clear_text()
+          #ez_cli.vimmsgbox.update_content(str(reply.data))
+    #except:
+      #pass
   else:
     ez_cli.statusline.update_content(data)
   return True

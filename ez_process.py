@@ -45,6 +45,7 @@ class p2pReply(object):
   replyType = error:    type(data) = str
   """
   error, success = range(2)
+  msg            = 2
 
   def __init__(self, replyType=None, data=None):
     self.replyType = replyType
@@ -122,12 +123,14 @@ class ez_process_base(object):
 
   commandQueue = Queue.Queue()
 
-
-
-
+  # storing active and/or sleeping background process
   background_processes    = {}
+  # storing the cmd with which the background processes were initiated
   background_process_cmds = {}
-  success_callback = {}
+
+  # storing user-defined functions for calling after a process has been
+  # terminated successfully
+  success_callback        = {}
 
   def __init__(self, **kwargs):
     if 'write_to_pipe' in kwargs:
@@ -139,21 +142,23 @@ class ez_process_base(object):
         def put(self, cmd):
           Queue.Queue.put(self, cmd)
           if self.write_to_pipe:
-            os.write(pipe.pipe, 'reply')
+            os.write(pipe.pipe, 'status')
 
       self.replyQueue = RQueue(write_to_pipe = kwargs['write_to_pipe'])
     else:
       self.replyQueue = Queue.Queue()
-    #pass
-    #self.myself = None
-    #assert('name' in kwargs)
-    #self.name = kwargs['name']
 
+  # client related
   def success(self, success_msg=None):
     return p2pReply(p2pReply.success, success_msg)
 
+  # client related
   def error(self, error_msg=None):
     return p2pReply(p2pReply.error, error_msg)
+
+  # MsgDb update
+  def msg(self, msg=None):
+    return p2pReply(p2pReply.msg, msg)
 
 
 
@@ -688,7 +693,6 @@ class ez_db_sync(ez_process_base):
     user_id = cmd.data
     if user_id in self.ips:
       user_addr = self.ips[user_id]
-      #data = (self.name, self.MsgDatabase.UID_list())
       cmd_dct = {'user_id': self.name, 'UID_list': self.MsgDatabase.UID_list()}
       db_sync_request = {'db_sync_request_in': cmd_dct}
       msg             = pickle.dumps(db_sync_request)
@@ -709,15 +713,10 @@ class ez_db_sync(ez_process_base):
       user_addr = self.ips[user_id]
       UIDs_to_sync = self.MsgDatabase.complement_entries(UID_list)
       if len(UIDs_to_sync) != 0:
-        packets = ep.Packets(data = self.MsgDatabase.get_entries(UIDs_to_sync))
-        self.sent_packets[packets.packets_hash] = packets
-        for packet_id in packets.packets:
-          data = pickle.dumps(packets.packets[packet_id])
-          if len(data) > 2048:
-            self.replyQueue.put(self.error("data larger than 2048 bytes"))
-          else:
-            cmd_dct = {'user_id': user_id, 'data':data}
-            self.commandQueue.put(p2pCommand('send', cmd_dct))
+        msges = self.MsgDatabase.get_entries(UIDs_to_sync)
+        for msg in msges:
+          cmd_dct = {'user_id': user_id, 'data': msg}
+          self.commandQueue.put(p2pCommand('send', cmd_dct))
 
 #==============================================================================#
 #                                class ez_relay                                #

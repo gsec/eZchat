@@ -11,6 +11,7 @@ import os
 import ez_pipe    as pipe
 import ez_user    as eu
 import ez_message as em
+import cPickle as pickle
 from ez_process import ez_process, p2pCommand, p2pReply
 
 class ez_user_methods(ez_process):
@@ -125,14 +126,16 @@ class ez_user_methods(ez_process):
       self.replyQueue.put(self.error("Syntax error in key"))
 
   def cmd_send_msg(self, user_id, msg):
-    try:
+    #try:
       if not self.UserDatabase.in_DB(name=user_id):
         # raise error instead
         self.replyQueue.put(self.error("User not in DB"))
         return
 
       # store msg in db
-      mx = em.Message(self.name, user_id, msg)
+      # TODO: nick Sa 04 Okt 2014 15:06:36 CEST
+      # apparently crypto does not allow unicode
+      mx = em.Message(self.name, user_id, str(msg))
       self.MsgDatabase.add_entry(mx)
 
       if not user_id in self.ips:
@@ -143,8 +146,8 @@ class ez_user_methods(ez_process):
       cmd_data = {'user_id': user_id, 'data':data}
       self.commandQueue.put(p2pCommand('send', cmd_data))
 
-    except:
-      self.replyQueue.put(self.error("Syntax error in command"))
+    #except:
+      #self.replyQueue.put(self.error("Syntax error in command"))
 
   def ping_background(self, cmd):
     process_id = ('ping_reply', 'all')

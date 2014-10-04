@@ -267,8 +267,12 @@ class client(ez_user_methods, threading.Thread):
           user_cmd = p2pCommand(command, cmd_dct)
           self.commandQueue.put(user_cmd)
 
-      # raw data
+      elif isinstance(data, em.Message):
+        self.replyQueue.put(self.success("received msg"))
+        self.MsgDatabase.add_entry(data)
+        self.replyQueue.put(self.msg(data))
       else:
+      # raw data
         self.replyQueue.put(self.success(data))
         return data
 
