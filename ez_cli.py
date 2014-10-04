@@ -17,7 +17,7 @@ from urwid.util import move_next_char, move_prev_char
 from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
     CURSOR_UP, CURSOR_DOWN, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT)
 
-from ez_process import p2pReply
+from ez_process import p2pReply, p2pCommand
 
 import ez_preferences as ep
 import ez_client as cl
@@ -499,37 +499,40 @@ class ez_cli_urwid(urwid.Frame):
   def __init__(self, *args, **kwargs):
     self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
                                  multiline = True)
-    self.vimedit.mode  = VimEdit.insert_mode
-    self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
-    self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, 10)
+    self.commandline   = VimCommandLine(self.vimedit, u'')
 
-    #self.vimmsgbox     = VimMsgBox(['msg1: foo', 'msg2: bar'])
+    if ep.cli_start_in_insertmode:
+      self.vimedit.mode  = VimEdit.insert_mode
+      self.commandline.set_edit_text(u'insert mode')
+    else:
+      self.vimedit.mode  = VimEdit.command_mode
+      self.commandline.set_edit_text(u'command mode')
+
+    self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
+    self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
+
     self.vimmsgbox     = VimMsgBox(file_name = 'logo')
     self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
-    self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, 25)
+    self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
     self.vimbox      = urwid.Pile([self.vimmsgbox_b, self.vimedit])
     self.vimbox_f    = urwid.Filler(self.vimbox, valign = 'top')
-    #self.vimbox.set_focus(1)
-
-    self.statusline    = VimStatusline()
-    self.statusline.update_content('')
-    self.statusline.update_content('')
-    self.statusline.update_content('')
-    #self.statusline.update_content('test')
-    self.statusline_b  = urwid.BoxAdapter(self.statusline, 4)
-    self.commandline   = VimCommandLine(self.vimedit, u'')
-    self.commandline.set_edit_text(u'insert mode')
-
-    #self.commandline_b = urwid.BoxAdapter(self.commandline, 1)
-    #self.commandline_f = urwid.Filler(self.commandline, valign = 'bottom')
 
 
-    self.command_and_status = urwid.Pile([self.statusline_b,
-                                          self.commandline])
+    if ep.cli_status_height > 0:
+      self.statusline    = VimStatusline()
+      for i in range(ep.cli_status_height-1):
+        self.statusline.update_content('')
 
-    #self.command_and_status = urwid.Pile([ self.commandline])
+      self.statusline_b  = urwid.BoxAdapter(self.statusline,
+                                            ep.cli_status_height)
+
+    if hasattr(self, 'statusline'):
+      self.command_and_status = urwid.Pile([self.statusline_b,
+                                            self.commandline])
+    else:
+      self.command_and_status = self.commandline
 
     focus_map = {
     'heading': 'focus heading',
@@ -572,10 +575,12 @@ class ez_cli_urwid(urwid.Frame):
     signal.signal(signal.SIGINT, self.__close__)
 
   def status_update(self, content):
+    # update SimpleFocusListWalker
     self.statusline.update_content(content)
+    # get the current focus (on item)
     focus = self.statusline.body.get_focus()[1]
+    # set the new foucs to the last item
     self.statusline.body.set_focus(focus+1)
-    #self.statusline.set_focus(3)
 
   def __close__(self, *args):
     self.commandline.cmd_close()
@@ -609,16 +614,7 @@ class ez_cli_urwid(urwid.Frame):
 #                               GLOBAL INSTANCES                               #
 #==============================================================================#
 
-#if __name__ == "__main__":
-#cl.init_client()
 client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
-ez_cli = ez_cli_urwid()
-palette = [
-    ('online', 'light green', 'dark green'),
-    ('offline', 'dark red', 'light red'),
-    ]
-loop = urwid.MainLoop(ez_cli, palette)
-
 def received_output(data):
   if 'reply' in data.strip():
     try:
@@ -634,10 +630,27 @@ def received_output(data):
     ez_cli.statusline.update_content(data)
   return True
 
+try:
+  ep.init_cli_preferences()
+  ez_cli = ez_cli_urwid()
+
+except ep.DomainError, err:
+  sys.stderr.write('ERROR: %s\n' % str(err))
+  cl.cl.commandQueue.put(p2pCommand('shutdown'))
+  sys.exit()
+
+palette = [
+      ('online', 'light green', 'dark green'),
+      ('offline', 'dark red', 'light red'),
+      ]
+loop = urwid.MainLoop(ez_cli, palette)
 pipe.pipe = loop.watch_pipe(received_output)
-proc = subprocess.Popen(
-    ['python', '-u', client_path, sys.argv[1]],
-    stdout=pipe.pipe,
-    close_fds=True)
+
+# starting a subprocess seems to be unnecessary and the call
+# `import ez_client as cl` starts an independent process
+#proc = subprocess.Popen(
+    #['python', '-u', client_path, sys.argv[1]],
+    #stdout=pipe.pipe,
+    #close_fds=True)
 
 loop.run()
