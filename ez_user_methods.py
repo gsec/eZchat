@@ -28,15 +28,16 @@ class ez_user_methods(ez_process):
     # every new client gets a fresh database in memory for now. Should be made
     # an argument to support test as well as use case
     #db_name = 'sqlite:///:' + self.name + 'memory:'
-    user_db_name = 'sqlite:///' + self.name + '_contacts:'
-    msg_db_name  = 'sqlite:///' + self.name + '_messages:'
-    self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
+    user_db_name = 'sqlite:///' + self.name + '_contacts'
+    msg_db_name  = 'sqlite:///' + self.name + '_messages'
+    #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
+    self.UserDatabase  = eu.user_database
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):
       #self.replyQueue.put(self.success("New user created"))
       #os.write(pipe.pipe, 'reply')
-      self.myself = eu.User(name=self.name)
+      self.myself = eu.User(name=self.name, current_ip = '127.0.0.1:222')
       self.UserDatabase.add_entry(self.myself)
     else:
       #self.replyQueue.put(self.success("Retrieved user"))
@@ -115,7 +116,6 @@ class ez_user_methods(ez_process):
       cmd_dct = {'user_id': user_id}
       self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
     except:
-      print "user:", user
       self.replyQueue.put(self.error("Syntax error in ips"))
 
   def cmd_key(self, user_id):

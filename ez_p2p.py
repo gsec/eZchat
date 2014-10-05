@@ -211,6 +211,7 @@ class client(ez_user_methods, threading.Thread):
         user_id, msg = data.split()
         if not self.UserDatabase.in_DB(name=user_id):
           return
+
         mx = em.Message(self.name, user_id, msg)
         self.MsgDatabase.add_entry(mx)
 
@@ -268,8 +269,9 @@ class client(ez_user_methods, threading.Thread):
         self.MsgDatabase.add_entry(data)
         #print "bytes(data):", bytes(data)
         #print "sys.getsizeof(data):", sys.getsizeof(data)
-        #print "data.clear_text():", data.clear_text()
-        #self.replyQueue.put(self.msg(data))
+        if self.enableCLI:
+          print "data.clear_text():", data.clear_text()
+        self.replyQueue.put(self.msg(data))
       else:
       # raw data
         self.replyQueue.put(self.success(data))

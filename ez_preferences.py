@@ -33,14 +33,14 @@ cli_option_frac_range   = range(10, 50)
 
 def init_cli_preferences():
   global cli_edit_height
-  cli_edit_height         = 10   # 10 rows + built in scrolling
+  cli_edit_height         = 5   # 10 rows + built in scrolling
   if not cli_edit_height in cli_edit_range:
     raise DomainError('cli_edit_height(' + str(cli_edit_height) +
                       ') out of range')
 
 
   global cli_msg_height
-  cli_msg_height          = 25   # 25 rows + scrolling possible, however,
+  cli_msg_height          = 20   # 25 rows + scrolling possible, however,
                                  # no focus yet
   if not cli_msg_height in cli_msg_range:
     raise DomainError('cli_msg_height(' + str(cli_msg_height) +

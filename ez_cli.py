@@ -31,7 +31,8 @@ class VimMsgBox(urwid.ListBox):
   """Prototype for our message box"""
 
   signals = ['exit_msgbox', 'status_update']
-  def __init__(self, content = [], file_name = None, divider = True):
+  def __init__(self, content = [], file_name = None, divider = True,
+                     *args, **kwargs):
     if file_name != None:
       try:
         with open(str(file_name)) as f:
@@ -51,7 +52,7 @@ class VimMsgBox(urwid.ListBox):
     slw.append(urwid.Text(content[-1]))
     slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
             None, 'reveal focus') for w in slw])
-    urwid.ListBox.__init__(self, slw)
+    urwid.ListBox.__init__(self, slw, *args, **kwargs)
 
     self.command_dict = {'j' : self.cmd_move_down,
                          'k' : self.cmd_move_up,
@@ -68,15 +69,14 @@ class VimMsgBox(urwid.ListBox):
 
   def update_content(self, content):
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
-    #slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
-            #None, 'reveal focus') for w in slw])
-    #self.body = slw
 
   def cmd_exit_msgbox(self, *args):
     if self.logo_displayed:
-      slw = urwid.SimpleFocusListWalker([])
-      self.body = slw
-      #self.update_content('test')
+      # Deleting the content of the ListWalker. Create a new Walker wouldn't
+      # work unless you ListBox.__init__ again.
+      rows = len(self.body)
+      for row in range(rows):
+        self.body.pop(-1)
       self.logo_displayed = False
 
     urwid.emit_signal(self, 'exit_msgbox')
@@ -94,14 +94,14 @@ class VimMsgBox(urwid.ListBox):
     # press any key to skip logo
     if self.logo_displayed:
       self.cmd_exit_msgbox()
+      # The idea here is that the first keypress is already processed which
+      # to my opinion feels better.
+      ez_cli.vimedit.keypress((size[0],), key)
       return
     try:
       return self.command_dict[key](size)
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
-
-  def update_content(self, content):
-    self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
 
 #==============================================================================#
@@ -334,7 +334,7 @@ class VimCommandLine(urwid.Edit):
       self.tab_completion(cmd)
       return
     # do not allow to delete `:`
-    elif key != 'backspace' or p > 1:
+    elif (key != 'backspace' or p > 1) and (key != 'left' or p > 1):
       urwid.Edit.keypress(self, size, key)
 
 #==============================================================================#
@@ -514,11 +514,12 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
     self.vimmsgbox     = VimMsgBox(file_name = 'logo')
-    self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
+    #self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
     self.vimbox      = urwid.Pile([self.vimmsgbox_b, self.vimedit])
+    #self.vimbox.set_focus(1)
     self.vimbox_f    = urwid.Filler(self.vimbox, valign = 'top')
 
 
@@ -559,7 +560,8 @@ class ez_cli_urwid(urwid.Frame):
 
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
-    self.top_f = urwid.Filler(self.top, 'top', 20)
+    self.top_f = urwid.Filler(self.top, 'top', ep.cli_msg_height +
+        ep.cli_edit_height)
 
     urwid.Frame.__init__(self, self.top_f, footer=self.command_and_status)
 
@@ -580,9 +582,18 @@ class ez_cli_urwid(urwid.Frame):
     # update SimpleFocusListWalker
     self.statusline.update_content(content)
     # get the current focus (on item)
-    focus = self.statusline.body.get_focus()[1]
+    # focus = self.statusline.body.get_focus()[1]
+    focus = len(self.statusline.body) - 1
     # set the new foucs to the last item
-    self.statusline.body.set_focus(focus+1)
+    self.statusline.body.set_focus(focus)
+
+  def msg_update(self, content):
+    # update SimpleFocusListWalker
+    self.vimmsgbox.update_content(content)
+    # get the number of item
+    focus = len(self.vimmsgbox.body) - 1
+    # set the new foucs to the last item
+    self.vimmsgbox.body.set_focus(focus)
 
   def __close__(self, *args):
     self.commandline.cmd_close()
@@ -623,7 +634,10 @@ def received_output(data):
                 p2pReply.msg:     'msg'
                 }
   if 'status' in data.strip():
-      reply = cl.cl.replyQueue.get(block=False)
+      try:
+        reply = cl.cl.replyQueue.get(block=False)
+      except:
+        reply = None
       while reply:
         if ((reply.replyType == p2pReply.success) or
             (reply.replyType == p2pReply.error)):
@@ -631,11 +645,12 @@ def received_output(data):
           ez_cli.status_update(
                     ('Client reply %s: %s' % (status, reply.data)))
         elif reply.replyType == p2pReply.msg:
-          ez_cli.status_update( ('Client reply: msg' ))
+          #ez_cli.status_update( ('Client reply: msg' ))
           #if reply.data.recipient == cl.cl.name:
           #reply.data.clear_text()
-          ez_cli.status_update( ('Client reply: ' + reply.data.clear_text() ))
-          ez_cli.vimmsgbox.update_content(str(reply.data.clear_text()))
+          #ez_cli.status_update( ('Client reply: ' + reply.data.clear_text() ))
+          ez_cli.msg_update((str(reply.data.clear_text())))
+          #ez_cli.status_update( str(reply.data.clear_text()))
         else:
           ez_cli.status_update( ('Client reply: nada' ))
         try:
