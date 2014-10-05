@@ -683,7 +683,9 @@ def received_output(data):
 #========================#
 #  command line options  #
 #========================#
+# help conflct with ez_p2p queue -> disabled for the moment
 parser = OptionParser()
+#parser = OptionParser(add_help_option=False)
 
 # parse options
 parser.add_option("-s", "--script", dest="filename",
@@ -701,6 +703,13 @@ try:
   (options, args) = parser.parse_args()
 except ep.DomainError, err:
   sys.stderr.write('ERROR: %s\n' % str(err))
+  cl.cl.commandQueue.put(p2pCommand('shutdown'))
+  sys.exit()
+except:
+  cl.cl.commandQueue.put(p2pCommand('shutdown'))
+  sys.exit()
+
+if options.help:
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
@@ -748,3 +757,5 @@ if options.filename:
     #close_fds=True)
 
 loop.run()
+
+cl.cl.commandQueue.put(p2pCommand('shutdown'))
