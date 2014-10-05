@@ -6,11 +6,19 @@
 # TODO: (bcn 2014-08-10) Allow to scroll in LICENSE and other files. Most likely
 # we want to use a text widget that also allows to center the logo when we have
 # varying width
+# The built-in Text widget allows for scrolling. To do so, you have to focus
+# the corresponding Text widget and press Up/Down (which can be mapped to j/k).
+# We can implement scrolling even without focussing the Text widget.
+# Assume we press `shift-j` and we want the text widget to scoll down. We simply
+# need to capture `shift-j` and forward `down` to the text widget.
 
 import sys, types
 import signal
 import subprocess, os
 from time import sleep
+
+from optparse import OptionParser
+
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
@@ -277,21 +285,21 @@ class VimCommandLine(urwid.Edit):
       self.command_dict[cmd_and_args[0]](*cmd_and_args[1:])
       self.save_command(cmd)
       urwid.emit_signal(self, 'command_line_exit', self, '')
+
     # Empty cmdline
     except IndexError:
-      #urwid.emit_signal(self, 'command_line_exit', self, '')
-      print (' <Esc> for normal mode')
-      sleep(0.8)
+      ez_cli.status_update('<Esc> for normal mode')
+
     # Unkown command
     except KeyError:
-      #print '\n'
-      print '\nCommand not known'
-      sleep(0.8)
+      ez_cli.status_update('Command not known')
+
     # Arguments have wrong type
     except TypeError as e:
-      print '\n'
-      print str(e)
-      raw_input(self.command_dict[cmd_and_args[0]].__doc__)
+      ez_cli.status_update('error:' + str(e))
+      ez_cli.status_update(self.command_dict[cmd_and_args[0]].__doc__)
+      #raw_input(self.command_dict[cmd_and_args[0]].__doc__)
+
     self.set_edit_text(':' + cmd)
 
   def save_command(self, command):
@@ -498,7 +506,7 @@ class VimEdit(urwid.Edit):
 class ez_cli_urwid(urwid.Frame):
   """Main CLI Frame."""
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, name = '', logging = False, *args, **kwargs):
     self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
                                  multiline = True)
     self.commandline   = VimCommandLine(self.vimedit, u'')
@@ -578,14 +586,22 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
     signal.signal(signal.SIGINT, self.__close__)
 
+    self.name    = name
+    self.logging = logging
+    if self.logging:
+      self.logger = open('.' + name + '_eZsession.log','w')
+
   def status_update(self, content):
-    # update SimpleFocusListWalker
-    self.statusline.update_content(content)
-    # get the current focus (on item)
-    # focus = self.statusline.body.get_focus()[1]
-    focus = len(self.statusline.body) - 1
-    # set the new foucs to the last item
-    self.statusline.body.set_focus(focus)
+    if self.logging:
+      self.logger.write(content + '\n')
+
+    if hasattr(self, 'statusline'):
+      # update SimpleFocusListWalker
+      self.statusline.update_content(content)
+      # get the number of item
+      focus = len(self.statusline.body) - 1
+      # set the new foucs to the last item
+      self.statusline.body.set_focus(focus)
 
   def msg_update(self, content):
     # update SimpleFocusListWalker
@@ -621,6 +637,8 @@ class ez_cli_urwid(urwid.Frame):
 
   def exit(self, *args):
     cl.cl.cmd_close()
+    if self.logging:
+      self.logger.close()
     raise urwid.ExitMainLoop()
 
 #==============================================================================#
@@ -645,25 +663,53 @@ def received_output(data):
           ez_cli.status_update(
                     ('Client reply %s: %s' % (status, reply.data)))
         elif reply.replyType == p2pReply.msg:
-          #ez_cli.status_update( ('Client reply: msg' ))
-          #if reply.data.recipient == cl.cl.name:
-          #reply.data.clear_text()
-          #ez_cli.status_update( ('Client reply: ' + reply.data.clear_text() ))
+          # decrypt msg and print it on the screen
           ez_cli.msg_update((str(reply.data.clear_text())))
-          #ez_cli.status_update( str(reply.data.clear_text()))
         else:
+          # this case should not happen! (if theres something in the queue it
+          # must be success,error or msg)
           ez_cli.status_update( ('Client reply: nada' ))
         try:
           reply = cl.cl.replyQueue.get(block=False)
         except:
           reply = None
   else:
+    # this case should not happen! (if theres something in the queue it
+    # must be success,error or msg)
     ez_cli.statusline.update_content(data)
   return True
 
+
+#========================#
+#  command line options  #
+#========================#
+parser = OptionParser()
+
+# parse options
+parser.add_option("-s", "--script", dest="filename",
+                  help="run eZchat with script", metavar="FILE")
+
+parser.add_option("-q", "--quiet",
+                  action="store_false", dest="verbose", default=True,
+                  help="don't print status messages")
+
+parser.add_option("-l", "--log",
+                  action="store_true", dest="logging", default=False,
+                  help="log status to .name_eZsession.log")
+
+try:
+  (options, args) = parser.parse_args()
+except ep.DomainError, err:
+  sys.stderr.write('ERROR: %s\n' % str(err))
+  cl.cl.commandQueue.put(p2pCommand('shutdown'))
+  sys.exit()
+
 try:
   ep.init_cli_preferences()
-  ez_cli = ez_cli_urwid()
+  if not options.verbose:
+    ep.cli_status_height = 0 # disable statusline
+
+  ez_cli = ez_cli_urwid(name = sys.argv[1], logging = options.logging)
 
 except ep.DomainError, err:
   sys.stderr.write('ERROR: %s\n' % str(err))
@@ -674,8 +720,25 @@ palette = [
       ('online', 'light green', 'dark green'),
       ('offline', 'dark red', 'light red'),
       ]
+
 loop = urwid.MainLoop(ez_cli, palette)
 pipe.pipe = loop.watch_pipe(received_output)
+
+
+# start eZchat with script
+if options.filename:
+  try:
+    with open(options.filename, 'r') as f:
+      lines = f.readlines()
+      for line in lines:
+        ez_cli.commandline.evaluate_command(line.replace('\n',''))
+  except IOError as e:
+    ez_cli.status_update("Loading script failed. I/O error({0}): {1}".
+                          format(e.errno, e.strerror))
+  except:
+    print "Unexpected error:", sys.exc_info()[0]
+    raise
+
 
 # starting a subprocess seems to be unnecessary and the call
 # `import ez_client as cl` starts an independent process
