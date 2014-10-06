@@ -709,7 +709,7 @@ except:
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
-if options.help:
+if hasattr(options, 'help'):
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 

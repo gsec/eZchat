@@ -72,12 +72,16 @@ class ez_user_methods(ez_process):
       self.replyQueue.put(self.error("Syntax error in ping"))
 
   def cmd_add(self, user_id, host, port):
-      #try:
-        cmd_dct = {'user_id': user_id, 'host': host, 'port':port}
-        self.add_client(**cmd_dct)
-        self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
-      #except:
-        #self.replyQueue.put(self.error("Syntax error in user"))
+    """
+    Add user to IPs list.
+    :param user_id, host, port
+    """
+    try:
+      cmd_dct = {'user_id': user_id, 'host': host, 'port':port}
+      self.add_client(**cmd_dct)
+      self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
+    except:
+      self.replyQueue.put(self.error("Syntax error in user"))
 
   def cmd_servermode(self, host, port):
     try:
@@ -111,12 +115,16 @@ class ez_user_methods(ez_process):
       self.replyQueue.put(self.error("Syntax error in ips"))
 
   def cmd_ips(self, user_id):
+    """
+    Request IPs from a user in servermode.
+    :param user_id
+    """
     try:
       assert(user_id in self.ips)
       cmd_dct = {'user_id': user_id}
       self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
     except:
-      self.replyQueue.put(self.error("Syntax error in ips"))
+      self.replyQueue.put(self.error("User_id not in known Ips"))
 
   def cmd_key(self, user_id):
     try:
