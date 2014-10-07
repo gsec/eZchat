@@ -65,6 +65,7 @@ class Timer(threading._Timer):
   Sofar Timer is used for:
   - Aborting a ping request after a certain time
   - Aborting a connection request after a certain time
+  - Continuously trying to connect on server
 
   """
   def __init__(self, *args, **kwargs):
@@ -198,11 +199,6 @@ class ez_background_process(ez_process_base):
   (See ping_background)
   """
 
-  # TODO: (bcn 2014-08-09) In a class this could be deleted. Is it necessary for
-  # meta classes?!
-  # -What do u mean?
-  # - Background_processes keeps track of all processes -> needed
-  # - super initialization is necessary -> needed
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
@@ -276,6 +272,7 @@ class ez_background_process(ez_process_base):
         self.background_process_cmds['process_id'] = new_process_cmd
         self.commandQueue.put(process_cmd)
       else:
+
         bg_cmd = self.background_process_cmds[process_id]
         self.commandQueue.put(bg_cmd)
 
@@ -500,7 +497,6 @@ class ez_connect(ez_background_process):
     process_id = ('connection_request', user_addr)
     if not process_id in self.background_processes:
       cmd_dct = {'user_id': self.name}
-      #con_holepunch = {'connection_nat_traversal': self.name}
       con_holepunch = {'connection_nat_traversal': cmd_dct}
       msg           = pickle.dumps(con_holepunch)
       try:
@@ -588,6 +584,36 @@ class ez_connect(ez_background_process):
     cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
 
+    if hasattr(self, 'server'):
+      con_success     = {'connection_server_success': {}}
+      msg             = pickle.dumps(con_success)
+
+      self.sockfd.sendto(msg, user_addr)
+
+  def connection_server_success(self, cmd):
+    """
+    Not to be called by the user, but automatically invoked.
+
+    Client B receives the news that Client A succeded and Client B adds Client A
+    to the user db.
+
+    - (user_id, (user_ip, user_port)) = cmd.data
+    """
+    try:
+      host    = cmd.data['host']
+      port    = cmd.data['port']
+    except:
+      print "user_id, host, port not properly specified in connection_success"
+
+    user_addr = (host, port)
+    process_id = 'connect_server'
+    if process_id in self.background_processes:
+      pr = self.background_processes[process_id]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[process_id]
+
+    self.replyQueue.put(self.success("Connection with server established"))
 
 #==============================================================================#
 #                                  ez_contact                                  #
@@ -664,7 +690,6 @@ class ez_contact(ez_process_base):
       print "user/host/port not properly specified in contact_request_in"
 
     self.replyQueue.put(self.success("received contact request"))
-    #self.myself = eu.User(name=self.name)
     assert(self.myself != None)
 
     self.replyQueue.put(self.success("sent contact data: " +
@@ -841,6 +866,29 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
+    def connection_failed_func(self_timer, host, port, user_id):
+      cmd = self.error("connection to server failed, retrying")
+      self.replyQueue.put(cmd)
+      conn_success = {'connection_success': {'user_id': user_id}}
+      msg          = pickle.dumps(conn_success)
+      try:
+        self.sockfd.sendto(msg, master)
+      except IOError as e:
+        self.replyQueue.put(self.error(str(e)))
+
+      process_id = 'connect_server'
+      if process_id in self.background_processes:
+        # Reset process.
+        self.reset_background_process(process_id)
+
+    process_id = 'connect_server'
+    bgp = p2pCommand('start_background_process',
+              {'process_id'      : process_id,
+               'callback'        : connection_failed_func,
+               'interval'        : 5,
+               'callback_args'   : (host, port, self.name)})
+    self.commandQueue.put(bgp)
+
   def servermode(self, cmd):
     """
     Start listening on port. Mandatory arguments:
@@ -864,6 +912,7 @@ class ez_process(ez_ping, ez_contact, ez_relay, ez_db_sync):
 
     self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
+    self.server = True
 
   def shutdown(self, cmd):
     if self.sockfd != None:

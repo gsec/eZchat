@@ -191,23 +191,24 @@ class VimCommandLine(urwid.Edit):
     except IOError:
       self.command_lines = []
     self.command_counter = len(self.command_lines)
-    self.command_dict = {"close" : cl.cl.cmd_close,
-                         "contacts" : cl.cl.cmd_get_contact_names,
-                         "users" : cl.cl.cmd_get_online_users,
-                         "ping" : cl.cl.cmd_ping,
-                         "add" : cl.cl.cmd_add,
+    self.command_dict = {"close"      : cl.cl.cmd_close,
+                         "contacts"   : cl.cl.cmd_get_contact_names,
+                         "users"      : cl.cl.cmd_get_online_users,
+                         "ping"       : cl.cl.cmd_ping,
+                         "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
-                         "connect" : cl.cl.cmd_connect,
-                         "bg" : cl.cl.cmd_bg,
-                         "sync" : cl.cl.cmd_sync,
-                         "ips" : cl.cl.cmd_ips,
-                         "key" : cl.cl.cmd_key,
+                         "connect"    : cl.cl.cmd_connect,
+                         "bg"         : cl.cl.cmd_bg,
+                         "sync"       : cl.cl.cmd_sync,
+                         "ips"        : cl.cl.cmd_ips,
+                         "key"        : cl.cl.cmd_key,
                          #"verify" : cl.cl.cmd_verify,
-                         "send" : cl.cl.cmd_send_msg,
-                         "quit" : self.cmd_close,
-                         "q" : self.cmd_close,
-                         "show" : self.cmd_show,
-                         "open" : self.cmd_open
+                         "send"       : cl.cl.cmd_send_msg,
+                         "quit"       : self.cmd_close,
+                         "q"          : self.cmd_close,
+                         "show"       : self.cmd_show,
+                         "open"       : self.cmd_open
+                         #"clear" :
                         }
 
   def cmd_show(self, file_name):
@@ -218,13 +219,7 @@ class VimCommandLine(urwid.Edit):
     except IOError:
       print "File not found"
 
-  def cmd_open(self, *args):
-    # what is intended here? seems wrong
-    # JNicL - Sa 04 Okt 2014 00:02:08 CEST
-    # Not Wrong. The following works only for `:open contacts`. We will have to
-    # introduce other scenarios as we might want to open other windows, e.g.
-    # settings.
-    assert(args[0] == 'contacts')
+  def open_contacts(self):
     def contact_list(user_ids):
       contacts = [urwid.Text("Contacts:")]
       for user in user_ids:
@@ -253,15 +248,34 @@ class VimCommandLine(urwid.Edit):
       contacts = [(contact, contact in cl.cl.ips) for contact in contacts]
 
     lst = contact_list(contacts)
-    #lst_f = urwid.Filler(lst, valign = 'top')
     ez_cli.top.open_box(lst, 50)
-    #ez_cli.top.open_box(contacts_f)
-    return
+
+  def open_processes(self):
+    def process_list(processes):
+      prs = [urwid.Text("Processes:")]
+      for process_id in processes:
+        pr = processes[process_id]
+        pr_on = not pr.finished.isSet()
+        on  = urwid.Text(("online", u"ON"))
+        off = urwid.Text(("offline", u"OFF"))
+        status = on if pr_on else off
+        prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
+      return VimListBox(urwid.SimpleListWalker(prs))
+
+    processes = cl.cl.background_processes
+    lst = process_list(processes)
+    ez_cli.top.open_box(lst, 50)
+
+  def cmd_open(self, *args):
+    if args[0] == 'contacts':
+      self.open_contacts()
+    elif args[0] == 'processes':
+      self.open_processes()
 
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
       f.write('\n'.join(self.command_lines))
-    #cl.cl.cmd_close()
+
     urwid.emit_signal(self, 'exit_ez_chat')
 
   def __close__(self):
@@ -276,8 +290,6 @@ class VimCommandLine(urwid.Edit):
       self.set_edit_pos(len(line)-1)
     else:
       urwid.emit_signal(self, 'status_update', ' '.join(matches))
-      #print '\n'
-      #print ' '.join(matches)
 
   def evaluate_command(self, cmd):
     cmd_and_args = cmd.split()
@@ -298,7 +310,6 @@ class VimCommandLine(urwid.Edit):
     except TypeError as e:
       ez_cli.status_update('error:' + str(e))
       ez_cli.status_update(self.command_dict[cmd_and_args[0]].__doc__)
-      #raw_input(self.command_dict[cmd_and_args[0]].__doc__)
 
     self.set_edit_text(':' + cmd)
 

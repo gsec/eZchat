@@ -178,7 +178,7 @@ class ez_user_methods(ez_process):
       # the process might have been killed while this function called.
       if process_id in self.background_processes:
         # Reset process.
-        self.reset_background_process(self, process_id)
+        self.reset_background_process(process_id)
 
     bgp = p2pCommand('start_background_process',
             {'process_id'    : process_id,
