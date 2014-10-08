@@ -1,27 +1,33 @@
 #==============================================================================#
-#                               ez_user_methods                                #
+#                                  ez_api.py                                   #
 #==============================================================================#
 
 #============#
 #  Includes  #
 #============#
 
-import os
-#import ez_cli     as cli
-import ez_pipe    as pipe
+import cPickle as pickle
+from ez_process_base import ez_process_base, p2pCommand
+
+# adding the eZchat path to search directory
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                             os.pardir))
 import ez_user    as eu
 import ez_message as em
-import cPickle as pickle
-from ez_process import ez_process, p2pCommand, p2pReply
 
-class ez_user_methods(ez_process):
+#==============================================================================#
+#                                 class ez_api                                 #
+#==============================================================================#
+
+class ez_api(ez_process_base):
   """
   ez_user_methods contains methods intended to be called directly by the user.
   the class is inherited by the client which makes the methods available for the
   UI. It also takes care of the user and message database.
   """
   def __init__(self, **kwargs):
-    super(ez_user_methods, self).__init__(**kwargs)
+    super(ez_api, self).__init__(**kwargs)
     assert('name' in kwargs)
     self.name = kwargs['name']
 
@@ -35,18 +41,9 @@ class ez_user_methods(ez_process):
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):
-      #self.replyQueue.put(self.success("New user created"))
-      #os.write(pipe.pipe, 'reply')
       self.myself = eu.User(name=self.name, current_ip = '127.0.0.1:222')
       self.UserDatabase.add_entry(self.myself)
     else:
-      #self.replyQueue.put(self.success("Retrieved user"))
-      #print "reply"
-      #print "pipe.pipe:", pipe.pipe
-      #os.write(pipe.pipe, 'reply')
-
-      #self.replyQueue.put(self.success("test"))
-      #print "reply"
       self.myself = self.UserDatabase.get_entry(name=self.name)
 
   def cmd_close(self):
@@ -186,4 +183,3 @@ class ez_user_methods(ez_process):
              'interval'      : 1,
              'callback_args' : (self.commandQueue, self.ips, )})
     self.commandQueue.put(bgp)
-

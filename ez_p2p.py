@@ -13,11 +13,11 @@ import socket, select
 import Queue, threading
 import cPickle as pickle
 
-from ez_process      import p2pCommand, p2pReply
-from datetime import datetime
-from ez_user_methods import ez_user_methods
-from ez_process      import ez_process_base
 import ez_message  as em
+from datetime import datetime
+from ez_process      import p2pCommand, p2pReply, ez_process
+#from ez_user_methods import ez_user_methods
+#from ez_process      import ez_process_base
 
 CLIENT_TIMEOUT = 0.1
 
@@ -25,7 +25,7 @@ CLIENT_TIMEOUT = 0.1
 #                                 class client                                 #
 #==============================================================================#
 
-class client(ez_user_methods, threading.Thread):
+class client(ez_process, threading.Thread):
   """
   Client class with builtin queue system, p2p via NAT traversal and reliable udp
   packet system.
