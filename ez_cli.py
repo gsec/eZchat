@@ -12,9 +12,11 @@
 # Assume we press `shift-j` and we want the text widget to scoll down. We simply
 # need to capture `shift-j` and forward `down` to the text widget.
 
-import sys, types
+import sys
+import types
+import os
 import signal
-import subprocess, os
+import subprocess
 from time import sleep
 
 from optparse import OptionParser
@@ -22,8 +24,8 @@ from optparse import OptionParser
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
-from urwid.command_map import (command_map, CURSOR_LEFT, CURSOR_RIGHT,
-    CURSOR_UP, CURSOR_DOWN, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT)
+from urwid.command_map import command_map, CURSOR_MAX_LEFT, CURSOR_MAX_RIGHT
+from urwid.command_map import CURSOR_LEFT, CURSOR_RIGHT, CURSOR_UP, CURSOR_DOWN
 
 from ez_process import p2pReply, p2pCommand
 
@@ -39,28 +41,9 @@ class VimMsgBox(urwid.ListBox):
   """Prototype for our message box"""
 
   signals = ['exit_msgbox', 'status_update']
-  def __init__(self, content = [], file_name = None, divider = True,
-                     *args, **kwargs):
-    if file_name != None:
-      try:
-        with open(str(file_name)) as f:
-          content = f.readlines()
-          divider = False
-          for i, con in enumerate(content):
-            content[i] = con.replace('\n','')
-          self.logo_displayed = True
-      except IOError:
-        print "File not found"
-    slw = []
-    for item in content[:-1]:
-      if divider:
-        slw.extend([urwid.Text(item),urwid.Divider()])
-      else:
-        slw.extend([urwid.Text(item)])
-    slw.append(urwid.Text(content[-1]))
-    slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
-            None, 'reveal focus') for w in slw])
-    urwid.ListBox.__init__(self, slw, *args, **kwargs)
+  def __init__(self, logo_file=None, divider=True, *args, **kwargs):
+
+    self.display_logo(logo_file, divider)
 
     self.command_dict = {'j' : self.cmd_move_down,
                          'k' : self.cmd_move_up,
@@ -72,7 +55,31 @@ class VimMsgBox(urwid.ListBox):
                          'right' : self.cmd_unhandled,
                          }
 
-  def cmd_unhandled(self, *args):
+  def display_logo(self, file_name, divider):
+    try:
+      with open(str(file_name)) as f:
+        content = f.readlines()
+        divider = False
+        for i, con in enumerate(content):
+          content[i] = con.replace('\n','')
+        self.logo_displayed = True
+    except IOError:
+      print "File not found"
+      self.logo_displayed = False
+      content = 'eZ'
+
+    slw = []
+    for item in content[:-1]:
+      if divider:
+        slw.extend([urwid.Text(item),urwid.Divider()])
+      else:
+        slw.extend([urwid.Text(item)])
+    slw.append(urwid.Text(content[-1]))
+    slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
+            None, 'reveal focus') for w in slw])
+    urwid.ListBox.__init__(self, slw)
+
+  def cmd_unhandled(self):
     pass
 
   def update_content(self, content):
@@ -154,8 +161,9 @@ class VimListBox(urwid.ListBox):
 #==============================================================================#
 
 class VimStatusline(urwid.ListBox):
-  """Prototype for our message box"""
-
+  """
+  Prints the current mode and other notifications.
+  """
   def __init__(self):
     slw = urwid.SimpleFocusListWalker([])
     urwid.ListBox.__init__(self, slw)
@@ -166,9 +174,6 @@ class VimStatusline(urwid.ListBox):
   def update_content(self, content):
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
-#class VimStatusline(urwid.Text):
-    #def __init__(self):
-        #"""@todo: to be defined1. """
 
 
 #==============================================================================#
@@ -379,8 +384,8 @@ class VimEdit(urwid.Edit):
                          'i' : self.cmd_insert,
                          'a' : self.cmd_append,
                          'd' : self.cmd_delete,
-                         'o' : self.cmd_newline,
-                         'O' : self.cmd_newline_O,
+                         'o' : self.cmd_newline_low,
+                         'O' : self.cmd_newline_high,
                          'h' : self.cmd_move_left,
                          'l' : self.cmd_move_right,
                          'j' : self.cmd_move_down,
@@ -423,12 +428,13 @@ class VimEdit(urwid.Edit):
 
   def cmd_append(self):
     self.cmd_insert()
-    if self.p >= len(self.edit_text): return
+    if self.p >= len(self.edit_text):
+      return
     p = move_next_char(self.edit_text, self.p, len(self.edit_text))
     self.set_edit_pos(p)
     return
 
-  def cmd_newline(self, shift=0):
+  def cmd_newline_low(self, shift=0):
     self.cmd_insert()
     x, y = self.get_cursor_coords((self.maxcol,))
     y = y + shift
@@ -440,8 +446,8 @@ class VimEdit(urwid.Edit):
     self.move_cursor_to_coords((self.maxcol,), 'left', y + 1)
     return
 
-  def cmd_newline_O(self):
-    self.cmd_newline(shift=-1)
+  def cmd_newline_high(self):
+    self.cmd_newline_low(shift=-1)
 
   def cmd_move_left(self, pressed=CURSOR_LEFT):
     if self.p==0: return pressed
@@ -515,7 +521,25 @@ class VimEdit(urwid.Edit):
 #==============================================================================#
 
 class ez_cli_urwid(urwid.Frame):
-  """Main CLI Frame."""
+  """
+  Main CLI Frame.
+  Here we build the mainframe out of the widgets.
+  The base layout is as follows:
+        +-------------------+
+        |                   |   \
+        | chatlog: xxx      |    \
+        | chatlog: yyy      |    /
+        |                   |   /
+        +-------------------+
+        |                   |  \
+        | >>Input widget<<  |    body
+        |                   |  /
+        =====================
+        | StatusLine        |  \
+        +-------------------+    footer
+        | CommandLine       |  /
+        +-------------------+
+  """
 
   def __init__(self, name = '', logging = False, *args, **kwargs):
     self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
@@ -532,7 +556,7 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
-    self.vimmsgbox     = VimMsgBox(file_name = 'logo')
+    self.vimmsgbox     = VimMsgBox(logo_file = 'logo')
     #self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
