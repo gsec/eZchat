@@ -38,8 +38,9 @@ class ez_process( ebp.ez_background_process,
 
 #========#
 #  Info  #
+#  many  # thx @nick, this is beautiful #
 #========#
 
-__author__  = "Jean-Nicolas lang"
+__author__  = "Jean-Nicolas Lang"
 __date__    = "8.10. 2014"
 __version__ = "0.1"

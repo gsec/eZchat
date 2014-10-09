@@ -25,9 +25,8 @@ class p2pCommand(object):
   A p2pCommand encapsulates commands which are then appended to the command
   queue for execution. The msgType is the string of the function which must
   match a key in the client handler functions (see ez_process_base_meta). Data
-  is must be a dictionary and has to be filled with key,value pairs as required
+  must be a dictionary and has to be filled with key,value pairs as required
   by the handler function.
-
   """
   def __init__(self, msgType=None, data=None):
     """

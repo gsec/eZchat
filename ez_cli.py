@@ -58,15 +58,12 @@ class VimMsgBox(urwid.ListBox):
   def display_logo(self, file_name, divider):
     try:
       with open(str(file_name)) as f:
-        content = f.readlines()
+        content = [lines.rstrip() for lines in f.readlines()]
         divider = False
-        for i, con in enumerate(content):
-          content[i] = con.replace('\n','')
         self.logo_displayed = True
     except IOError:
-      print "File not found"
-      self.logo_displayed = False
-      content = 'eZ'
+      content = ['eZ-Chat: logo file not found']
+      self.logo_displayed = True
 
     slw = []
     for item in content[:-1]:
@@ -89,8 +86,7 @@ class VimMsgBox(urwid.ListBox):
     if self.logo_displayed:
       # Deleting the content of the ListWalker. Create a new Walker wouldn't
       # work unless you ListBox.__init__ again.
-      rows = len(self.body)
-      for row in range(rows):
+      for row in self.body:
         self.body.pop(-1)
       self.logo_displayed = False
 
