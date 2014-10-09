@@ -22,9 +22,9 @@ import ez_message as em
 
 class ez_api(ez_process_base):
   """
-  ez_user_methods contains methods intended to be called directly by the user.
-  the class is inherited by the client which makes the methods available for the
-  UI. It also takes care of the user and message database.
+  ez_api contains methods intended to be called directly by the user.  the class
+  is inherited by the client which makes the methods available for the UI. It
+  also takes care of the user and message database.
   """
   def __init__(self, **kwargs):
     super(ez_api, self).__init__(**kwargs)
@@ -36,7 +36,10 @@ class ez_api(ez_process_base):
     #db_name = 'sqlite:///:' + self.name + 'memory:'
     user_db_name = 'sqlite:///' + self.name + '_contacts'
     msg_db_name  = 'sqlite:///' + self.name + '_messages'
+
+    # uncomment here -> problem with private/public keys
     #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
+
     self.UserDatabase  = eu.user_database
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 

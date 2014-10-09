@@ -680,7 +680,7 @@ class ez_cli_urwid(urwid.Frame):
 #                               GLOBAL INSTANCES                               #
 #==============================================================================#
 
-client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
+#client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
 def received_output(data):
   categories = {p2pReply.success: 'success',
                 p2pReply.error:   'error',
@@ -748,7 +748,9 @@ if hasattr(options, 'help'):
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
+
 try:
+  cl.init_client()
   ep.init_cli_preferences()
   if not options.verbose:
     ep.cli_status_height = 0 # disable statusline
@@ -782,14 +784,6 @@ if options.filename:
   except:
     print "Unexpected error:", sys.exc_info()[0]
     raise
-
-
-# starting a subprocess seems to be unnecessary and the call
-# `import ez_client as cl` starts an independent process
-#proc = subprocess.Popen(
-    #['python', '-u', client_path, sys.argv[1]],
-    #stdout=pipe.pipe,
-    #close_fds=True)
 
 loop.run()
 
