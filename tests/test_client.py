@@ -2,7 +2,8 @@ from __future__ import print_function
 from test_tools import *
 from time import sleep
 
-from ez_p2p import client, p2pCommand
+from ez_client  import client
+from ez_process import p2pCommand
 
 class Test_p2p(object):
   def setUp(self):
@@ -40,12 +41,12 @@ class Test_p2p(object):
     self.alice.ips_request(pr)
 
   def test_ping(self):
-    sleep(1.25)
+    sleep(1.4)
     result = None
     pr = p2pCommand('ping_request', data = {'user_id': "bob"})
     result = self.alice.ping_request(pr, testing=True)
     pr = p2pCommand('shutdown')
-    sleep(.50)
+    sleep(.8)
     self.server.shutdown(pr)
     self.alice.shutdown(pr)
     self.bob.shutdown(pr)
