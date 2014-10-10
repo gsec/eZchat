@@ -86,7 +86,12 @@ class VimMsgBox(urwid.ListBox):
     if self.logo_displayed:
       # Deleting the content of the ListWalker. Create a new Walker wouldn't
       # work unless you ListBox.__init__ again.
-      for row in self.body:
+      # iterating over self.body and deleting elements in self.body does update
+      # self.body. As a result, not all rows are deleted -> range(len(@)) does
+      # not share the same memory and is fixed -> iteration deletes all elements
+      # in self.body
+      # for row in self.body:
+      for row in range(len(self.body)):
         self.body.pop(-1)
       self.logo_displayed = False
 
