@@ -1,5 +1,5 @@
 import sys, errno
-from ez_p2p import client, p2pCommand
+from ez_client import client, p2pCommand
 
 if __name__ == "__main__":
   try:
