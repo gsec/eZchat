@@ -145,3 +145,33 @@ class ez_ping(ez_process_base):
 
     self.replyQueue.put(self.error("ping failed: " + user_id))
     return False
+
+  def ping_background(self, cmd):
+    process_id = ('ping_reply', 'all')
+
+    # define the function called by the timer after the countdown
+    # ping_background_func calls itself resulting in an endless ping chain.
+    def ping_background_func(self_timer, queue, user_ips):
+      # ping all users
+      user_ids = user_ips.keys()
+
+      # custom success_callback
+      def success_ping_all():
+        print "background ping successful"
+
+      for user_id in user_ids:
+        cmd_dct = {'user_id': user_id, 'success_callback': success_ping_all}
+        queue.put(p2pCommand('ping_request', cmd_dct))
+
+      # check if the process still running, i.e. that it has not been killed
+      # the process might have been killed while this function called.
+      if process_id in self.background_processes:
+        # Reset process.
+        self.reset_background_process(process_id)
+
+    bgp = p2pCommand('start_background_process',
+            {'process_id'    : process_id,
+             'callback'      : ping_background_func,
+             'interval'      : 1,
+             'callback_args' : (self.commandQueue, self.ips, )})
+    self.commandQueue.put(bgp)

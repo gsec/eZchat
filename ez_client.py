@@ -183,5 +183,3 @@ if __name__ == "__main__":
     print ("usage: %s <id>" % sys.argv[0])
     sys.exit(65)
   init_client()
-
-

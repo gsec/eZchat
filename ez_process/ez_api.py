@@ -22,9 +22,23 @@ import ez_message as em
 
 class ez_api(ez_process_base):
   """
-  ez_api contains methods intended to be called directly by the user.  the class
-  is inherited by the client which makes the methods available for the UI. It
-  also takes care of the user and message database.
+  Retrieving user information and handling commands.
+
+  Class ez_api brings along abunch of methods intended to be called directly by
+  the user. The class is inherited by the client via ez_process which makes the
+  methods available for the UI. It also takes care of the user and message
+  database.
+
+  Class variable *name*, declareing the user_id, is required for
+  initiating ez_api and is specified by the keyword ``'name'``
+
+  Class variable *UserDatabase* represents the Database where contact
+  information is stored, i.e. Usernames, Database user ids (UIDs), possibly
+  current IP and latest IPs and the Public key.
+
+  Class variable *MsgDatabase* represents the Database storing messages.
+  Messages cannot be read unless a valid private key is available.
+
   """
   def __init__(self, **kwargs):
     super(ez_api, self).__init__(**kwargs)
@@ -50,13 +64,14 @@ class ez_api(ez_process_base):
       self.myself = self.UserDatabase.get_entry(name=self.name)
 
   def cmd_close(self):
+    """ Client shutdown """
     self.enableCLI = False
     self.commandQueue.put(p2pCommand('shutdown'))
     return
 
-  def cmd_get_online_users(self):
-    #return [(user, self.ips[user]) for user in self.ips]
-    print [(user, self.ips[user]) for user in self.ips]
+  #def cmd_get_online_users(self):
+    ##return [(user, self.ips[user]) for user in self.ips]
+    #print [(user, self.ips[user]) for user in self.ips]
 
   def cmd_get_contact_names(self):
     UIDs = self.UserDatabase.UID_list()
@@ -73,8 +88,16 @@ class ez_api(ez_process_base):
 
   def cmd_add(self, user_id, host, port):
     """
-    Add user to IPs list.
-    :param user_id, host, port
+    Add user IP to clients IP list.
+
+    :param user_id: id specifying the username
+    :type  user_id: string
+
+    :param host: hosts IP
+    :type  host: string
+
+    :param port: hosts port
+    :type  port: integer
     """
     try:
       cmd_dct = {'user_id': user_id, 'host': host, 'port':port}
@@ -84,6 +107,21 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in user"))
 
   def cmd_servermode(self, host, port):
+    """
+    Switch the client to servermode enabling to connect other users.
+
+    A users in the network can use the method
+    :py:meth:`ez_process.ez_api.ez_api.cmd_ips` to ask the client for
+    connection. The client then relays the request to other users and connects
+    them which each other. The connection process is described by the class
+    :py:class:`ez_process.ez_relay.ez_relay`
+
+    :param host: hosts IP
+    :type  host: string
+
+    :param port: port on which to listen
+    :type  port: integer
+    """
     try:
       cmd_dct = {'host': host, 'port': port}
       self.commandQueue.put(p2pCommand('servermode', cmd_dct))
@@ -91,6 +129,18 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in servermode"))
 
   def cmd_connect(self, host, port):
+    """
+    Connect to a server.
+
+    A connection to a server enables the use of
+    :py:meth:`ez_process.ez_api.ez_api.cmd_ips`.
+
+    :param host: server IP
+    :type  host: string
+
+    :param port: server port
+    :type  port: integer
+    """
     #master = (host, int(port))
     cmd_dct = {'host': host, 'port':int(port)}
     try:
@@ -107,17 +157,21 @@ class ez_api(ez_process_base):
     except:
       self.replyQueue.put(self.error("Syntax error in bp"))
 
-  def cmd_sync(self, user_id):
-    try:
-      cmd_dct = {'user_id': user_id}
-      self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
-    except:
-      self.replyQueue.put(self.error("Syntax error in ips"))
+
+  #TODO: JNicL need to be tested again Sa 11 Okt 2014 14:08:24 CEST
+  #def cmd_sync(self, user_id):
+    #try:
+      #cmd_dct = {'user_id': user_id}
+      #self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
+    #except:
+      #self.replyQueue.put(self.error("Syntax error in ips"))
 
   def cmd_ips(self, user_id):
     """
     Request IPs from a user in servermode.
-    :param user_id
+
+    :param user_id: clients username
+    :type  user_id: string
     """
     try:
       assert(user_id in self.ips)
@@ -127,6 +181,12 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("User_id not in known Ips"))
 
   def cmd_key(self, user_id):
+    """
+    Public key request.
+
+    :param user_id: clients username
+    :type  user_id: string
+    """
     try:
       cmd_dct = {'user_id': user_id}
       self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
@@ -134,7 +194,19 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in key"))
 
   def cmd_send_msg(self, user_id, msg):
-    #try:
+    """
+    Send an encrypted message.
+
+    The method requires the the target client to be online. The encryption can
+    be done only if a valid public key of the targets client is available.
+
+    :param user_id: clients username
+    :type  user_id: string
+
+    :param msg: message
+    :type  msg: string
+    """
+    try:
       if not self.UserDatabase.in_DB(name=user_id):
         # raise error instead
         self.replyQueue.put(self.error("User not in DB"))
@@ -154,35 +226,9 @@ class ez_api(ez_process_base):
       cmd_data = {'user_id': user_id, 'data':data}
       self.commandQueue.put(p2pCommand('send', cmd_data))
 
-    #except:
-      #self.replyQueue.put(self.error("Syntax error in command"))
+    except:
+      self.replyQueue.put(self.error("Syntax error in command"))
 
-  def ping_background(self, cmd):
-    process_id = ('ping_reply', 'all')
-
-    # define the function called by the timer after the countdown
-    # ping_background_func calls itself resulting in an endless ping chain.
-    def ping_background_func(self_timer, queue, user_ips):
-      # ping all users
-      user_ids = user_ips.keys()
-
-      # custom success_callback
-      def success_ping_all():
-        print "background ping successful"
-
-      for user_id in user_ids:
-        cmd_dct = {'user_id': user_id, 'success_callback': success_ping_all}
-        queue.put(p2pCommand('ping_request', cmd_dct))
-
-      # check if the process still running, i.e. that it has not been killed
-      # the process might have been killed while this function called.
-      if process_id in self.background_processes:
-        # Reset process.
-        self.reset_background_process(process_id)
-
-    bgp = p2pCommand('start_background_process',
-            {'process_id'    : process_id,
-             'callback'      : ping_background_func,
-             'interval'      : 1,
-             'callback_args' : (self.commandQueue, self.ips, )})
-    self.commandQueue.put(bgp)
+  def cmd_ping_background(self):
+    """ start background ping process """
+    self.commandQueue.put(p2pCommand('ping_background'))

@@ -6,12 +6,23 @@
 Welcome to eZchat's documentation!
 ==================================
 
-Contents:
-
+Contents
+========
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-.. include:: modules.rst
+   ez_client
+   ez_crypto
+   ez_database
+   ez_gui
+   ez_message
+   ez_packet
+   ez_preferences
+   ez_process
+   ez_server
+   ez_user
+   ez_cli
+   keys
 
 Indices and tables
 ==================
