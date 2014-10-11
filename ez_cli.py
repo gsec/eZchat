@@ -198,14 +198,14 @@ class VimCommandLine(urwid.Edit):
       self.command_lines = []
     self.command_counter = len(self.command_lines)
     self.command_dict = {"close"      : cl.cl.cmd_close,
-                         "contacts"   : cl.cl.cmd_get_contact_names,
-                         "users"      : cl.cl.cmd_get_online_users,
+                         #"contacts"   : cl.cl.cmd_get_contact_names,
+                         #"users"      : cl.cl.cmd_get_online_users,
                          "ping"       : cl.cl.cmd_ping,
                          "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
                          "bg"         : cl.cl.cmd_bg,
-                         "sync"       : cl.cl.cmd_sync,
+                         #"sync"       : cl.cl.cmd_sync,
                          "ips"        : cl.cl.cmd_ips,
                          "key"        : cl.cl.cmd_key,
                          #"verify" : cl.cl.cmd_verify,
