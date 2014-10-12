@@ -94,7 +94,7 @@ def return_location(var, test_func=False):
     if test_func:
       answer = test_func()
     else:
-      answer = user_input()
+      answer = user_input(location)
     if answer == 'y':
       makedirs(location)
       return location
@@ -103,7 +103,7 @@ def return_location(var, test_func=False):
       raise IOError("Please create " + desc +
             " location or specifiy other directory in ez_preferences.py")
 
-def user_input():
+def user_input(location):
   """
   outsourced for test module
   """
