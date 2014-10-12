@@ -56,6 +56,7 @@ def test_RSA():
   er = ec.eZ_RSA()
   # temporary key generation
   priv_key, pub_key = er.generate_keys(user="FAKE_USER", testing=True)
+  #er.generate_keys(user='Bob')
   sig02 =  er.sign(priv_key, text02)
   wrongsig = 'somerandomstuff'
   eq_(er.verify(pub_key, text02, sig02), True)

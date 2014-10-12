@@ -106,7 +106,7 @@ class eZ_RSA(CryptoBaseClass):
     Sets the path for the private keyfiles. Base path retrieved from the user
     preferences.
     """
-    return path.join(ep.key_location, 'ez_rsa_' + user + '.priv')
+    return path.join(ep.return_location(ep.key_loc), 'ez_rsa_' + user + '.priv')
 
   def get_private_key(self, user):
     """

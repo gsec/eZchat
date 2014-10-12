@@ -557,7 +557,7 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
     self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
-    self.vimmsgbox     = VimMsgBox(logo_file = 'logo')
+    self.vimmsgbox     = VimMsgBox(logo_file = 'misc/logo.txt')
     #self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox

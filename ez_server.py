@@ -12,6 +12,3 @@ if __name__ == "__main__":
   cl.enableCLI = True
   cl.commandQueue.put(p2pCommand('servermode', cmd_dct))
   cl.start()
-  #while True:
-    #pass
-

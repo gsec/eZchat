@@ -66,21 +66,48 @@ def init_cli_preferences():
 #==============#
 #  User prefs  #
 #==============#
+# ------- Directorys --------
+"""
+Here we define the local path, and the subdirectories for user specific files.
+The existence is ensure by check_location()
+format:
+  VAR           = ('SUBDIR', "DESCRIPTION")
+"""
+local_path      = 'local'
 
-key_location    = 'tests'
-command_history = '.cmd_history'
+key_loc         = ('keys', "key")
+hist_loc        = ('history', "history files")
+log_loc         = ('logs', "chatlog files")
 
-def check_key_location():
+def return_location(var, test_func=False):
   """
-  Makes sure that key_location exists and creates it if necessary and if the user
-  has checked that it is the correct directory.
-  This has to be called either at start up or made interactive with CLI and GUI.
+  Makes sure that key_location exists and creates it if necessary and if the
+  user has checked that it is the correct directory. This has to be called
+  from the function requesting the path. [Could this have performance impacts?]
   """
-  if not path.isdir(key_location):
-    print("Chosen key location doesn't exist")
-    answer = raw_input("Should I create " + path.abspath(key_location) + \
-                       " for you? [y/n] ")
-    if answer == 'y':
-      makedirs(key_location)
+  subdir, desc  = var
+  location      = path.join(local_path, subdir)
+  if path.isdir(location):
+    return location
+  else:
+    print("Chosen " + desc + " location does not exist")
+    if test_func:
+      answer = test_func()
     else:
-      exit("Please fix key location.")
+      answer = user_input()
+    if answer == 'y':
+      makedirs(location)
+      return location
+    else:
+      #exit
+      raise IOError("Please create " + desc +
+            " location or specifiy other directory in ez_preferences.py")
+
+def user_input():
+  """
+  outsourced for test module
+  """
+  return raw_input("Should " + path.abspath(location) + " be created? [y/n]")
+
+# ------- Files --------
+command_history = path.join(return_location(hist_loc), 'command_history.txt')

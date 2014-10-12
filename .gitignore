@@ -56,7 +56,8 @@ coverage.xml
 *.swo
 
 # misc files, documentation, examples etc.
-misc/
+misc/*
+local/*
 
 # generally ignore dotfiles
 # use 'git add -f <filename>' if necessary
