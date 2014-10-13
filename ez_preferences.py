@@ -19,9 +19,9 @@ class DomainError(Exception):
   def __str__(self):
     return repr(self.value)
 
-#=============#
-#  Cli prefs  #
-#=============#
+#============================================#
+#  CLI prefs. - Appearance and key bindings  #
+#============================================#
 
 cli_edit_range          = range(1, 30)
 cli_msg_range           = range(1, 30)
@@ -32,6 +32,11 @@ cli_option_frac_range   = range(10, 50)
 # Hardcoded for now
 
 def init_cli_preferences():
+
+  #==============#
+  #  Appearance  #
+  #==============#
+
   global cli_edit_height
   cli_edit_height         = 5   # 10 rows + built in scrolling
   if not cli_edit_height in cli_edit_range:
@@ -45,7 +50,6 @@ def init_cli_preferences():
   if not cli_msg_height in cli_msg_range:
     raise DomainError('cli_msg_height(' + str(cli_msg_height) +
                       ') out of range ')
-
 
   global cli_status_height
   cli_status_height       = 4    # 4 rows = 4 status msges. Can be disabled by
@@ -62,6 +66,33 @@ def init_cli_preferences():
 
   global cli_start_in_insertmode
   cli_start_in_insertmode = False
+
+  #================#
+  #  Key bindings  #
+  #================#
+
+  global cli_command_dict
+  cli_command_dict = {}
+  #abbreviation
+  ccd = cli_command_dict
+  # do not worry that I wrapped the keys as tuples, I need it to iterate over
+  # keys mapped on the same command. The user will not have to specify the keys
+  # in this way, and the keys will be read from an rc file.
+  ccd['cli_enter_cmdline']   = (':',)
+  ccd['cli_delete_one']      = ('x',)
+  ccd['cli_delete']          = ('d',)
+  ccd['cli_insert']          = ('i',)
+  ccd['cli_append']          = ('a',)
+  ccd['cli_delete']          = ('d',)
+  ccd['cli_newline_low']     = ('o',)
+  ccd['cli_newline_high']    = ('h',)
+  ccd['cli_move_left']       = ('l', 'left')
+  ccd['cli_move_right']      = ('l', 'right')
+  ccd['cli_move_down']       = ('j', 'up')
+  ccd['cli_move_up']         = ('k', 'down')
+  ccd['cli_scroll_msg_up']   = ('K',)
+  ccd['cli_scroll_msg_down'] = ('J',)
+
 
 #==============#
 #  User prefs  #

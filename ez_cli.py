@@ -42,13 +42,14 @@ class VimMsgBox(urwid.ListBox):
 
   signals = ['exit_msgbox', 'status_update']
   def __init__(self, logo_file=None, divider=True, *args, **kwargs):
-
     self.display_logo(logo_file, divider)
 
+# TODO: JNicL No Commands needed Di 14 Okt 2014 00:03:09 CEST
+# VimMsgBox is max unselectable. Thus no keys will ever get captured directly
     self.command_dict = {'j' : self.cmd_move_down,
                          'k' : self.cmd_move_up,
-                         'down' : self.cmd_exit_msgbox,
-                         'up' : self.cmd_unhandled,
+                         #'down' : self.cmd_exit_msgbox,
+                         #'up' : self.cmd_unhandled,
                          'q': self.cmd_close_list,
                          # Blocking left & right arrow key.
                          'left' : self.cmd_unhandled,
@@ -76,10 +77,13 @@ class VimMsgBox(urwid.ListBox):
             None, 'reveal focus') for w in slw])
     urwid.ListBox.__init__(self, slw)
 
-  def cmd_unhandled(self):
+  def cmd_unhandled(self, *args):
     pass
 
   def update_content(self, content):
+    if self.display_logo:
+      self.cmd_exit_msgbox()
+
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
   def cmd_exit_msgbox(self, *args):
@@ -94,6 +98,7 @@ class VimMsgBox(urwid.ListBox):
       for row in range(len(self.body)):
         self.body.pop(-1)
       self.logo_displayed = False
+      self._selectable = False
 
     urwid.emit_signal(self, 'exit_msgbox')
 
@@ -368,34 +373,57 @@ class VimCommandLine(urwid.Edit):
 
 # TODO: (bcn 2014-08-10) Add visual mode
 class VimEdit(urwid.Edit):
-  """VimEdit encapsulates all vim-like edit functionality."""
+  """
+  VimEdit encapsulates all vim-like edit functionality.
+
+  VimEdit allows for customization such as custom key bindings and modes.
+  Preferences are defined in ez_peferences.py (soon .rc file) and are
+  initialized by invoking :py:meth:`ez_preferences.init_cli_preferences` which
+  must be done before the VimEdit instance.
+
+  """
   signals = ['done', 'insert_mode', 'command_mode',
              'visual_mode', 'command_line']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, **kwargs):
     urwid.Edit.__init__(self, **kwargs)
-    self.mode = VimEdit.insert_mode
-    self.last_key = None
+    self.mode         = VimEdit.insert_mode
+    self.last_key     = None
     self.double_press = False
-    self.initialized = None
-    self.command_dict = {':' : self.cmd_enter_cmdline,
-                         'x' : self.cmd_delete_one,
-                         'd' : self.cmd_delete,
-                         'i' : self.cmd_insert,
-                         'a' : self.cmd_append,
-                         'd' : self.cmd_delete,
-                         'o' : self.cmd_newline_low,
-                         'O' : self.cmd_newline_high,
-                         'h' : self.cmd_move_left,
-                         'l' : self.cmd_move_right,
-                         'j' : self.cmd_move_down,
-                         'k' : self.cmd_move_up,
-                         'down' : self.cmd_move_down,
-                         'up' : self.cmd_move_up,
-                         'left' : self.cmd_move_left,
-                         'right' : self.cmd_move_right,
-                        }
+    self.initialized  = None
+
+    commands = {'cli_enter_cmdline'   : self.cmd_enter_cmdline,
+                'cli_delete_one'      : self.cmd_delete_one,
+                'cli_delete'          : self.cmd_delete,
+                'cli_insert'          : self.cmd_insert,
+                'cli_append'          : self.cmd_append,
+                'cli_delete'          : self.cmd_delete,
+                'cli_newline_low'     : self.cmd_newline_low,
+                'cli_newline_high'    : self.cmd_newline_high,
+                'cli_move_left'       : self.cmd_move_left,
+                'cli_move_right'      : self.cmd_move_right,
+                'cli_move_down'       : self.cmd_move_down,
+                'cli_move_up'         : self.cmd_move_up,
+                'cli_scroll_msg_up'   : self.cmd_scroll_msg_up,
+                'cli_scroll_msg_down' : self.cmd_scroll_msg_down
+                }
+
+    self.command_dict = {}
+    for cmd in commands:
+      if not cmd in ep.cli_command_dict:
+        sys.stderr.write('ERROR: Command ' + cmd + ' not mapped')
+        cl.cl.commandQueue.put(p2pCommand('shutdown'))
+        sys.exit()
+      for mapped_key in ep.cli_command_dict[cmd]:
+        self.command_dict[mapped_key] = commands[cmd]
+
+
+  def cmd_scroll_msg_up(self):
+    ez_cli.vimmsgbox.keypress((self.maxcol, 20), 'up')
+
+  def cmd_scroll_msg_down(self):
+    ez_cli.vimmsgbox.keypress((self.maxcol, 20), 'down')
 
   def cmd_enter_cmdline(self):
     urwid.emit_signal(self, 'command_line', self, ':')
