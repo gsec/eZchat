@@ -6,6 +6,7 @@
 #  Includes  #
 #============#
 
+import socket
 from ez_process_base import ez_process_base, p2pCommand
 import cPickle as pickle
 
@@ -130,7 +131,8 @@ class ez_ping(ez_process_base):
 
     #user_id, user_addr = cmd.data
     if user_id in self.ips:
-      if self.ips[user_id] == user_addr:
+      if (self.ips[user_id] == user_addr or
+          socket.gethostbyname('ez') == user_addr[0]):
         process_id = ('ping_reply', user_id)
         pr = self.background_processes[process_id]
         pr.finished.set()
@@ -143,7 +145,12 @@ class ez_ping(ez_process_base):
           self.replyQueue.put(self.success("ping success: " + user_id))
         return True
 
-    self.replyQueue.put(self.error("ping failed: " + user_id))
+    #if socket.gethostbyname('ez') == user_addr[0]:
+      #self.replyQueue.put(self.success("ping success: " + user_id))
+      #return True
+    #else:
+    self.replyQueue.put(self.error("Received ping_success, source unknown: " +
+        str(user_addr)))
     return False
 
   def ping_background(self, cmd):
