@@ -112,16 +112,25 @@ class eZ_RSA(CryptoBaseClass):
     """
     Import the senders keypair from Harddisk.
     """
-    with open(self.priv_key_loc(user), 'r') as keypairfile:
-      keypair = RSA.importKey(keypairfile.read())
-    return keypair
+    try:
+      with open(self.priv_key_loc(user), 'r') as keypairfile:
+        keypair = RSA.importKey(keypairfile.read())
+      return keypair
+    except IOError:
+      print("Could not get private key!")
+      self.shutdown()
+
 
   def get_public_key(self, user):
     """
     Get recipient public key from database.
     """
-    pub_key_stored = eu.user_database.get_entry(name=user).public_key
-    return RSA.importKey(pub_key_stored)
+    try:
+      pub_key_stored = eu.user_database.get_entry(name=user).public_key
+      return RSA.importKey(pub_key_stored)
+    except:
+      print("Could not get public key!")
+      self.shutdown()
 
   def generate_keys(self, user, testing=False):
     """
