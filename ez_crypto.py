@@ -244,6 +244,15 @@ class eZ_AES(CryptoBaseClass):
     self.cipher     = _crypter.encrypt(padded_text).encode('base64')
     self.key        = _key.encode('base64')
     self.iv         = _iv.encode('base64')
+"""
+CAUTION:
+  this is MAC-then-encrypt, MAC is done on plain, unpadded text.
+  FIX REQUIRED!
+  compare:
+    http://crypto.stackexchange.com/questions/202/should-we-mac-then-encrypt-or-encrypt-then-mac
+  and:
+    http://cseweb.ucsd.edu/~mihir/papers/oem.html
+"""
     self.hmac       = self.hmac_digest(_key, self.plain)    # Create HMAC
     encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     return self.return_dict(encrypt_items)
