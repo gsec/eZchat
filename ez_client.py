@@ -117,8 +117,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       elif isinstance(data, em.Message):
         self.replyQueue.put(self.success("received msg"))
         self.MsgDatabase.add_entry(data)
-        #print "bytes(data):", bytes(data)
-        #print "sys.getsizeof(data):", sys.getsizeof(data)
         if self.enableCLI:
           print "data.clear_text():", data.clear_text()
         self.replyQueue.put(self.msg(data))

@@ -86,17 +86,20 @@ class VimMsgBox(urwid.ListBox):
 
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
+  def clear_msgbox(self):
+    # Deleting the content of the ListWalker. Create a new Walker wouldn't
+    # work unless you ListBox.__init__ again.
+    # iterating over self.body and deleting elements in self.body does update
+    # self.body. As a result, not all rows are deleted -> range(len(@)) does
+    # not share the same memory and is fixed -> iteration deletes all elements
+    # in self.body
+    # for row in self.body:
+    for row in range(len(self.body)):
+      self.body.pop(-1)
+
   def cmd_exit_msgbox(self, *args):
     if self.logo_displayed:
-      # Deleting the content of the ListWalker. Create a new Walker wouldn't
-      # work unless you ListBox.__init__ again.
-      # iterating over self.body and deleting elements in self.body does update
-      # self.body. As a result, not all rows are deleted -> range(len(@)) does
-      # not share the same memory and is fixed -> iteration deletes all elements
-      # in self.body
-      # for row in self.body:
-      for row in range(len(self.body)):
-        self.body.pop(-1)
+      self.clear_msgbox()
       self.logo_displayed = False
       self._selectable = False
 
@@ -210,7 +213,7 @@ class VimCommandLine(urwid.Edit):
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
                          "bg"         : cl.cl.cmd_bg,
-                         #"sync"       : cl.cl.cmd_sync,
+                         "sync"       : cl.cl.cmd_sync,
                          "ips"        : cl.cl.cmd_ips,
                          "key"        : cl.cl.cmd_key,
                          #"verify" : cl.cl.cmd_verify,
@@ -282,6 +285,16 @@ class VimCommandLine(urwid.Edit):
       self.open_contacts()
     elif args[0] == 'processes':
       self.open_processes()
+    elif args[0] == 'messages':
+      UIDs = cl.cl.MsgDatabase.UID_list()
+      msgs = cl.cl.MsgDatabase.get_entries(UIDs)
+      ez_cli.vimmsgbox.clear_msgbox()
+      for msg in msgs:
+        if msg.recipient == cl.cl.name:
+          try:
+            ez_cli.msg_update((str(msg.clear_text())))
+          except Exception, e:
+            ez_cli.status_update("<p>Error: %s</p>" % str(e))
 
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
@@ -728,7 +741,12 @@ def received_output(data):
                     ('Client reply %s: %s' % (status, reply.data)))
         elif reply.replyType == p2pReply.msg:
           # decrypt msg and print it on the screen
-          ez_cli.msg_update((str(reply.data.clear_text())))
+          if reply.data.recipient == cl.cl.name:
+            try:
+              ez_cli.msg_update((str(reply.data.clear_text())))
+            except Exception, e:
+              ez_cli.status_update("<p>Error: %s</p>" % str(e))
+
         else:
           # this case should not happen! (if theres something in the queue it
           # must be success,error or msg)

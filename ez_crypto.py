@@ -16,6 +16,20 @@ import ez_preferences as ep
 import ez_user as eu
 
 #==============================================================================#
+#                               PrivateKeyError                                #
+#==============================================================================#
+
+class PrivateKeyError(Exception):
+  """
+  PrivateKeyError exception is raised if the private key is not found or
+  corrupted.
+  """
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
+
+#==============================================================================#
 #                            class CryptoBaseClass                             #
 #==============================================================================#
 class CryptoBaseClass(object):
@@ -117,8 +131,9 @@ class eZ_RSA(CryptoBaseClass):
         keypair = RSA.importKey(keypairfile.read())
       return keypair
     except IOError:
-      print("Could not get private key!")
-      self.shutdown()
+      #print("Could not get private key!")
+      raise PrivateKeyError('Could not get private key!')
+      #self.shutdown()
 
 
   def get_public_key(self, user):

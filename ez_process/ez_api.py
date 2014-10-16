@@ -158,13 +158,18 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in bp"))
 
 
-  #TODO: JNicL need to be tested again Sa 11 Okt 2014 14:08:24 CEST
-  #def cmd_sync(self, user_id):
-    #try:
-      #cmd_dct = {'user_id': user_id}
-      #self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
-    #except:
-      #self.replyQueue.put(self.error("Syntax error in ips"))
+  def cmd_sync(self, user_id):
+    """
+    Initiate mesage database sync request.
+
+    :param user_id: the user with thom to sync
+    :type  user_id: string
+    """
+    try:
+      cmd_dct = {'user_id': user_id}
+      self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
+    except:
+      self.replyQueue.put(self.error("Syntax error in ips"))
 
   def cmd_ips(self, user_id):
     """
@@ -216,6 +221,9 @@ class ez_api(ez_process_base):
       # TODO: nick Sa 04 Okt 2014 15:06:36 CEST
       # apparently crypto does not allow unicode
       mx = em.Message(self.name, user_id, str(msg))
+      mx.UID
+      self.replyQueue.put(self.success('Put UID: ' + str(mx.UID) +
+                                       ' to the msg database'))
       self.MsgDatabase.add_entry(mx)
 
       if not user_id in self.ips:
