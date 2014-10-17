@@ -122,17 +122,17 @@ def return_location(var, test_func=False):
     return location
   else:
     print("Chosen " + desc + " location does not exist")
-    if test_func:
-      answer = test_func()
-    else:
-      answer = user_input(location)
-    if answer == 'y':
-      makedirs(location)
-      return location
-    else:
+    #if test_func:
+      #answer = test_func()
+    #else:
+      #answer = user_input(location)
+    #if answer == 'y':
+    makedirs(location)
+    return location
+    #else:
       #exit
-      raise IOError("Please create " + desc +
-            " location or specifiy other directory in ez_preferences.py")
+      #raise IOError("Please create " + desc +
+            #" location or specifiy other directory in ez_preferences.py")
 
 def user_input(location):
   """
