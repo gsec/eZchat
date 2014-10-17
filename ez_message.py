@@ -25,7 +25,11 @@ class Message(object):
                     'ciphered_mac']
   components = ['time', 'recipient', 'UID'] + crypto_content
   def __init__(self, sender='', recipient='', content='',
-               dtime=datetime.now(), _dict=None):
+               dtime=None, _dict=None):
+
+    if dtime == None:
+      dtime=datetime.now()
+
     if _dict:
       for component in Message.components:
         setattr(self, component, _dict[component])
