@@ -169,7 +169,17 @@ class ez_api(ez_process_base):
       cmd_dct = {'user_id': user_id}
       self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
     except:
-      self.replyQueue.put(self.error("Syntax error in ips"))
+      self.replyQueue.put(self.error("Syntax error in cmd_sync"))
+
+  def cmd_passive_sync(self):
+    """
+    Initiate passive mesage database syncing. The frequency is determined in
+    ez_process_preferences.
+    """
+    try:
+      self.commandQueue.put(p2pCommand('db_sync_background'))
+    except:
+      self.replyQueue.put(self.error("Error in cmd_passive_sync"))
 
   def cmd_ips(self, user_id):
     """

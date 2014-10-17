@@ -209,11 +209,13 @@ class VimCommandLine(urwid.Edit):
                          #"contacts"   : cl.cl.cmd_get_contact_names,
                          #"users"      : cl.cl.cmd_get_online_users,
                          "ping"       : cl.cl.cmd_ping,
+                         "bgping"     : cl.cl.cmd_ping_background,
                          "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
                          "bg"         : cl.cl.cmd_bg,
                          "sync"       : cl.cl.cmd_sync,
+                         "bgsync"     : cl.cl.cmd_passive_sync,
                          "ips"        : cl.cl.cmd_ips,
                          "key"        : cl.cl.cmd_key,
                          #"verify" : cl.cl.cmd_verify,
@@ -797,8 +799,8 @@ if hasattr(options, 'help'):
 
 
 try:
-  cl.init_client()
   ep.init_cli_preferences()
+  cl.init_client(**ep.process_preferences)
   if not options.verbose:
     ep.cli_status_height = 0 # disable statusline
 

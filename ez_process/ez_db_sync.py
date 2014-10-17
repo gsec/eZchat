@@ -6,8 +6,9 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base, p2pCommand
-import cPickle   as pickle
+from ez_process_base import ez_process_base, p2pCommand, p2pReply
+import cPickle as pickle
+import ez_process_preferences as epp
 
 #==============================================================================#
 #                               class ez_db_sync                               #
@@ -77,3 +78,29 @@ class ez_db_sync(ez_process_base):
           data = pickle.dumps(msg)
           cmd_dct = {'user_id': user_id, 'data': data}
           self.commandQueue.put(p2pCommand('send', cmd_dct))
+
+  def db_sync_background(self, cmd):
+    # we assign a random, but unique process id
+    process_id = ('db_sync_request_out', 'all')
+
+    #=================#
+    #  functionblock  #
+    #=================#
+    def db_sync_func(self_timer, queue, user_ips):
+      user_ids = user_ips.keys()
+
+      for user_id in user_ids:
+        cmd_dct = {'user_id': user_id}
+        queue.put(p2pCommand('db_sync_request_out', cmd_dct))
+
+      # Reset process
+      if process_id in self.background_processes:
+        self.reset_background_process(process_id)
+
+    bgp = p2pCommand('start_background_process',
+                    {'process_id'    : process_id,
+                     'callback'      : db_sync_func,
+                     'interval'      : epp.db_bgsync_timeout,
+                     'callback_args' : (self.commandQueue, self.ips, )})
+    self.commandQueue.put(bgp)
+

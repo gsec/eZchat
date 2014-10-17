@@ -15,13 +15,15 @@ import ez_db_sync             as eds
 import ez_ping                as ep
 import ez_connect             as et
 import ez_api                 as ea
+import ez_process_preferences as epp
 
 #===========#
 #  Globals  #
 #===========#
 
-p2pCommand = epb.p2pCommand
-p2pReply   = epb.p2pReply
+p2pCommand  = epb.p2pCommand
+p2pReply    = epb.p2pReply
+#DomainError = epp.DomainError
 
 
 class ez_process( ebp.ez_background_process,

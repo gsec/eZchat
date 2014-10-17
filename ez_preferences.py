@@ -2,8 +2,8 @@
 This module encapsulates personal user preferences and should be used where
 appropriate
 """
-from os import path, makedirs
-from sys import exit
+from os         import path, makedirs
+from sys        import exit
 
 #==============================================================================#
 #                                 DomainError                                  #
@@ -92,6 +92,23 @@ def init_cli_preferences():
   ccd['cli_move_up']         = ('k', 'down')
   ccd['cli_scroll_msg_up']   = ('K',)
   ccd['cli_scroll_msg_down'] = ('J',)
+
+
+  #=======================#
+  #  process preferences  #
+  #=======================#
+
+  global process_preferences
+  process_preferences = {}
+
+  # time period(seconds) with which all users are are requested to sync msges
+  process_preferences['db_bgsync_timeout']  = 60
+  # time period with which all users are passively pinged
+  process_preferences['ping_bg_timeout']    = 10
+  # pingreply waittime
+  process_preferences['ping_reply_timeout'] = 4
+  process_preferences['silent_ping']        = False
+
 
 
 #==============#

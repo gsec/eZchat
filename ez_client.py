@@ -162,15 +162,15 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       if self.enableCLI:
         try:
           reply = self.replyQueue.get(block=False)
-          status = "success" if reply.replyType == p2pReply.success else "ERROR"
-          print ('Client reply %s: %s' % (status, reply.data))
+          #status = "success" if reply.replyType == p2pReply.success else "ERROR"
+          #print ('Client reply %s: %s' % (status, reply.data))
         except Queue.Empty:
           pass
 
 
-def init_client():
+def init_client(**kwargs):
   global cl
-  cl = client(name = sys.argv[1], write_to_pipe = True)
+  cl = client(name = sys.argv[1], write_to_pipe = True, **kwargs)
   cl.start()
 
 if __name__ == "__main__":
