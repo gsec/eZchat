@@ -1,8 +1,6 @@
 # encoding=utf-8 ==============================================================#
 #                                  ez_cli.py                                   #
 #==============================================================================#
-# TODO: (bcn 2014-08-10) Allow to read in commands from file or pipe with switch
-# -file
 # TODO: (bcn 2014-08-10) Allow to scroll in LICENSE and other files. Most likely
 # we want to use a text widget that also allows to center the logo when we have
 # varying width
@@ -20,7 +18,6 @@ import subprocess
 from time import sleep
 
 from optparse import OptionParser
-
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
@@ -127,7 +124,6 @@ class VimMsgBox(urwid.ListBox):
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
 
-
 #==============================================================================#
 #                                  VimListBox                                  #
 #==============================================================================#
@@ -164,7 +160,6 @@ class VimListBox(urwid.ListBox):
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
 
-
 #==============================================================================#
 #                                VimStatusLine                                 #
 #==============================================================================#
@@ -182,8 +177,6 @@ class VimStatusline(urwid.ListBox):
 
   def update_content(self, content):
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
-
-
 
 #==============================================================================#
 #                                VimCommandLine                                #
@@ -567,7 +560,7 @@ class VimEdit(urwid.Edit):
 class ez_cli_urwid(urwid.Frame):
   """
   Main CLI Frame.
-  Here we build the mainframe out of the widgets.
+  Here we build the main frame out of the widgets.
   The base layout is as follows:
         +-------------------+
         |                   |   \
@@ -721,10 +714,9 @@ class ez_cli_urwid(urwid.Frame):
     raise urwid.ExitMainLoop()
 
 #==============================================================================#
-#                               GLOBAL INSTANCES                               #
+#                                  FUNCTIONS                                   #
 #==============================================================================#
 
-#client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
 def received_output(data):
   categories = {p2pReply.success: 'success',
                 p2pReply.error:   'error',
@@ -758,20 +750,20 @@ def received_output(data):
         except:
           reply = None
   else:
-    # this case should not happen! (if theres something in the queue it
+    # this case should not happen! (if theres something in the queue, it
     # must be success,error or msg)
     ez_cli.statusline.update_content(data)
   return True
 
-
+#==============================================================================#
+#                               GLOBAL INSTANCES                               #
+#==============================================================================#
 #========================#
 #  command line options  #
 #========================#
+
 usage = "usage: %prog [options] name"
 parser = OptionParser(usage)
-# TODO: (bcn 2014-10-18) I don't see a conflict? Can we remove this?
-# help conflct with ez_p2p queue -> disabled for the moment
-#parser = OptionParser(add_help_option=False)
 
 # parse options
 parser.add_option("-s", "--script", dest="filename",
@@ -801,6 +793,9 @@ except ep.DomainError, err:
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
+#==============#
+#  MAIN LOOPS  #
+#==============#
 
 loop = urwid.MainLoop(ez_cli, ep.palette)
 pipe.pipe = loop.watch_pipe(received_output)
