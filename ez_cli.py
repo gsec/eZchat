@@ -767,8 +767,10 @@ def received_output(data):
 #========================#
 #  command line options  #
 #========================#
+usage = "usage: %prog [options] name"
+parser = OptionParser(usage)
+# TODO: (bcn 2014-10-18) I don't see a conflict? Can we remove this?
 # help conflct with ez_p2p queue -> disabled for the moment
-parser = OptionParser()
 #parser = OptionParser(add_help_option=False)
 
 # parse options
@@ -783,42 +785,25 @@ parser.add_option("-l", "--log",
                   action="store_true", dest="logging", default=False,
                   help="log status to .name_eZsession.log")
 
-try:
-  (options, args) = parser.parse_args()
-except ep.DomainError, err:
-  sys.stderr.write('ERROR: %s\n' % str(err))
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-except:
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-
-if hasattr(options, 'help'):
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-
+(options, args) = parser.parse_args()
 
 try:
   ep.init_cli_preferences()
-  cl.init_client(**ep.process_preferences)
+  if not len(args) == 1:
+    print 'Please give your name as argument'
+    sys.exit()
+  cl.init_client(args[0], **ep.process_preferences)
   if not options.verbose:
     ep.cli_status_height = 0 # disable statusline
-
-  ez_cli = ez_cli_urwid(name = sys.argv[1], logging = options.logging)
-
+  ez_cli = ez_cli_urwid(name = args[0], logging = options.logging)
 except ep.DomainError, err:
   sys.stderr.write('ERROR: %s\n' % str(err))
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
-palette = [
-      ('online', 'light green', 'dark green'),
-      ('offline', 'dark red', 'light red'),
-      ]
 
-loop = urwid.MainLoop(ez_cli, palette)
+loop = urwid.MainLoop(ez_cli, ep.palette)
 pipe.pipe = loop.watch_pipe(received_output)
-
 
 # start eZchat with script
 if options.filename:

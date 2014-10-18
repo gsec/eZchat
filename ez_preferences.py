@@ -110,7 +110,6 @@ def init_cli_preferences():
   process_preferences['silent_ping']        = False
 
 
-
 #==============#
 #  User prefs  #
 #==============#
@@ -159,3 +158,10 @@ def user_input(location):
 
 # ------- Files --------
 command_history = path.join(return_location(hist_loc), 'command_history.txt')
+
+
+# ------- Colors --------
+palette = [
+      ('online', 'light green', 'dark green'),
+      ('offline', 'dark red', 'light red'),
+      ]

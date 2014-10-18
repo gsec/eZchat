@@ -168,9 +168,9 @@ class client(ez_process, ez_simple_cli, threading.Thread):
           pass
 
 
-def init_client(**kwargs):
+def init_client(name, **kwargs):
   global cl
-  cl = client(name = sys.argv[1], write_to_pipe = True, **kwargs)
+  cl = client(name=name, write_to_pipe=True, **kwargs)
   cl.start()
 
 if __name__ == "__main__":
