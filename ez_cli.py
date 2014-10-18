@@ -698,7 +698,8 @@ class ez_cli_urwid(urwid.Frame):
     self.vimbox.set_focus(1)
 
   def command_line_mode(self, edit, new_edit_text):
-    self.command_and_status.set_focus(1)
+    if hasattr(self, 'statusline'):
+      self.command_and_status.set_focus(1)
     self.commandline.set_edit_text(':')
     self.commandline.set_edit_pos(1)
     self.set_focus('footer')
