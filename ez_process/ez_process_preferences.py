@@ -12,12 +12,6 @@ def init_process_preferences(**kwargs):
   else:
     db_bgsync_timeout = kwargs['db_bgsync_timeout']
 
-  global db_bgsync_timeout
-  if not 'db_bgsync_timeout' in kwargs:
-    db_bgsync_timeout = 60
-  else:
-    db_bgsync_timeout = kwargs['db_bgsync_timeout']
-
   global ping_bg_timeout
   if not 'ping_bg_timeout' in kwargs:
     ping_bg_timeout = 10

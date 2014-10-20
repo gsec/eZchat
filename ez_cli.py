@@ -678,8 +678,10 @@ class ez_cli_urwid(urwid.Frame):
 
     self.name    = name
     self.logging = logging
+    # TODO: (bcn 2014-10-19) This should also log errors
     if self.logging:
-      self.logger = open('.' + name + '_eZsession.log','w')
+      self.logger = open(ep.join(ep.location['log'], name + '_ez_cli_session.log'),
+                         'w')
 
   def status_update(self, content):
     if self.logging:

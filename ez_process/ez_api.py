@@ -13,8 +13,9 @@ from ez_process_base import ez_process_base, p2pCommand
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              os.pardir))
-import ez_user    as eu
+import ez_user as eu
 import ez_message as em
+import ez_preferences as ep
 
 #==============================================================================#
 #                                 class ez_api                                 #
@@ -45,15 +46,21 @@ class ez_api(ez_process_base):
     assert('name' in kwargs)
     self.name = kwargs['name']
 
-    # every new client gets a fresh database in memory for now. Should be made
-    # an argument to support test as well as use case
-    #db_name = 'sqlite:///:' + self.name + 'memory:'
-    user_db_name = 'sqlite:///' + self.name + '_contacts'
-    msg_db_name  = 'sqlite:///' + self.name + '_messages'
+    # TODO: (bcn 2014-10-19) @JNicL:
+    # This would give every client a fresh database.
+    #user_db_name = 'sqlite:///:memory:'
+    #msg_db_name = 'sqlite:///:memory:'
+    # Doesn't work, however, as you seem to be relying on files. There
+    # is also no need for seperate user and msg databases.
+    user_db_name = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_contacts'
+    msg_db_name  = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_messages'
 
     # uncomment here -> problem with private/public keys
+    # TODO: (bcn 2014-10-19) It is peculiar that it works in the cli when both
+    # share the SAME user database which is local/ez.db. The tests work with
+    # both versions. We should craft a test that is closer to the implementation
+    # used in ez_process and find the problem.
     #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
-
     self.UserDatabase  = eu.user_database
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 

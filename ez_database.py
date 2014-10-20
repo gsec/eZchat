@@ -6,6 +6,7 @@
 #  Includes  #
 #============#
 import dataset
+import ez_preferences as ep
 
 #==============================================================================#
 #                                class Database                                #
@@ -15,7 +16,7 @@ class Database(object):
   The Database class is a template for giving access to the SQL database. Also
   other databases like MySQL could be used.
   """
-  def __init__(self, table_name, constructor, localdb='sqlite:///ez.db'):
+  def __init__(self, table_name, constructor, localdb='sqlite:///' + ep.default_db):
     self.localdb = localdb
     self.database = dataset.connect(self.localdb)
     self.table = self.database[table_name]

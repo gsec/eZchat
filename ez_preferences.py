@@ -11,13 +11,30 @@ from sys        import exit
 
 class DomainError(Exception):
   """
-  DomainError exception is raised if the user specified a wrong domain, e.g.
-  ranges of args and metrics, wrong tensor multiplication/addition etc.
+  DomainError exception is raised if the user specified a wrong domain, i.e. a
+  line height that is not in the given ranges.
   """
   def __init__(self, value):
     self.value = value
   def __str__(self):
     return repr(self.value)
+
+#==============================================================================#
+#                                  FUNCTIONS                                   #
+#==============================================================================#
+
+def join(var, file_name):
+  """
+    VAR           = ('SUBDIR', "DESCRIPTION")
+  Makes sure that SUBDIR exists and create it if necessary. Return the SUBDIR
+  joined with the file_name
+  """
+  subdir, desc  = var
+  location      = path.join(local_path, subdir)
+  if not path.isdir(location):
+    print("Creating " + location + " for " + desc)
+    makedirs(location)
+  return path.join(location, file_name)
 
 #============================================#
 #  CLI prefs. - Appearance and key bindings  #
@@ -42,7 +59,6 @@ def init_cli_preferences():
   if not cli_edit_height in cli_edit_range:
     raise DomainError('cli_edit_height(' + str(cli_edit_height) +
                       ') out of range')
-
 
   global cli_msg_height
   cli_msg_height          = 20   # 25 rows + scrolling possible, however,
@@ -93,14 +109,12 @@ def init_cli_preferences():
   ccd['cli_scroll_msg_up']   = ('K',)
   ccd['cli_scroll_msg_down'] = ('J',)
 
-
   #=======================#
   #  process preferences  #
   #=======================#
 
   global process_preferences
   process_preferences = {}
-
   # time period(seconds) with which all users are are requested to sync msges
   process_preferences['db_bgsync_timeout']  = 60
   # time period with which all users are passively pinged
@@ -109,56 +123,28 @@ def init_cli_preferences():
   process_preferences['ping_reply_timeout'] = 4
   process_preferences['silent_ping']        = False
 
-
 #==============#
 #  User prefs  #
 #==============#
 # ------- Directorys --------
 """
 Here we define the local path, and the subdirectories for user specific files.
-The existence is ensure by check_location()
+The existence is ensured by join()
 format:
   VAR           = ('SUBDIR', "DESCRIPTION")
 """
-local_path      = 'local'
+# TODO: (bcn 2014-10-18) This should become ~/.local/share/ezchat/
+local_path = 'local'
 
-key_loc         = ('keys', "key")
-hist_loc        = ('history', "history files")
-log_loc         = ('logs', "chatlog files")
-
-def return_location(var, test_func=False):
-  """
-  Makes sure that key_location exists and creates it if necessary and if the
-  user has checked that it is the correct directory. This has to be called
-  from the function requesting the path. [Could this have performance impacts?]
-  """
-  subdir, desc  = var
-  location      = path.join(local_path, subdir)
-  if path.isdir(location):
-    return location
-  else:
-    print("Chosen " + desc + " location does not exist")
-    #if test_func:
-      #answer = test_func()
-    #else:
-      #answer = user_input(location)
-    #if answer == 'y':
-    makedirs(location)
-    return location
-    #else:
-      #exit
-      #raise IOError("Please create " + desc +
-            #" location or specifiy other directory in ez_preferences.py")
-
-def user_input(location):
-  """
-  outsourced for test module
-  """
-  return raw_input("Should " + path.abspath(location) + " be created? [y/n]")
+location = {}
+location['key'] = ('keys', "private key files")
+location['hist'] = ('history', "history files")
+location['db'] = ('database', "database files for users and messages")
+location['log'] = ('log', "log files")
 
 # ------- Files --------
-command_history = path.join(return_location(hist_loc), 'command_history.txt')
-
+command_history = join(location['hist'], 'command_history.txt')
+default_db = join(location['db'], 'ez.db')
 
 # ------- Colors --------
 palette = [

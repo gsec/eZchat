@@ -76,8 +76,7 @@ class MessageDatabase(ed.Database):
 
   def __init__(self, **kwargs):
     """
-    Opens a local sqlite database
-        localdb = 'sqlite:///ez.db'
+    Opens a local sqlite database in the default location default_db,
     which is saved to and loaded from disk automatically. To create a merely
     temporary database in memory use 'sqlite:///:memory:'
     """

@@ -33,7 +33,6 @@ class Test_p2p(object):
 
     pr = p2pCommand('connect_server', cmd_dct)
     self.bob.connect_server(pr)
-    # Why doesn't bob add_client("server",..) ?
     # Bob does not need to add the server as he is not requesting to establish a
     # connection with alice (which is done via the server)
 

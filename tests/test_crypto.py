@@ -69,11 +69,13 @@ def test_OmniScheme():
   """
   er = ec.eZ_RSA()
   if not eu.user_database.in_DB(name=author):
+    print("\nAdding " + author + " to database\n")
     eu.user_database.add_entry(eu.User(author, '0.0.0.0' + ':' + '0'))
   if not eu.user_database.in_DB(name=reader):
+    print("\nAdding " + reader + " to database\n")
     eu.user_database.add_entry(eu.User(reader, '0.0.0.0' + ':' + '0'))
-  package = {'etime':extime, 'sender':author, 'recipient':reader,
-             'content':text01}
+  package = {'etime':extime, 'sender':author,
+             'recipient':reader, 'content':text01}
   es = ec.eZ_CryptoScheme(**package)
   supergeheim = es.encrypt_sign()
 
