@@ -228,17 +228,30 @@ class VimCommandLine(urwid.Edit):
     except IOError:
       print "File not found"
 
+  def get_marked_contacts(self):
+    if hasattr(self, 'contact_checkbox'):
+      return [u for u in self.contact_checkbox if
+                self.contact_checkbox[u].state]
+    else:
+      return []
+
+  def contact_list(self):
+    contacts = [urwid.Text("Contacts:")]
+    self.contact_checkbox = {}
+    for user in self.contacts:
+      user_id  = user[0]
+      on       = urwid.Text(("online", u"ON"))
+      off      = urwid.Text(("offline", u"OFF"))
+      status   = on if user[1] else off
+      checkbox = urwid.CheckBox(user_id)
+
+      self.contact_checkbox[user_id] = checkbox
+      contacts += [urwid.Columns([checkbox, status])]
+    return VimListBox(urwid.SimpleListWalker(contacts))
+
+
   def open_contacts(self):
-    def contact_list(user_ids):
-      contacts = [urwid.Text("Contacts:")]
-      for user in user_ids:
-        user_id = user[0]
-        on  = urwid.Text(("online", u"ON"))
-        off = urwid.Text(("offline", u"OFF"))
-        status = on if user[1] else off
-        contacts += [urwid.Columns([urwid.CheckBox(user_id), status])]
-      return VimListBox(urwid.SimpleListWalker(contacts))
-    # get contact list
+        # get contact list
     UIDs = cl.cl.UserDatabase.UID_list()
     if len(UIDs) > 0:
       contacts = [str(entry.name) for entry in
@@ -256,8 +269,9 @@ class VimCommandLine(urwid.Edit):
     if len(contacts) > 0:
       contacts = [(contact, contact in cl.cl.ips) for contact in contacts]
 
-    lst = contact_list(contacts)
-    ez_cli.top.open_box(lst, 50)
+    self.contacts = contacts
+    self.contact_list = self.contact_list()
+    ez_cli.top.open_box(self.contact_list, 50)
 
   def open_processes(self):
     def process_list(processes):
@@ -528,8 +542,12 @@ class VimEdit(urwid.Edit):
         key = "\n"
         self.insert_text(key)
       else:
-        urwid.emit_signal(self, 'done', self, self.get_edit_text())
+        #urwid.emit_signal(self, 'done', self, self.get_edit_text())
+        for u in ez_cli.commandline.get_marked_contacts():
+          cl.cl.cmd_send_msg(u,self.get_edit_text())
+          ez_cli.status_update(u)
         self.set_edit_text('')
+        #self.get_edit_text()
       return
 
     # execute commands

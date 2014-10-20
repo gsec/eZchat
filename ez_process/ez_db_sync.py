@@ -66,7 +66,6 @@ class ez_db_sync(ez_process_base):
                                         user_id))
       user_addr = self.ips[user_id]
       self.replyQueue.put(self.success('Received '  + str(UID_list)))
-      self.replyQueue.put(self.success('own '  + str(self.MsgDatabase.UID_list())))
       UIDs_to_sync = self.MsgDatabase.complement_entries(UID_list)
       self.replyQueue.put(self.success('Sending '  + str(UIDs_to_sync)))
       if len(UIDs_to_sync) != 0:

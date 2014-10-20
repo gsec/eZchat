@@ -120,7 +120,6 @@ class ez_ping(ez_process_base):
 
     if not epp.silent_ping:
       self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
-      self.replyQueue.put(self.success(str(epp.silent_ping)))
 
     cmd_dct = {'user_id': user_id}
     ping    = {'ping_success': cmd_dct}

@@ -119,7 +119,7 @@ class ez_api(ez_process_base):
     :param host: hosts IP
     :type  host: string
 
-    :param port: port on which to listen
+    :param port: port on which to listen to
     :type  port: integer
     """
     try:

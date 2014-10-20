@@ -58,7 +58,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     # internal cli enabled
     self.enableCLI = False
 
-
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except socket.error, msg:
@@ -72,6 +71,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     self.command_history = {}
 
     self.timeout = CLIENT_TIMEOUT
+
 
 #===================#
 #  client receive   #
@@ -137,6 +137,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     client main loop: Processes all queued commands. The timeout (0.1) is set in
     order to allow checking self.alive
     """
+
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
@@ -162,8 +163,8 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       if self.enableCLI:
         try:
           reply = self.replyQueue.get(block=False)
-          #status = "success" if reply.replyType == p2pReply.success else "ERROR"
-          #print ('Client reply %s: %s' % (status, reply.data))
+          status = "success" if reply.replyType == p2pReply.success else "ERROR"
+          print ('Client reply %s: %s' % (status, reply.data))
         except Queue.Empty:
           pass
 
