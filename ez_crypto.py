@@ -221,6 +221,10 @@ class eZ_AES(CryptoBaseClass):
     the crypt_mode used.
     """
     assert self.crypt_mode is 0, "Can not encrypt. Data already encrypted"
+# changed to EtA
+# !! check for iv and mac still needed
+#        http://crypto.stackexchange.com/questions/202/should-we-mac-then-encrypt-or-encrypt-then-mac
+#        http://cseweb.ucsd.edu/~mihir/papers/oem.html
     _iv             = RNG.read(AES.block_size)
     _key            = RNG.read(self.KEY_LENGTH)
     _crypter        = AES.new(_key, mode=self.MODE, IV=_iv)
@@ -229,16 +233,7 @@ class eZ_AES(CryptoBaseClass):
     self.cipher     = _crypter.encrypt(padded_text).encode('base64')
     self.key        = _key.encode('base64')
     self.iv         = _iv.encode('base64')
-"""
-CAUTION:
-  this is MAC-then-encrypt, MAC is done on plain, unpadded text.
-  FIX REQUIRED!
-  compare:
-    http://crypto.stackexchange.com/questions/202/should-we-mac-then-encrypt-or-encrypt-then-mac
-  and:
-    http://cseweb.ucsd.edu/~mihir/papers/oem.html
-"""
-    self.hmac       = self.hmac_digest(_key, self.plain)    # Create HMAC
+    self.hmac       = self.hmac_digest(_key, self.cipher)    # Create HMAC
     encrypt_items   = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     return self.return_dict(encrypt_items)
 
@@ -251,12 +246,16 @@ CAUTION:
     _key            = self.key.decode('base64')
     _iv             = self.iv.decode('base64')
     _cipher         = self.cipher.decode('base64')
-    decrypter       = AES.new(_key, mode=self.MODE, IV=_iv)
-    padded_text     = decrypter.decrypt(_cipher)
-    self.plain      = self.remove_padding(padded_text)
-    self.crypt_mode = 0
-    _hmac_sig       = self.hmac   # Verify HMAC
-    self.authorized = self.hmac_verify(_key, self.plain, _hmac_sig)
+    self.authorized = self.hmac_verify(_key, self.cipher, self.hmac)
+    if self.authorized:
+      decrypter       = AES.new(_key, mode=self.MODE, IV=_iv)
+      padded_text     = decrypter.decrypt(_cipher)
+      self.plain      = self.remove_padding(padded_text)
+      self.crypt_mode = 0
+    else:
+      raise ValueError("HMAC Authentification failed")
+      self.crypt_mode = 1
+      self.plain      = None
     plain_items     = ['plain', 'crypt_mode', 'authorized']
     return self.return_dict(plain_items)
 
