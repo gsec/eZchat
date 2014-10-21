@@ -58,7 +58,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     # internal cli enabled
     self.enableCLI = False
 
-
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except socket.error, msg:
@@ -72,6 +71,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     self.command_history = {}
 
     self.timeout = CLIENT_TIMEOUT
+
 
 #===================#
 #  client receive   #
@@ -117,8 +117,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       elif isinstance(data, em.Message):
         self.replyQueue.put(self.success("received msg"))
         self.MsgDatabase.add_entry(data)
-        #print "bytes(data):", bytes(data)
-        #print "sys.getsizeof(data):", sys.getsizeof(data)
         if self.enableCLI:
           print "data.clear_text():", data.clear_text()
         self.replyQueue.put(self.msg(data))
@@ -139,6 +137,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     client main loop: Processes all queued commands. The timeout (0.1) is set in
     order to allow checking self.alive
     """
+
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
@@ -170,9 +169,9 @@ class client(ez_process, ez_simple_cli, threading.Thread):
           pass
 
 
-def init_client():
+def init_client(name, **kwargs):
   global cl
-  cl = client(name = sys.argv[1], write_to_pipe = True)
+  cl = client(name=name, write_to_pipe=True, **kwargs)
   cl.start()
 
 if __name__ == "__main__":

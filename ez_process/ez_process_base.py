@@ -15,6 +15,7 @@ import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              os.pardir))
 import ez_pipe as pipe
+import ez_process_preferences as epp
 
 #==============================================================================#
 #                               class p2pCommand                               #
@@ -118,6 +119,10 @@ class ez_process_base(object):
       self.replyQueue = RQueue(write_to_pipe = kwargs['write_to_pipe'])
     else:
       self.replyQueue = Queue.Queue()
+
+    # user defined parameters are passed to the process preferences potentiall
+    # overwriting default values.
+    epp.init_process_preferences(**kwargs)
 
   # client related
   def success(self, success_msg=None):

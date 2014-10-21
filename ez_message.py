@@ -25,7 +25,11 @@ class Message(object):
                     'ciphered_mac']
   components = ['time', 'recipient', 'UID'] + crypto_content
   def __init__(self, sender='', recipient='', content='',
-               dtime=datetime.now(), _dict=None):
+               dtime=None, _dict=None):
+
+    if dtime == None:
+      dtime=datetime.now()
+
     if _dict:
       for component in Message.components:
         setattr(self, component, _dict[component])
@@ -72,8 +76,7 @@ class MessageDatabase(ed.Database):
 
   def __init__(self, **kwargs):
     """
-    Opens a local sqlite database
-        localdb = 'sqlite:///ez.db'
+    Opens a local sqlite database in the default location default_db,
     which is saved to and loaded from disk automatically. To create a merely
     temporary database in memory use 'sqlite:///:memory:'
     """

@@ -9,6 +9,7 @@
 import socket
 from ez_process_base import ez_process_base, p2pCommand
 import cPickle as pickle
+import ez_process_preferences as epp
 
 #------------------------------------------------------------------------------#
 # schematic view of the ping process                                           #
@@ -64,8 +65,18 @@ class ez_ping(ez_process_base):
         error_callback = cmd.data['error_callback']
       else:
         def error_callback(self_timer):
-          cmd = self.error("ping failed: " + user_id)
-          self.replyQueue.put(cmd)
+          if not epp.silent_ping:
+            cmd = self.error("ping failed: " + user_id)
+            self.replyQueue.put(cmd)
+          try:
+            del self.ips[user_id]
+            if not epp.silent_ping:
+              cmd = self.success('Removed user : ' + user_id + ' from ips')
+              self.replyQueue.put(cmd)
+          except:
+            cmd = self.error('Failed to remove user : ' + user_id +
+                               ' from ips.')
+            self.replyQueue.put(cmd)
           del self.background_processes[process_id]
 
       if not user_id in self.ips:
@@ -82,7 +93,7 @@ class ez_ping(ez_process_base):
           bgp = p2pCommand('start_background_process',
                 {'process_id'    : process_id,
                  'callback'      : error_callback,
-                 'interval'      : 5})
+                 'interval'      : epp.ping_reply_timeout})
           self.commandQueue.put(bgp)
 
         except IOError as e:
@@ -104,9 +115,12 @@ class ez_ping(ez_process_base):
       user_id = cmd.data['user_id']
       user_addr = (cmd.data['host'], cmd.data['port'])
     except:
-      print "user_id/host/port not properly specified in ping_reply"
+      self.replyQueue.put(self.error("user_id/host/port not properly " +
+                                     "specified in ping_reply"))
 
-    self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
+    if not epp.silent_ping:
+      self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
+
     cmd_dct = {'user_id': user_id}
     ping    = {'ping_success': cmd_dct}
     msg     = pickle.dumps(ping)
@@ -127,7 +141,8 @@ class ez_ping(ez_process_base):
       user_id = cmd.data['user_id']
       user_addr = (cmd.data['host'], cmd.data['port'])
     except:
-      print "user_id/host/port not properly specified in ping_reply"
+      self.replyQueue.put(self.error("user_id/host/port not properly " +
+                                     "specified in ping_success"))
 
     #user_id, user_addr = cmd.data
     if user_id in self.ips:
@@ -142,7 +157,8 @@ class ez_ping(ez_process_base):
           self.success_callback[process_id]()
           del self.success_callback[process_id]
         else:
-          self.replyQueue.put(self.success("ping success: " + user_id))
+          if not epp.silent_ping:
+            self.replyQueue.put(self.success("ping success: " + user_id))
         return True
 
     #if socket.gethostbyname('ez') == user_addr[0]:
@@ -162,9 +178,10 @@ class ez_ping(ez_process_base):
       # ping all users
       user_ids = user_ips.keys()
 
-      # custom success_callback
+      # custom success_callback - just for demonstration purpose
       def success_ping_all():
-        print "background ping successful"
+        pass
+        #print "background ping successful"
 
       for user_id in user_ids:
         cmd_dct = {'user_id': user_id, 'success_callback': success_ping_all}
@@ -179,6 +196,6 @@ class ez_ping(ez_process_base):
     bgp = p2pCommand('start_background_process',
             {'process_id'    : process_id,
              'callback'      : ping_background_func,
-             'interval'      : 1,
+             'interval'      : epp.ping_bg_timeout,
              'callback_args' : (self.commandQueue, self.ips, )})
     self.commandQueue.put(bgp)

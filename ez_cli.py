@@ -1,8 +1,6 @@
 # encoding=utf-8 ==============================================================#
 #                                  ez_cli.py                                   #
 #==============================================================================#
-# TODO: (bcn 2014-08-10) Allow to read in commands from file or pipe with switch
-# -file
 # TODO: (bcn 2014-08-10) Allow to scroll in LICENSE and other files. Most likely
 # we want to use a text widget that also allows to center the logo when we have
 # varying width
@@ -20,7 +18,6 @@ import subprocess
 from time import sleep
 
 from optparse import OptionParser
-
 
 import urwid
 from urwid.util import move_next_char, move_prev_char
@@ -86,17 +83,20 @@ class VimMsgBox(urwid.ListBox):
 
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
 
+  def clear_msgbox(self):
+    # Deleting the content of the ListWalker. Create a new Walker wouldn't
+    # work unless you ListBox.__init__ again.
+    # iterating over self.body and deleting elements in self.body does update
+    # self.body. As a result, not all rows are deleted -> range(len(@)) does
+    # not share the same memory and is fixed -> iteration deletes all elements
+    # in self.body
+    # for row in self.body:
+    for row in range(len(self.body)):
+      self.body.pop(-1)
+
   def cmd_exit_msgbox(self, *args):
     if self.logo_displayed:
-      # Deleting the content of the ListWalker. Create a new Walker wouldn't
-      # work unless you ListBox.__init__ again.
-      # iterating over self.body and deleting elements in self.body does update
-      # self.body. As a result, not all rows are deleted -> range(len(@)) does
-      # not share the same memory and is fixed -> iteration deletes all elements
-      # in self.body
-      # for row in self.body:
-      for row in range(len(self.body)):
-        self.body.pop(-1)
+      self.clear_msgbox()
       self.logo_displayed = False
       self._selectable = False
 
@@ -123,7 +123,6 @@ class VimMsgBox(urwid.ListBox):
       return self.command_dict[key](size)
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
-
 
 #==============================================================================#
 #                                  VimListBox                                  #
@@ -161,7 +160,6 @@ class VimListBox(urwid.ListBox):
     except KeyError:
       return urwid.ListBox.keypress(self, size, key)
 
-
 #==============================================================================#
 #                                VimStatusLine                                 #
 #==============================================================================#
@@ -179,8 +177,6 @@ class VimStatusline(urwid.ListBox):
 
   def update_content(self, content):
     self.body.append(urwid.AttrMap(urwid.Text(content), None, 'reveal focus'))
-
-
 
 #==============================================================================#
 #                                VimCommandLine                                #
@@ -206,11 +202,13 @@ class VimCommandLine(urwid.Edit):
                          #"contacts"   : cl.cl.cmd_get_contact_names,
                          #"users"      : cl.cl.cmd_get_online_users,
                          "ping"       : cl.cl.cmd_ping,
+                         "bgping"     : cl.cl.cmd_ping_background,
                          "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
                          "bg"         : cl.cl.cmd_bg,
-                         #"sync"       : cl.cl.cmd_sync,
+                         "sync"       : cl.cl.cmd_sync,
+                         "bgsync"     : cl.cl.cmd_passive_sync,
                          "ips"        : cl.cl.cmd_ips,
                          "key"        : cl.cl.cmd_key,
                          #"verify" : cl.cl.cmd_verify,
@@ -230,17 +228,30 @@ class VimCommandLine(urwid.Edit):
     except IOError:
       print "File not found"
 
+  def get_marked_contacts(self):
+    if hasattr(self, 'contact_checkbox'):
+      return [u for u in self.contact_checkbox if
+                self.contact_checkbox[u].state]
+    else:
+      return []
+
+  def contact_list(self):
+    contacts = [urwid.Text("Contacts:")]
+    self.contact_checkbox = {}
+    for user in self.contacts:
+      user_id  = user[0]
+      on       = urwid.Text(("online", u"ON"))
+      off      = urwid.Text(("offline", u"OFF"))
+      status   = on if user[1] else off
+      checkbox = urwid.CheckBox(user_id)
+
+      self.contact_checkbox[user_id] = checkbox
+      contacts += [urwid.Columns([checkbox, status])]
+    return VimListBox(urwid.SimpleListWalker(contacts))
+
+
   def open_contacts(self):
-    def contact_list(user_ids):
-      contacts = [urwid.Text("Contacts:")]
-      for user in user_ids:
-        user_id = user[0]
-        on  = urwid.Text(("online", u"ON"))
-        off = urwid.Text(("offline", u"OFF"))
-        status = on if user[1] else off
-        contacts += [urwid.Columns([urwid.CheckBox(user_id), status])]
-      return VimListBox(urwid.SimpleListWalker(contacts))
-    # get contact list
+        # get contact list
     UIDs = cl.cl.UserDatabase.UID_list()
     if len(UIDs) > 0:
       contacts = [str(entry.name) for entry in
@@ -258,8 +269,9 @@ class VimCommandLine(urwid.Edit):
     if len(contacts) > 0:
       contacts = [(contact, contact in cl.cl.ips) for contact in contacts]
 
-    lst = contact_list(contacts)
-    ez_cli.top.open_box(lst, 50)
+    self.contacts = contacts
+    self.contact_list = self.contact_list()
+    ez_cli.top.open_box(self.contact_list, 50)
 
   def open_processes(self):
     def process_list(processes):
@@ -282,6 +294,16 @@ class VimCommandLine(urwid.Edit):
       self.open_contacts()
     elif args[0] == 'processes':
       self.open_processes()
+    elif args[0] == 'messages':
+      UIDs = cl.cl.MsgDatabase.UID_list()
+      msgs = cl.cl.MsgDatabase.get_entries(UIDs)
+      ez_cli.vimmsgbox.clear_msgbox()
+      for msg in msgs:
+        if msg.recipient == cl.cl.name:
+          try:
+            ez_cli.msg_update((str(msg.clear_text())))
+          except Exception, e:
+            ez_cli.status_update("<p>Error: %s</p>" % str(e))
 
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
@@ -520,8 +542,12 @@ class VimEdit(urwid.Edit):
         key = "\n"
         self.insert_text(key)
       else:
-        urwid.emit_signal(self, 'done', self, self.get_edit_text())
+        #urwid.emit_signal(self, 'done', self, self.get_edit_text())
+        for u in ez_cli.commandline.get_marked_contacts():
+          cl.cl.cmd_send_msg(u,self.get_edit_text())
+          ez_cli.status_update(u)
         self.set_edit_text('')
+        #self.get_edit_text()
       return
 
     # execute commands
@@ -552,7 +578,7 @@ class VimEdit(urwid.Edit):
 class ez_cli_urwid(urwid.Frame):
   """
   Main CLI Frame.
-  Here we build the mainframe out of the widgets.
+  Here we build the main frame out of the widgets.
   The base layout is as follows:
         +-------------------+
         |                   |   \
@@ -652,8 +678,10 @@ class ez_cli_urwid(urwid.Frame):
 
     self.name    = name
     self.logging = logging
+    # TODO: (bcn 2014-10-19) This should also log errors
     if self.logging:
-      self.logger = open('.' + name + '_eZsession.log','w')
+      self.logger = open(ep.join(ep.location['log'], name + '_ez_cli_session.log'),
+                         'w')
 
   def status_update(self, content):
     if self.logging:
@@ -690,7 +718,8 @@ class ez_cli_urwid(urwid.Frame):
     self.vimbox.set_focus(1)
 
   def command_line_mode(self, edit, new_edit_text):
-    self.command_and_status.set_focus(1)
+    if hasattr(self, 'statusline'):
+      self.command_and_status.set_focus(1)
     self.commandline.set_edit_text(':')
     self.commandline.set_edit_pos(1)
     self.set_focus('footer')
@@ -706,10 +735,9 @@ class ez_cli_urwid(urwid.Frame):
     raise urwid.ExitMainLoop()
 
 #==============================================================================#
-#                               GLOBAL INSTANCES                               #
+#                                  FUNCTIONS                                   #
 #==============================================================================#
 
-#client_path = os.path.join(os.path.dirname(sys.argv[0]), 'ez_client.py')
 def received_output(data):
   categories = {p2pReply.success: 'success',
                 p2pReply.error:   'error',
@@ -728,7 +756,12 @@ def received_output(data):
                     ('Client reply %s: %s' % (status, reply.data)))
         elif reply.replyType == p2pReply.msg:
           # decrypt msg and print it on the screen
-          ez_cli.msg_update((str(reply.data.clear_text())))
+          if reply.data.recipient == cl.cl.name:
+            try:
+              ez_cli.msg_update((str(reply.data.clear_text())))
+            except Exception, e:
+              ez_cli.status_update("<p>Error: %s</p>" % str(e))
+
         else:
           # this case should not happen! (if theres something in the queue it
           # must be success,error or msg)
@@ -738,18 +771,20 @@ def received_output(data):
         except:
           reply = None
   else:
-    # this case should not happen! (if theres something in the queue it
+    # this case should not happen! (if theres something in the queue, it
     # must be success,error or msg)
     ez_cli.statusline.update_content(data)
   return True
 
-
+#==============================================================================#
+#                               GLOBAL INSTANCES                               #
+#==============================================================================#
 #========================#
 #  command line options  #
 #========================#
-# help conflct with ez_p2p queue -> disabled for the moment
-parser = OptionParser()
-#parser = OptionParser(add_help_option=False)
+
+usage = "usage: %prog [options] name"
+parser = OptionParser(usage)
 
 # parse options
 parser.add_option("-s", "--script", dest="filename",
@@ -763,42 +798,28 @@ parser.add_option("-l", "--log",
                   action="store_true", dest="logging", default=False,
                   help="log status to .name_eZsession.log")
 
-try:
-  (options, args) = parser.parse_args()
-except ep.DomainError, err:
-  sys.stderr.write('ERROR: %s\n' % str(err))
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-except:
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-
-if hasattr(options, 'help'):
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
-
+(options, args) = parser.parse_args()
 
 try:
-  cl.init_client()
   ep.init_cli_preferences()
+  if not len(args) == 1:
+    print 'Please give your name as argument'
+    sys.exit()
+  cl.init_client(args[0], **ep.process_preferences)
   if not options.verbose:
     ep.cli_status_height = 0 # disable statusline
-
-  ez_cli = ez_cli_urwid(name = sys.argv[1], logging = options.logging)
-
+  ez_cli = ez_cli_urwid(name = args[0], logging = options.logging)
 except ep.DomainError, err:
   sys.stderr.write('ERROR: %s\n' % str(err))
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
   sys.exit()
 
-palette = [
-      ('online', 'light green', 'dark green'),
-      ('offline', 'dark red', 'light red'),
-      ]
+#==============#
+#  MAIN LOOPS  #
+#==============#
 
-loop = urwid.MainLoop(ez_cli, palette)
+loop = urwid.MainLoop(ez_cli, ep.palette)
 pipe.pipe = loop.watch_pipe(received_output)
-
 
 # start eZchat with script
 if options.filename:

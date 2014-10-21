@@ -13,8 +13,9 @@ from ez_process_base import ez_process_base, p2pCommand
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              os.pardir))
-import ez_user    as eu
+import ez_user as eu
 import ez_message as em
+import ez_preferences as ep
 
 #==============================================================================#
 #                                 class ez_api                                 #
@@ -45,15 +46,21 @@ class ez_api(ez_process_base):
     assert('name' in kwargs)
     self.name = kwargs['name']
 
-    # every new client gets a fresh database in memory for now. Should be made
-    # an argument to support test as well as use case
-    #db_name = 'sqlite:///:' + self.name + 'memory:'
-    user_db_name = 'sqlite:///' + self.name + '_contacts'
-    msg_db_name  = 'sqlite:///' + self.name + '_messages'
+    # TODO: (bcn 2014-10-19) @JNicL:
+    # This would give every client a fresh database.
+    #user_db_name = 'sqlite:///:memory:'
+    #msg_db_name = 'sqlite:///:memory:'
+    # Doesn't work, however, as you seem to be relying on files. There
+    # is also no need for seperate user and msg databases.
+    user_db_name = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_contacts'
+    msg_db_name  = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_messages'
 
     # uncomment here -> problem with private/public keys
+    # TODO: (bcn 2014-10-19) It is peculiar that it works in the cli when both
+    # share the SAME user database which is local/ez.db. The tests work with
+    # both versions. We should craft a test that is closer to the implementation
+    # used in ez_process and find the problem.
     #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
-
     self.UserDatabase  = eu.user_database
     self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
 
@@ -119,7 +126,7 @@ class ez_api(ez_process_base):
     :param host: hosts IP
     :type  host: string
 
-    :param port: port on which to listen
+    :param port: port on which to listen to
     :type  port: integer
     """
     try:
@@ -158,13 +165,28 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in bp"))
 
 
-  #TODO: JNicL need to be tested again Sa 11 Okt 2014 14:08:24 CEST
-  #def cmd_sync(self, user_id):
-    #try:
-      #cmd_dct = {'user_id': user_id}
-      #self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
-    #except:
-      #self.replyQueue.put(self.error("Syntax error in ips"))
+  def cmd_sync(self, user_id):
+    """
+    Initiate mesage database sync request.
+
+    :param user_id: the user with thom to sync
+    :type  user_id: string
+    """
+    try:
+      cmd_dct = {'user_id': user_id}
+      self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
+    except:
+      self.replyQueue.put(self.error("Syntax error in cmd_sync"))
+
+  def cmd_passive_sync(self):
+    """
+    Initiate passive mesage database syncing. The frequency is determined in
+    ez_process_preferences.
+    """
+    try:
+      self.commandQueue.put(p2pCommand('db_sync_background'))
+    except:
+      self.replyQueue.put(self.error("Error in cmd_passive_sync"))
 
   def cmd_ips(self, user_id):
     """
@@ -216,6 +238,9 @@ class ez_api(ez_process_base):
       # TODO: nick Sa 04 Okt 2014 15:06:36 CEST
       # apparently crypto does not allow unicode
       mx = em.Message(self.name, user_id, str(msg))
+      mx.UID
+      self.replyQueue.put(self.success('Put UID: ' + str(mx.UID) +
+                                       ' to the msg database'))
       self.MsgDatabase.add_entry(mx)
 
       if not user_id in self.ips:

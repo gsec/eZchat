@@ -16,8 +16,37 @@ import ez_preferences as ep
 import ez_user as eu
 
 #==============================================================================#
+#                               PrivateKeyError                                #
+#==============================================================================#
+
+class PrivateKeyError(Exception):
+  """
+  PrivateKeyError exception is raised if the private key is not found or
+  corrupted.
+  """
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
+
+#==============================================================================#
+#                               PublicKeyError                                 #
+#==============================================================================#
+
+class PublicKeyError(Exception):
+  """
+  PublicKeyError exception is raised if the public key is not found or
+  corrupted.
+  """
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
+
+#==============================================================================#
 #                            class CryptoBaseClass                             #
 #==============================================================================#
+
 class CryptoBaseClass(object):
   """
   Base class defining common functions.
@@ -39,6 +68,7 @@ class CryptoBaseClass(object):
 #==============================================================================#
 #                            class eZ_CryptoScheme                             #
 #==============================================================================#
+
 class eZ_CryptoScheme(CryptoBaseClass):
   """
   Outer crypto API to encrypt+sign and decrypt+verify message objects.
@@ -90,10 +120,10 @@ class eZ_CryptoScheme(CryptoBaseClass):
 
     return self.return_dict(decrypt_items)
 
-
 #==============================================================================#
 #                                 class eZ_RSA                                 #
 #==============================================================================#
+
 class eZ_RSA(CryptoBaseClass):
   """
   RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
@@ -106,7 +136,7 @@ class eZ_RSA(CryptoBaseClass):
     Sets the path for the private keyfiles. Base path retrieved from the user
     preferences.
     """
-    return path.join(ep.return_location(ep.key_loc), 'ez_rsa_' + user + '.priv')
+    return ep.join(ep.location['key'], 'ez_rsa_' + user + '.priv')
 
   def get_private_key(self, user):
     """
@@ -117,9 +147,7 @@ class eZ_RSA(CryptoBaseClass):
         keypair = RSA.importKey(keypairfile.read())
       return keypair
     except IOError:
-      print("Could not get private key!")
-      self.shutdown()
-
+      raise PrivateKeyError('Could not get private key from file!')
 
   def get_public_key(self, user):
     """
@@ -129,8 +157,8 @@ class eZ_RSA(CryptoBaseClass):
       pub_key_stored = eu.user_database.get_entry(name=user).public_key
       return RSA.importKey(pub_key_stored)
     except:
-      print("Could not get public key!")
-      self.shutdown()
+      raise PublicKeyError("Could not get public key from database!")
+      #self.shutdown()
 
   def generate_keys(self, user, testing=False):
     """
@@ -298,9 +326,9 @@ class eZ_AES(CryptoBaseClass):
     """
     return text.rstrip(self.PAD)[:-1]
 
-
 #==============================================================================#
 #                               GLOBAL INSTANCES                               #
 #==============================================================================#
+
 # Strong random generator as file object:
 RNG = Random.new()

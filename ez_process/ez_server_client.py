@@ -99,7 +99,7 @@ class ez_server_client(ez_process_base):
     self.replyQueue.put(self.success("listening socket"))
     self.server = True
 
-  def shutdown(self, cmd):
+  def shutdown(self, *args):
     if self.sockfd != None:
       self.sockfd.close()
     self.alive.clear()
