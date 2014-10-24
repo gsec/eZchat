@@ -23,21 +23,27 @@ import ez_process_preferences as epp
 
 class p2pCommand(object):
   """
-  A p2pCommand encapsulates commands which are then appended to the command
-  queue for execution. The msgType is the string of the function which must
-  match a key in the client handler functions (see ez_process_base_meta). Data
-  must be a dictionary and has to be filled with key,value pairs as required
-  by the handler function.
-  """
-  def __init__(self, msgType=None, data=None):
-    """
-    param:  msgType: the command to be executed
-    type :  msgType: string
+  A p2pCommand encapsulates ``'commandQueue'`` commands. The p2pCommand instance
+  can be appended to the client's command queue for execution via:
 
-    param: data: arguments passed to the command
-    type : data: dict
+    cmd = p2pCommand(...)
+    client_class_instance.commandQueue.put(cmd)
+
+  The funcStr is the name of the function which must match a key in the client
+  handler functions (see ez_process_base_meta). Data must be a dictionary and
+  has to be filled with key,value pairs as required by the handler function.
+  """
+  def __init__(self, funcStr=None, data=None):
     """
-    self.msgType = msgType
+    :param funcStr: Storing the function name which should be called when
+                    executed.
+    :type  funcStr: String
+
+    :param data: Keyword arguments (*kwargs*) passed to the called
+                 function.
+    :type  data: Dict
+    """
+    self.funcStr = funcStr
     self.data    = data
 
 #==============================================================================#

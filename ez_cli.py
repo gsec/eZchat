@@ -206,6 +206,7 @@ class VimCommandLine(urwid.Edit):
                          "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
+                         "auth"       : cl.cl.cmd_authentificate,
                          "bg"         : cl.cl.cmd_bg,
                          "sync"       : cl.cl.cmd_sync,
                          "bgsync"     : cl.cl.cmd_passive_sync,

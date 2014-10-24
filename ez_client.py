@@ -58,6 +58,11 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     # internal cli enabled
     self.enableCLI = False
 
+    if 'require_auth' in kwargs:
+      self.require_auth = kwargs['require_auth']
+    else:
+      self.require_auth = False
+
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except socket.error, msg:
@@ -141,7 +146,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
-        msg = self.handlers[cmd.msgType](self, cmd)
+        msg = self.handlers[cmd.funcStr](self, cmd)
       except Queue.Empty:
         pass
       readable = []

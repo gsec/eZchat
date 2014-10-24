@@ -135,6 +135,28 @@ class ez_api(ez_process_base):
     except:
       self.replyQueue.put(self.error("Syntax error in servermode"))
 
+  def cmd_authentificate(self, host, port):
+    """
+    Connect to a server with authentification.
+
+    A connection to a server enables the use of
+    :py:meth:`ez_process.ez_api.ez_api.cmd_ips`.
+
+    :param host: server IP
+    :type  host: string
+
+    :param port: server port
+    :type  port: integer
+    """
+    cmd_dct = {'host': host, 'port':int(port)}
+    try:
+      self.commandQueue.put(p2pCommand('authentification_request', cmd_dct))
+      cmd_dct['user_id'] = 'server'
+      self.add_client(**cmd_dct)
+      self.replyQueue.put(self.success("Started cmd_authentificate"))
+    except:
+      self.replyQueue.put(self.error("Syntax error in cmd_authentificate"))
+
   def cmd_connect(self, host, port):
     """
     Connect to a server.
@@ -238,7 +260,6 @@ class ez_api(ez_process_base):
       # TODO: nick Sa 04 Okt 2014 15:06:36 CEST
       # apparently crypto does not allow unicode
       mx = em.Message(self.name, user_id, str(msg))
-      mx.UID
       self.replyQueue.put(self.success('Put UID: ' + str(mx.UID) +
                                        ' to the msg database'))
       self.MsgDatabase.add_entry(mx)
