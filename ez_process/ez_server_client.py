@@ -18,6 +18,7 @@ import random
 class ez_server_client(ez_process_base):
 
   authentifcation_words = {}
+  authentifications     = {}
 
   def __init__(self, *args, **kwargs):
     super(ez_server_client, self).__init__(*args, **kwargs)
@@ -187,7 +188,8 @@ class ez_server_client(ez_process_base):
       user_id    = cmd.data['user_id']
       host, port = cmd.data['host'], cmd.data['port']
     except:
-      print "user_id/host/port not properly specified in authentification_verify."
+      self.replyQueue.put(self.error('reply_msg, host, port not properly '+
+                                     'specified in authentification_verify'))
       return
 
     self.replyQueue.put(self.success('started authentification_verify'))
@@ -196,15 +198,20 @@ class ez_server_client(ez_process_base):
       reply_msg = reply_msg.clear_text().split('\n')[1]
       self.replyQueue.put(self.success(self.authentifcation_words[user_id] in
         reply_msg))
+      # == fails, maybe because of trailing whitespaces
+      # if `in` succeeds its highly unprobable that the authentification word
+      # does actually not match because the word is a floating point random
+      # number.
       if self.authentifcation_words[user_id] in reply_msg:
         cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
         self.add_client(**cmd_dct)
+        self.client_authentificated(**cmd_dct)
 
         auth_success = {'authentification_success': {}}
         msg          = pickle.dumps(auth_success)
 
         master = (host, port)
-        #self.sockfd.sendto(msg, master)
+        self.sockfd.sendto(msg, master)
 
     except:
       self.replyQueue.put(self.success('Declined user: ' + user_id))
@@ -220,7 +227,9 @@ class ez_server_client(ez_process_base):
       host    = cmd.data['host']
       port    = cmd.data['port']
     except:
-      print "user_id, host, port not properly specified in connection_success"
+      self.replyQueue.put(self.error('host, port not properly specified in ' +
+                                     'authentification_success'))
+      return
 
     process_id = ('authentification_verify', (host, port))
     if process_id in self.background_processes:
@@ -229,7 +238,17 @@ class ez_server_client(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("Authentification with server established"))
+    self.replyQueue.put(self.success("Authentification with server " +
+                                     "established"))
+
+  def client_authentificated(self, **kwargs):
+    try:
+      user_id = kwargs['user_id']
+      master  = (kwargs['host'], int(kwargs['port']))
+      self.authentifications[master] = user_id
+    except:
+      self.replyQueue.put(self.error('user_id, host, port not properly ' +
+                                     'specified in authentification_success'))
 
 
 #==================#

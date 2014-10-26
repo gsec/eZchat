@@ -83,7 +83,9 @@ class ez_process_base_meta(type):
   """
   def __init__(cls, name, bases, dct):
     if not hasattr(cls, 'handlers'):
-      cls.handlers = {}
+      cls.handlers      = {}
+    if not hasattr(cls, 'handler_rules'):
+      cls.handler_rules = {}
     for attr in [x for x in dct if not x.startswith('_')]:
       # register process functionalities and inherit them to child classes
       if isinstance(dct[attr], types.FunctionType):

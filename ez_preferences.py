@@ -123,6 +123,19 @@ def init_cli_preferences():
   process_preferences['ping_reply_timeout'] = 4
   process_preferences['silent_ping']        = False
 
+
+  #===================#
+  #  acception rules  #
+  #===================#
+
+  global acception_rules
+  acception_rules = {}
+  acception_rules['global_rule']   = 'Allow'
+  #acception_rules['distributeIPs'] = 'Auth'
+
+  process_preferences['acception_rules'] = acception_rules
+
+
 #==============#
 #  User prefs  #
 #==============#

@@ -58,11 +58,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     # internal cli enabled
     self.enableCLI = False
 
-    if 'require_auth' in kwargs:
-      self.require_auth = kwargs['require_auth']
-    else:
-      self.require_auth = False
-
     try:
       self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except socket.error, msg:
@@ -70,12 +65,35 @@ class client(ez_process, ez_simple_cli, threading.Thread):
                   msg[1]
       self.replyQueue.put(self.error(error_msg))
 
-    # online users are stored in the ips dict
-    # ips = {user_id: (user_host, user_port)}
-    self.ips = {}
     self.command_history = {}
 
+    if not 'acception_rules' in kwargs:
+      acception_rules = {}
+      acception_rules['global_rule'] = 'Allow'
+      self.set_acception_rules(**acception_rules)
+    else:
+      acception_rules = kwargs['acception_rules']
+      self.set_acception_rules(**acception_rules)
+
     self.timeout = CLIENT_TIMEOUT
+
+  def set_acception_rules(self, **acception_rules):
+    if 'global_rule' in acception_rules:
+      global_rule = acception_rules['global_rule']
+      del acception_rules['global_rule']
+      try:
+        assert(global_rule in ['Allow', 'Deny', 'Auth'])
+      except:
+        print 'global rule error'
+        return
+    else:
+      global_rule = 'Deny'
+
+    for handler in self.handlers:
+      if handler in acception_rules:
+        self.handler_rules[handler] = acception_rules[handler]
+      else:
+        self.handler_rules[handler] = global_rule
 
 
 #===================#
@@ -114,10 +132,28 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       # send packages etc.
       if isinstance(data, dict):
         for command in data:
-          cmd_dct = data[command]
-          cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
-          user_cmd = p2pCommand(command, cmd_dct)
-          self.commandQueue.put(user_cmd)
+          try:
+            assert(command in self.handler_rules)
+            if self.handler_rules[command] == 'Allow':
+              execute = True
+            elif self.handler_rules[command] == 'Auth':
+              master = (user_addr[0], int(user_addr[1]))
+              if master in self.authentifications:
+                execute = True
+              else:
+                execute = False
+            else:
+              execute = False
+
+            if execute:
+              cmd_dct = data[command]
+              cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
+              user_cmd = p2pCommand(command, cmd_dct)
+              self.commandQueue.put(user_cmd)
+
+          except:
+            self.replyQueue.put(self.error('No acception rule set for command '+
+                                            command + '.'))
 
       elif isinstance(data, em.Message):
         self.replyQueue.put(self.success("received msg"))
@@ -126,7 +162,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
           print "data.clear_text():", data.clear_text()
         self.replyQueue.put(self.msg(data))
       else:
-      # raw data
+        # raw data
         self.replyQueue.put(self.success(data))
         return data
 
@@ -178,6 +214,7 @@ def init_client(name, **kwargs):
   global cl
   cl = client(name=name, write_to_pipe=True, **kwargs)
   cl.start()
+
 
 if __name__ == "__main__":
 
