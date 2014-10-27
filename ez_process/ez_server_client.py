@@ -10,6 +10,7 @@ from ez_process_base import ez_process_base, p2pReply, p2pCommand
 import cPickle as pickle
 import ez_message as em
 import random
+import ez_crypto as ec
 
 #==============================================================================#
 #                            class ez_server_client                            #
@@ -150,10 +151,15 @@ class ez_server_client(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    mx = em.Message(self.name, user_id, str(msg))
+    er  = ec.eZ_RSA()
+    try:
+      sig = er.sign(er.get_private_key(self.name), str(msg))
+    except:
+      self.replyQueue.put(self.error('Failed to sign message.'))
+      return
 
     master   = (host, port)
-    cmd_dct  = {'reply_msg': mx, 'user_id':self.name}
+    cmd_dct  = {'reply_msg': sig, 'user_id':self.name}
     auth_vfy = {'authentification_verify': cmd_dct}
     msg      = pickle.dumps(auth_vfy)
 
@@ -195,14 +201,10 @@ class ez_server_client(ez_process_base):
     self.replyQueue.put(self.success('started authentification_verify'))
     try:
       # check that the decripted message matches the original message.
-      reply_msg = reply_msg.clear_text().split('\n')[1]
-      self.replyQueue.put(self.success(self.authentifcation_words[user_id] in
-        reply_msg))
-      # == fails, maybe because of trailing whitespaces
-      # if `in` succeeds its highly unprobable that the authentification word
-      # does actually not match because the word is a floating point random
-      # number.
-      if self.authentifcation_words[user_id] in reply_msg:
+      er  = ec.eZ_RSA()
+      if er.verify( er.get_public_key(user_id),
+                    self.authentifcation_words[user_id],
+                    reply_msg):
         cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
         self.add_client(**cmd_dct)
         self.client_authentificated(**cmd_dct)
