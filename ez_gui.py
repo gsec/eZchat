@@ -17,25 +17,14 @@
 #  sys.exit(app.exec_())
 
 
-#If you want to run eZ_chat with a graphic user interface, follow further steps:
-#TODO:
-#   -ez_p2p.Client.CLI() needs to be changed. data has to be a functionargument
-#      (watch ez_gui.ez_gui.gui_onSend())
-#
-#   -delete the mainloop in ez_p2p.Client.run(). QtGui.QApplication.exec_() will
-#      do this job
-#
-#   -to print statusmessages in ez_p2p.Client, use
-#      ez_gui.ez_gui.gui_printStatus() instead of print
-#
-#   -if a chatmessage was recieved in the clientthread, use
-#      ez_gui.ez_gui.gui_onRecv() to print it
-#
+
 #============#
 #  Includes  #
 #============#
 from PyQt4 import QtCore, QtGui
-#import ez_p2p
+import ez_pipe
+import sys
+import os
 #-------------------------------------------------------------------------------
 
 try:
@@ -105,6 +94,10 @@ class ez_gui(Ui_gui_mainwindow_setup, QtGui.QDialog):
     self.setWindowFlags(QtCore.Qt.Window)
     self.show()
 
+"""
+    self.pipe = QtCore.QSocketNotifier(ez_pipe.pipe, QtCore.QSocketNotifier.Read)
+
+    self.connect(self.pipe, QtCore.SIGNAL("activated(int)"), self.gui_onRecv)
     self.connect(self.sendBut, QtCore.SIGNAL("clicked ()"), self.gui_onSend)
     self.connect(self.textEdit, QtCore.SIGNAL("returnPressed"), self.gui_onSend)
 
@@ -113,24 +106,14 @@ class ez_gui(Ui_gui_mainwindow_setup, QtGui.QDialog):
     self.textEdit.clear()
     self.textShow.insertPlainText(self.msgcontent)
     self.textShow.moveCursor(QtGui.QTextCursor.End)
-    #ez_p2p.Client.CLI(self.msgcontent)
 
-  def gui_onRecv(self, msgdict = {}): #msgdict is a dict with sender, recipient, etime, content
-    self.msgcontent = msgdict['sender'] + ' says: ' + msgdict['content'] + '\n'
-    self.textShow.insertPlainText(self.msgcontent)
+  def gui_onRecv(self):
+    self.data = self.pipe.Read()
+    self.textShow.insertPlainText(self.data)
     self.textShow.moveCursor(QtGui.QTextCursor.End)
+"""
+    
 
-  def gui_printStatus(self, *statusmsg):
-    self.cnt = len(statusmsg)
-    for i in range(0, self.cnt, 1):
-      #if type(statusmsg[i]) == int:
-        #statusmsg[i] = str(statusmsg[i])
-        #self.textShow.insertPlainText(statusmsg[i] + ' ')
-      #elif type(statusmsg[i]) == float:
-        #statusmsg[i] = str(statusmsg[i])
-        #self.textShow.insertPlainText(statusmsg[i] + ' ')
-      #else:
-        #self.textShow.insertPlainText(statusmsg[i] + ' ')
-      self.textShow.insertPlainText(statusmsg[i] + ' ')
-    self.textShow.insertPlainText('\n')
-    self.textShow.moveCursor(QtGui.QTextCursor.End)
+app = QtGui.QApplication(sys.argv)
+win = ez_gui()
+sys.exit(app.exec_())
