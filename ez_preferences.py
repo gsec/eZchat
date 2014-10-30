@@ -23,7 +23,7 @@ class DomainError(Exception):
 #                                  FUNCTIONS                                   #
 #==============================================================================#
 
-def join(var, file_name):
+def join(var, file_name=None):
   """
     VAR           = ('SUBDIR', "DESCRIPTION")
   Makes sure that SUBDIR exists and create it if necessary. Return the SUBDIR
@@ -34,7 +34,10 @@ def join(var, file_name):
   if not path.isdir(location):
     print("Creating " + location + " for " + desc)
     makedirs(location)
-  return path.join(location, file_name)
+  if file_name:
+    return path.join(location, file_name)
+  else:
+    return location
 
 #============================================#
 #  CLI prefs. - Appearance and key bindings  #
@@ -150,10 +153,12 @@ format:
 local_path = 'local'
 
 location = {}
-location['key'] = ('keys', "private key files")
-location['hist'] = ('history', "history files")
-location['db'] = ('database', "database files for users and messages")
-location['log'] = ('log', "log files")
+location['key']   = ('keys', "private key files")
+location['hist']  = ('history', "history files")
+location['db']    = ('database', "database files for users and messages")
+location['log']   = ('log', "log files")
+location['gpg']   = ('.ez_gpg', "GnuPG Keys for eZchat")
+
 
 # ------- Files --------
 command_history = join(location['hist'], 'command_history.txt')
