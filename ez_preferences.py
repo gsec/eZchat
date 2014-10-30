@@ -23,7 +23,7 @@ class DomainError(Exception):
 #                                  FUNCTIONS                                   #
 #==============================================================================#
 
-def join(var, file_name):
+def join(var, file_name=None):
   """
     VAR           = ('SUBDIR', "DESCRIPTION")
   Makes sure that SUBDIR exists and create it if necessary. Return the SUBDIR
@@ -34,7 +34,10 @@ def join(var, file_name):
   if not path.isdir(location):
     print("Creating " + location + " for " + desc)
     makedirs(location)
-  return path.join(location, file_name)
+  if file_name:
+    return path.join(location, file_name)
+  else:
+    return location
 
 #============================================#
 #  CLI prefs. - Appearance and key bindings  #
@@ -123,6 +126,19 @@ def init_cli_preferences():
   process_preferences['ping_reply_timeout'] = 4
   process_preferences['silent_ping']        = False
 
+
+  #===================#
+  #  acception rules  #
+  #===================#
+
+  global acception_rules
+  acception_rules = {}
+  acception_rules['global_rule']   = 'Allow'
+  #acception_rules['distributeIPs'] = 'Auth'
+
+  process_preferences['acception_rules'] = acception_rules
+
+
 #==============#
 #  User prefs  #
 #==============#
@@ -137,10 +153,12 @@ format:
 local_path = 'local'
 
 location = {}
-location['key'] = ('keys', "private key files")
-location['hist'] = ('history', "history files")
-location['db'] = ('database', "database files for users and messages")
-location['log'] = ('log', "log files")
+location['key']   = ('keys', "private key files")
+location['hist']  = ('history', "history files")
+location['db']    = ('database', "database files for users and messages")
+location['log']   = ('log', "log files")
+location['gpg']   = ('.ez_gpg', "GnuPG Keys for eZchat")
+
 
 # ------- Files --------
 command_history = join(location['hist'], 'command_history.txt')

@@ -15,6 +15,10 @@ import cPickle as pickle
 
 class ez_contact(ez_process_base):
 
+  # online users are stored in the ips dict
+  # ips = {user_id: (user_host, user_port)}
+  ips = {}
+
   def __init__(self, *args, **kwargs):
     super(ez_contact, self).__init__(*args, **kwargs)
 

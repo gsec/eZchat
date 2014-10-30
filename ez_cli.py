@@ -206,6 +206,7 @@ class VimCommandLine(urwid.Edit):
                          "add"        : cl.cl.cmd_add,
                          "servermode" : cl.cl.cmd_servermode,
                          "connect"    : cl.cl.cmd_connect,
+                         "auth"       : cl.cl.cmd_authentificate,
                          "bg"         : cl.cl.cmd_bg,
                          "sync"       : cl.cl.cmd_sync,
                          "bgsync"     : cl.cl.cmd_passive_sync,
@@ -251,7 +252,8 @@ class VimCommandLine(urwid.Edit):
 
 
   def open_contacts(self):
-        # get contact list
+    # get contact list
+
     UIDs = cl.cl.UserDatabase.UID_list()
     if len(UIDs) > 0:
       contacts = [str(entry.name) for entry in
@@ -261,17 +263,17 @@ class VimCommandLine(urwid.Edit):
       contacts = []
 
     # append all users online
-    if len(cl.cl.ips.keys()) > 0:
-      for user in cl.cl.ips.keys():
-        if not (user in contacts or user == cl.cl.name):
-          contacts.append(user)
+    #if len(cl.cl.ips.keys()) > 0:
+      #for user in cl.cl.ips.keys():
+        #if not (user in contacts or user == cl.cl.name):
+          #contacts.append(user)
     # construct user/online list
     if len(contacts) > 0:
       contacts = [(contact, contact in cl.cl.ips) for contact in contacts]
 
     self.contacts = contacts
-    self.contact_list = self.contact_list()
-    ez_cli.top.open_box(self.contact_list, 50)
+    c_list = self.contact_list()
+    ez_cli.top.open_box(c_list, 50)
 
   def open_processes(self):
     def process_list(processes):

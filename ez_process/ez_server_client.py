@@ -7,7 +7,10 @@
 #============#
 
 from ez_process_base import ez_process_base, p2pReply, p2pCommand
-import cPickle   as pickle
+import cPickle as pickle
+import ez_message as em
+import random
+import ez_crypto as ec
 
 #==============================================================================#
 #                            class ez_server_client                            #
@@ -15,8 +18,240 @@ import cPickle   as pickle
 
 class ez_server_client(ez_process_base):
 
+  authentifcation_words = {}
+  authentifications     = {}
+
   def __init__(self, *args, **kwargs):
     super(ez_server_client, self).__init__(*args, **kwargs)
+
+#============================#
+#  authentification process  #
+#============================#
+
+  def authentification_request(self, cmd):
+    """
+    Start an authenticiation process.
+
+    :param cmd: The connection process requires the keywords ``'host'`` and
+                ``'port'`` specifying the clients/servers endpoint.
+    :type  cmd: p2pCommand instance. See
+    :py:class:`ez_process.ez_process_base.p2pCommand` on how to queue commands.
+    """
+    try:
+      assert('host' in cmd.data)
+      host = cmd.data['host']
+    except:
+      print "no host specified in connect_server"
+      return
+    try:
+      assert('port' in cmd.data)
+      port = int(cmd.data['port'])
+    except:
+      print "no port specified in servermode"
+      return
+
+    master  = (host, port)
+    cmd_dct = {'user_id': self.name}
+    auth_in = {'authentification_in': cmd_dct}
+    msg     = pickle.dumps(auth_in)
+    self.replyQueue.put(self.success('Started authentification.'))
+
+    def authentification_failed_func(self_timer, host, port, user_id):
+      cmd = self.error("Authentification with server failed, retrying.")
+      self.replyQueue.put(cmd)
+      conn_success = {'authentification_in': {'user_id': user_id}}
+      msg          = pickle.dumps(conn_success)
+      try:
+        self.sockfd.sendto(msg, master)
+      except IOError as e:
+        self.replyQueue.put(self.error(str(e)))
+
+      process_id = ('authentification', (host, port))
+      if process_id in self.background_processes:
+        # Reset process.
+        self.reset_background_process(process_id)
+
+    process_id = ('authentification', (host, port))
+    bgp = p2pCommand('start_background_process',
+              {'process_id'      : process_id,
+               'callback'        : authentification_failed_func,
+               'interval'        : 5,
+               'callback_args'   : (host, port, self.name)})
+    self.commandQueue.put(bgp)
+
+    try:
+      self.sockfd.sendto(msg, master)
+    except IOError as e:
+      self.replyQueue.put(self.error(str(e)))
+
+
+  def authentification_in(self, cmd):
+    """
+    A client requests a proposes an authentification.
+
+    All arguments are specified as keyword arguments in cmd.data.
+
+    :param user_id: id specifying the username
+    :type  user_id: string
+
+    :param host: hosts IP
+    :type  host: string
+
+    :param port: hosts port
+    :type  port: integer
+    """
+    try:
+      user_id    = cmd.data['user_id']
+      host, port = cmd.data['host'], cmd.data['port']
+    except:
+      print "user_id/host/port not properly specified in authentification_in."
+      return
+
+    self.replyQueue.put(self.success('started authentification_in'))
+    msg = str(random.random())
+    self.authentifcation_words[user_id] = msg
+
+    master   = (host, port)
+    cmd_dct  = {'msg': msg, 'user_id':self.name}
+    auth_out = {'authentification_out': cmd_dct}
+    msg      = pickle.dumps(auth_out)
+    try:
+      self.sockfd.sendto(msg, master)
+    except IOError as e:
+      self.replyQueue.put(self.error(str(e)))
+
+  def authentification_out(self, cmd):
+    """
+    A client response for authentification.
+
+    All arguments are specified as keyword arguments in cmd.data.
+
+    :param msg: The message which has to be encrypted and send back to the
+    server
+    :type  msg: string
+
+    :param host: hosts IP
+    :type  host: string
+
+    :param port: hosts port
+    :type  port: integer
+    """
+    try:
+      msg        = cmd.data['msg']
+      user_id    = cmd.data['user_id']
+      host, port = cmd.data['host'], cmd.data['port']
+    except:
+      print "user_id/host/port not properly specified in authentification_out."
+      return
+
+    process_id = ('authentification', (host, port))
+    if process_id in self.background_processes:
+      pr = self.background_processes[process_id]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[process_id]
+
+    er  = ec.eZ_RSA()
+    try:
+      sig = er.sign(er.get_private_key(self.name), str(msg))
+    except:
+      self.replyQueue.put(self.error('Failed to sign message.'))
+      return
+
+    master   = (host, port)
+    cmd_dct  = {'reply_msg': sig, 'user_id':self.name}
+    auth_vfy = {'authentification_verify': cmd_dct}
+    msg      = pickle.dumps(auth_vfy)
+
+    def authentification_verify_failed_func(self_timer, host, port):
+      cmd = self.error("Authentification verification response. " +
+                       "Connection has probably been rejected.")
+      self.replyQueue.put(cmd)
+
+      process_id = ('authentification_verify', (host, port))
+      if process_id in self.background_processes:
+        pr = self.background_processes[process_id]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[process_id]
+
+    process_id = ('authentification_verify', (host, port))
+    bgp = p2pCommand('start_background_process',
+              {'process_id'      : process_id,
+               'callback'        : authentification_verify_failed_func,
+               'interval'        : 5,
+               'callback_args'   : (host,port,)})
+    self.commandQueue.put(bgp)
+
+    try:
+      self.sockfd.sendto(msg, master)
+    except IOError as e:
+      self.replyQueue.put(self.error(str(e)))
+
+  def authentification_verify(self, cmd):
+    try:
+      reply_msg  = cmd.data['reply_msg']
+      user_id    = cmd.data['user_id']
+      host, port = cmd.data['host'], cmd.data['port']
+    except:
+      self.replyQueue.put(self.error('reply_msg, host, port not properly '+
+                                     'specified in authentification_verify'))
+      return
+
+    self.replyQueue.put(self.success('started authentification_verify'))
+    try:
+      # check that the decripted message matches the original message.
+      er  = ec.eZ_RSA()
+      if er.verify( er.get_public_key(user_id),
+                    self.authentifcation_words[user_id],
+                    reply_msg):
+        cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
+        self.add_client(**cmd_dct)
+        self.client_authentificated(**cmd_dct)
+
+        auth_success = {'authentification_success': {}}
+        msg          = pickle.dumps(auth_success)
+
+        master = (host, port)
+        self.sockfd.sendto(msg, master)
+
+    except:
+      self.replyQueue.put(self.success('Declined user: ' + user_id))
+
+  def authentification_success(self, cmd):
+    """
+    Not to be called by the user, but automatically invoked.
+
+    Client B receives the news that Client A succeded and Client B adds Client A
+    to the user db.
+    """
+    try:
+      host    = cmd.data['host']
+      port    = cmd.data['port']
+    except:
+      self.replyQueue.put(self.error('host, port not properly specified in ' +
+                                     'authentification_success'))
+      return
+
+    process_id = ('authentification_verify', (host, port))
+    if process_id in self.background_processes:
+      pr = self.background_processes[process_id]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[process_id]
+
+    self.replyQueue.put(self.success("Authentification with server " +
+                                     "established"))
+
+  def client_authentificated(self, **kwargs):
+    try:
+      user_id = kwargs['user_id']
+      master  = (kwargs['host'], int(kwargs['port']))
+      self.authentifications[master] = user_id
+    except:
+      self.replyQueue.put(self.error('user_id, host, port not properly ' +
+                                     'specified in authentification_success'))
+
 
 #==================#
 #  connect_server  #
