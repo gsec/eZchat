@@ -1,4 +1,4 @@
-eZchat [![Build Status](https://travis-ci.org/gsec/eZchat.svg?branch=master)](https://travis-ci.org/gsec/eZchat)[![Documentation Status](https://readthedocs.org/projects/ezchat/badge/?version=latest)](https://readthedocs.org/projects/ezchat/?badge=latest)
+eZchat [![Build Status](https://travis-ci.org/gsec/eZchat.svg?branch=master)](https://travis-ci.org/gsec/eZchat)[![Documentation Status](https://readthedocs.org/projects/ezchat/badge/?version=latest)](https://readthedocs.org/projects/ezchat/?badge=latest)[![Coverage Status](https://coveralls.io/repos/gsec/eZchat/badge.png)](https://coveralls.io/r/gsec/eZchat)
 =======
 Manifesto
 --------------------------------------------------------------------------------
