@@ -24,6 +24,7 @@ class PrivateKeyError(Exception):
   PrivateKeyError exception is raised if the private key is not found or
   corrupted.
   """
+
   def __init__(self, value):
     self.value = value
   def __str__(self):
@@ -38,6 +39,7 @@ class PublicKeyError(Exception):
   PublicKeyError exception is raised if the public key is not found or
   corrupted.
   """
+
   def __init__(self, value):
     self.value = value
   def __str__(self):
@@ -51,10 +53,12 @@ class CryptoBaseClass(object):
   """
   Base class defining common functions.
   """
+
   def attribute_setter(self, **kwargs):
     """
     Sets kwargs as instance attributes.
     """
+
     for key, value in kwargs.iteritems():
       setattr(self, key, value)
 
@@ -62,6 +66,7 @@ class CryptoBaseClass(object):
     """
     Extracts instance attributes into dictionary from return_list.
     """
+
     return {k:v for k, v in self.__dict__.iteritems() if k in return_list}
 
 
@@ -75,6 +80,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
   Encryption must be provided as dictionary with following keys:
   ['etime', 'sender', 'recipient', 'content']
   """
+
   def __init__(self, **kwargs):
     self.attribute_setter(**kwargs)
 
@@ -83,6 +89,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
     Pack content, exact time and sender to plaintext block. Sign and encrypt
     plaintext block. Return crypto items as dictionary.
     """
+
     encrypt_items = ['ciphered_key', 'iv', 'crypt_mode', 'cipher',
                      'recipient', 'ciphered_mac']
 
@@ -103,6 +110,7 @@ class eZ_CryptoScheme(CryptoBaseClass):
     Decrypt and unpack cipher block, check HMAC. Return HMAC check
     result in 'authorized' key, as well as the other plaintext attributes.
     """
+
     _aes_items      = ['key', 'iv', 'crypt_mode', 'cipher', 'hmac']
     decrypt_items   = ['etime', 'content', 'sender', 'recipient', 'authorized']
 
@@ -129,6 +137,7 @@ class eZ_RSA(CryptoBaseClass):
   RSA cipher object. Provides asymmetric encrytpion. Recommended minimal
   keylength: 2048 bit.
   """
+
   RSA_KEY_SIZE = 2048
 
   def priv_key_loc(self, user):
@@ -136,12 +145,14 @@ class eZ_RSA(CryptoBaseClass):
     Sets the path for the private keyfiles. Base path retrieved from the user
     preferences.
     """
+
     return ep.join(ep.location['key'], 'ez_rsa_' + user + '.priv')
 
   def get_private_key(self, user):
     """
     Import the senders keypair from Harddisk.
     """
+
     try:
       with open(self.priv_key_loc(user), 'r') as keypairfile:
         keypair = RSA.importKey(keypairfile.read())
@@ -153,6 +164,7 @@ class eZ_RSA(CryptoBaseClass):
     """
     Get recipient public key from database.
     """
+
     try:
       pub_key_stored = eu.user_database.get_entry(name=user).public_key
       return RSA.importKey(pub_key_stored)
@@ -165,6 +177,7 @@ class eZ_RSA(CryptoBaseClass):
     Create RSA keypair, return the exported public key, which will be stored in
     the database, and write the exported private key to disc.
     """
+
     fresh_key   = RSA.generate(eZ_RSA.RSA_KEY_SIZE)
     private_key = fresh_key
     public_key  = fresh_key.publickey()
@@ -183,6 +196,7 @@ class eZ_RSA(CryptoBaseClass):
     RSA encrypt method, PKCS1_OAEP. (See PyCrypto documentation for further
     information.)
     """
+
     cipher_scheme = PKCS1_OAEP.new(public_key)
     cipher = cipher_scheme.encrypt(plaintext)
     return cipher.encode('base64')
@@ -192,6 +206,7 @@ class eZ_RSA(CryptoBaseClass):
     RSA decrypt method, PKCS1_OAEP. (See PyCrypto documentation for further
     information.)
     """
+
     decipher_scheme = PKCS1_OAEP.new(private_key)
     try:
       plaintext = decipher_scheme.decrypt(ciphertext.decode('base64'))
@@ -203,6 +218,7 @@ class eZ_RSA(CryptoBaseClass):
     """
     Sign plaintext with private key.
     """
+
     msg_hash = SHA256.new(plaintext)
     signer = PKCS1_PSS.new(private_key)
     signature = signer.sign(msg_hash)
@@ -213,6 +229,7 @@ class eZ_RSA(CryptoBaseClass):
     Verify signature against plaintext with public key. Return True if
     successful, false otherwise.
     """
+
     msg_hash = SHA256.new(plaintext)
     verifier = PKCS1_PSS.new(public_key)
     try:
@@ -232,6 +249,7 @@ class eZ_AES(CryptoBaseClass):
   Encryption parameters as of crypt_mode_1: keylength = 32 Bytes,
   padding = '\01\00\00...', AES cipher mode = Cipher Block Chain.
   """
+
   def __init__(self, plaintext=None, **kwargs):
     crypt_parameters_mode_1 = {'KEY_LENGTH':32, 'INTERRUPT':"\1", 'PAD':"\0",
                                'MODE': AES.MODE_CBC}
@@ -248,6 +266,7 @@ class eZ_AES(CryptoBaseClass):
     padded text. Returns dictionary with base64 encoded ciphertext, key, IV and
     the crypt_mode used.
     """
+
     assert self.crypt_mode is 0, "Can not encrypt. Data already encrypted"
 # changed to EtA
 # !! check for iv and mac still needed
@@ -270,6 +289,7 @@ class eZ_AES(CryptoBaseClass):
     Produces plaintext from ciphertext, if provided with correct key and
     encryption parameters.
     """
+
     assert self.crypt_mode is not 0, "Can not decrypt. Data is not encrypted"
     _key            = self.key.decode('base64')
     _iv             = self.iv.decode('base64')
@@ -291,6 +311,7 @@ class eZ_AES(CryptoBaseClass):
     """
     Return bool. True if verification sucessfull, False otherwise.
     """
+
     mac_object      = HMAC.new(key, digestmod=SHA256)
     mac_object.update(plaintext)
     if mac_object.hexdigest() == hexmac_to_verify:
@@ -303,16 +324,26 @@ class eZ_AES(CryptoBaseClass):
     """
     Returns the hexdigest of a message, if provided with key.
     """
+
     mac_object      = HMAC.new(key, digestmod=SHA256)
     mac_object.update(plaintext)
     return mac_object.hexdigest()
 
   def add_padding(self, text):
-    """
+    r"""
     Pads text to whole blocks (AES blocksize = 16). Padding scheme is binary
     '100000...'. If message length is multiple of blocksize, a whole additional
     block will be padded.
+
+    >>> self = eZ_AES()
+
+    >>> self.add_padding("teststring")
+    'teststring\x01\x00\x00\x00\x00\x00'
+
+    >>> self.add_padding("teststring123456")
+    'teststring123456\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
     """
+
     pad_length = AES.block_size - len(text) % AES.block_size
     if pad_length:
       pass
@@ -321,10 +352,27 @@ class eZ_AES(CryptoBaseClass):
     return text + self.INTERRUPT + (pad_length - 1) * self.PAD
 
   def remove_padding(self, text):
-    """
+    r"""
     Unpads decrypted text. Removes rightmost zeros and one (interrupt) byte.
+
+    >>> self = eZ_AES()
+
+    >>> self.remove_padding("teststring\x01\x00\x00\x00\x00\x00")
+    'teststring'
+
+    >>> self.remove_padding("teststring123456\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+    'teststring123456'
     """
+
     return text.rstrip(self.PAD)[:-1]
+
+  #def test_doc(self, string):
+    #"""
+    #doctest test method
+    #>>> eZ_AES().test_doc("Hi")
+    #'Hi'
+    #"""
+    #return string
 
 #==============================================================================#
 #                               GLOBAL INSTANCES                               #
@@ -332,3 +380,7 @@ class eZ_AES(CryptoBaseClass):
 
 # Strong random generator as file object:
 RNG = Random.new()
+
+if __name__ == "__main__":
+  import doctest
+  doctest.testmod()
