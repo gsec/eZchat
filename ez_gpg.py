@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #encoding: utf-8
-import gnupg
 import os
+import gnupg
 import ez_preferences as ep
 
 ###############
@@ -16,6 +16,19 @@ def gpg_path(systemwide=False, fname=None):
     return ep.join(ep.location['gpg'], fname)
 
 
+def find_key(nickname=None):
+  if nickname is None:
+    print("yolowtf!!")
+    return None
+
+  thatkey = [(any(nickname in u for u in  key['uids'])) for key in gpg.list_keys()]
+  if not any(thatkey):
+    raise Exception('Key not found')
+  thatkey = gpg.list_keys()[thatkey.index(True)]
+  print "nick, fingerprint"
+  print nickname, thatkey['fingerprint']
+  return thatkey['fingerprint']
+
 def check_keys(key_id=None, remote_check=True):
   """ Check if given `key_id` matches a database.
 
@@ -23,7 +36,7 @@ def check_keys(key_id=None, remote_check=True):
   Without arguments it just return all local keys.
 
   @param: key_id
-  @type: string
+  @type:  string
   """
 
   local_list = gpg.list_keys()
@@ -73,6 +86,14 @@ def generate_key(user=None, params=None, secret=True):
   else:
     return new_key
 
+def encrypt_msg(nickname, msg):
+  try:
+    fingerprint = find_key(nickname)
+  except:
+    raise
+  cipher = gpg.encrypt(msg, fingerprint)
+  return cipher
+
 ######################
 #  Global instances  #
 ######################
@@ -87,7 +108,7 @@ gpg_params = {
               'key_params': {
                              'key_type': "RSA",
                              'key_length': 4096,
-                             'name_real': os.environ['LOGNAME'],
+                             'name_real': os.environ['USER'],
                              'name_comment': "eZchat communication key",
                              #'name_email': "<your-email@here.net>"
                              },
@@ -102,4 +123,14 @@ gpg.encoding = gpg_params['encoding']
 ################################################################################
 
 if __name__ == '__main__':
-  generate_key(gpg_params['key_params']['name_real'])
+  #generate_key(gpg_params['key_params']['name_real'])
+  #data = 'randomdata'
+  #print(gpg.list_keys())
+  #print find_key('gsec')
+  #fp = find_key('gsec')
+  #print  gpg.import_keys(fp)
+  #print gpg.encrypt(data, fp)
+  try:
+    print encrypt_msg('yolo', data)
+  except Exception as e:
+    print(e)
