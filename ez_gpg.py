@@ -48,7 +48,7 @@ def check_keys(key_id=None, remote_check=True):
     return key
   elif remote_check:
     remote_list = [key_id for server in gpg_params['key_server_list']
-          if gpg.recv_keys(server, key_id)]
+                   if gpg.recv_keys(server, key_id)]
     if remote_list:
       return remote_list
   raise NameError('Key with ID \'' + key_id + '\' not found')
