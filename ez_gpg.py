@@ -10,6 +10,7 @@ import ez_preferences as ep
 
 class ez_gpg(object):
 
+  """Docstring for ez_gpg. """
   # ep.join(ep.location['gpg'], fname)
   gpg_path = os.path.join(os.environ['HOME'], '.gnupg')
   gpg_params = {'encoding': "utf-8",
@@ -19,12 +20,12 @@ class ez_gpg(object):
   gpg = gnupg.GPG(**gpg_params['init'])
   gpg.encoding = gpg_params['encoding']
 
-  """Docstring for ez_gpg. """
-  def gpg_path(systemwide=False, fname=None):
-    if systemwide:
-      return os.path.join(os.environ['HOME'], ".ez_gnupg")  # eventually .gnupg
-    else:
-      return ep.join(ep.location['gpg'], fname)
+  #@staticmethod
+  #def gpg_path(systemwide=False, fname=None):
+    #if systemwide:
+      #return os.path.join(os.environ['HOME'], ".ez_gnupg")  # eventually .gnupg
+    #else:
+      #return ep.join(ep.location['gpg'], fname)
 
   @classmethod
   def find_key(self, nickname=None):
@@ -112,10 +113,10 @@ class ez_gpg(object):
     cipher = self.gpg.encrypt(msg, fingerprint)
     return cipher
 
-######################
-#  Global instances  #
-######################
-# TODO: exchange some of them with ez_preferences variable
+  @classmethod
+  def decrypt_msg(self, cipher):
+    msg = self.gpg.decrypt_msg(cipher)
+    return msg
 
 
 ################################################################################
@@ -123,7 +124,7 @@ class ez_gpg(object):
 ################################################################################
 
 if __name__ == '__main__':
-  #generate_key(gpg_params['key_params']['name_real'])
+  #ez_gpg.generate_key('yolo')
   data = 'randomdata'
   print ez_gpg.gpg.list_keys()
   #print(gpg.list_keys())
@@ -132,6 +133,6 @@ if __name__ == '__main__':
   #print  gpg.import_keys(fp)
   #print gpg.encrypt(data, fp)
   try:
-    print ez_gpg.encrypt_msg('Gui', data)
+    print ez_gpg.encrypt_msg('yolo', data)
   except Exception as e:
     print(e)
