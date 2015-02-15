@@ -7,7 +7,9 @@
 #============#
 
 from ez_process_base import ez_process_base, p2pCommand
-import Queue, thread, threading
+import Queue
+import thread
+import threading
 
 #==============================================================================#
 #                                 class Timer                                  #
@@ -117,10 +119,10 @@ class ez_background_process(ez_process_base):
     pr = Timer(interval, callback)
     # and add possibly callback args and kwargs
     if 'callback_args' in cmd.data:
-      pr.callback_args        = cmd.data['callback_args']
+      pr.callback_args = cmd.data['callback_args']
       bg_cmd['callback_args'] = cmd.data['callback_args']
     if 'callback_kwargs' in cmd.data:
-      pr.callback_kwargs        = cmd.data['callback_kwargs']
+      pr.callback_kwargs = cmd.data['callback_kwargs']
       bg_cmd['callback_kwargs'] = cmd.data['callback_kwargs']
 
     # construct background process
@@ -140,7 +142,7 @@ class ez_background_process(ez_process_base):
       del self.background_processes[process_id]
       del self.background_process_cmds[process_id]
 
-  def reset_background_process(self, process_id, new_process_cmd = None):
+  def reset_background_process(self, process_id, new_process_cmd=None):
     """
     A process can be started over again if it is found in the background
     processes.
@@ -151,9 +153,9 @@ class ez_background_process(ez_process_base):
       pr.finished.set()
       pr.cancel()
       del self.background_processes[process_id]
-      if new_process_cmd != None:
+      if new_process_cmd is not None:
         self.background_process_cmds['process_id'] = new_process_cmd
-        self.commandQueue.put(process_cmd)
+        self.commandQueue.put(new_process_cmd)
       else:
         bg_cmd = self.background_process_cmds[process_id]
         self.commandQueue.put(bg_cmd)

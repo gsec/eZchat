@@ -10,6 +10,7 @@ import ez_preferences as ep
 
 class ez_gpg(object):
 
+  """Docstring for ez_gpg. """
   # ep.join(ep.location['gpg'], fname)
   gpg_path = os.path.join(os.environ['HOME'], '.gnupg')
   gpg_params = {'encoding': "utf-8",
@@ -19,12 +20,12 @@ class ez_gpg(object):
   gpg = gnupg.GPG(**gpg_params['init'])
   gpg.encoding = gpg_params['encoding']
 
-  """Docstring for ez_gpg. """
-  def gpg_path(systemwide=False, fname=None):
-    if systemwide:
-      return os.path.join(os.environ['HOME'], ".ez_gnupg")  # eventually .gnupg
-    else:
-      return ep.join(ep.location['gpg'], fname)
+  #@staticmethod
+  #def gpg_path(systemwide=False, fname=None):
+    #if systemwide:
+      #return os.path.join(os.environ['HOME'], ".ez_gnupg")  # eventually .gnupg
+    #else:
+      #return ep.join(ep.location['gpg'], fname)
 
   @classmethod
   def find_key(self, nickname=None):
@@ -112,26 +113,53 @@ class ez_gpg(object):
     cipher = self.gpg.encrypt(msg, fingerprint)
     return cipher
 
-######################
-#  Global instances  #
-######################
-# TODO: exchange some of them with ez_preferences variable
+  @classmethod
+  def decrypt_msg(self, cipher):
+    msg = self.gpg.decrypt_msg(cipher)
+    return msg
 
+  @classmethod
+  def sign_msg(self, msg):
+    signed_msg = self.gpg.sign(msg)
+    return signed_msg
+
+  @classmethod
+  def verify_signed_msg(self, signed_msg):
+    verified = self.gpg.verify(signed_msg)
+    if(verified.trust_level is not None and
+       verified.trust_level >= verified.TRUST_FULLY):
+      return True
+    else:
+      return False
 
 ################################################################################
 #                                     main                                     #
 ################################################################################
 
 if __name__ == '__main__':
-  #generate_key(gpg_params['key_params']['name_real'])
+  #ez_gpg.generate_key('yolo')
   data = 'randomdata'
-  print ez_gpg.gpg.list_keys()
+  #print ez_gpg.gpg.list_keys()
   #print(gpg.list_keys())
   #print find_key('gsec')
   #fp = find_key('gsec')
   #print  gpg.import_keys(fp)
   #print gpg.encrypt(data, fp)
-  try:
-    print ez_gpg.encrypt_msg('Gui', data)
-  except Exception as e:
-    print(e)
+  #try:
+    #print ez_gpg.encrypt_msg('yolo', data)
+  #except Exception as e:
+    #print(e)
+
+  #signed_data = ez_gpg.gpg.sign(data.data)
+  #verified = ez_gpg.gpg.verify(signed_data)
+
+  #stream = open("example.txt", "rb")
+
+  signed_data = ez_gpg.gpg.sign(data)
+
+  verified = ez_gpg.gpg.verify(signed_data.data)
+  print "verified:", verified.__dict__
+  if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
+    print('Trust level: %s' % verified.trust_text)
+
+  #print "Verified" if verified else "Unverified"

@@ -28,7 +28,7 @@ from ez_process import p2pReply, p2pCommand
 
 import ez_preferences as ep
 import ez_client as cl
-import ez_pipe   as pipe
+import ez_pipe as pipe
 
 #==============================================================================#
 #                                  VimMsgBox                                   #
@@ -38,20 +38,20 @@ class VimMsgBox(urwid.ListBox):
   """Prototype for our message box"""
 
   signals = ['exit_msgbox', 'status_update']
+
   def __init__(self, logo_file=None, divider=True, *args, **kwargs):
     self.display_logo(logo_file, divider)
 
 # TODO: JNicL No Commands needed Di 14 Okt 2014 00:03:09 CEST
 # VimMsgBox is max unselectable. Thus no keys will ever get captured directly
-    self.command_dict = {'j' : self.cmd_move_down,
-                         'k' : self.cmd_move_up,
+    self.command_dict = {'j': self.cmd_move_down,
+                         'k': self.cmd_move_up,
                          #'down' : self.cmd_exit_msgbox,
                          #'up' : self.cmd_unhandled,
                          'q': self.cmd_close_list,
                          # Blocking left & right arrow key.
-                         'left' : self.cmd_unhandled,
-                         'right' : self.cmd_unhandled,
-                         }
+                         'left': self.cmd_unhandled,
+                         'right': self.cmd_unhandled}
 
   def display_logo(self, file_name, divider):
     try:
@@ -66,12 +66,12 @@ class VimMsgBox(urwid.ListBox):
     slw = []
     for item in content[:-1]:
       if divider:
-        slw.extend([urwid.Text(item),urwid.Divider()])
+        slw.extend([urwid.Text(item), urwid.Divider()])
       else:
         slw.extend([urwid.Text(item)])
     slw.append(urwid.Text(content[-1]))
     slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
-            None, 'reveal focus') for w in slw])
+                                       None, 'reveal focus') for w in slw])
     urwid.ListBox.__init__(self, slw)
 
   def cmd_unhandled(self, *args):
@@ -132,15 +132,14 @@ class VimListBox(urwid.ListBox):
 
   def __init__(self, *args, **kwargs):
     urwid.ListBox.__init__(self, *args, **kwargs)
-    self.command_dict = {'j' : self.cmd_move_down,
-                         'k' : self.cmd_move_up,
-                         'down' : self.cmd_move_down,
-                         'up' : self.cmd_move_up,
+    self.command_dict = {'j': self.cmd_move_down,
+                         'k': self.cmd_move_up,
+                         'down': self.cmd_move_down,
+                         'up': self.cmd_move_up,
                          'q': self.cmd_close_list,
                          # Blocking left & right arrow key.
-                         'left' : self.cmd_unhandled,
-                         'right' : self.cmd_unhandled,
-                         }
+                         'left': self.cmd_unhandled,
+                         'right': self.cmd_unhandled}
 
   def cmd_unhandled(self, *args):
     pass
@@ -198,28 +197,25 @@ class VimCommandLine(urwid.Edit):
     except IOError:
       self.command_lines = []
     self.command_counter = len(self.command_lines)
-    self.command_dict = {"close"      : cl.cl.cmd_close,
+    self.command_dict = {"close": cl.cl.cmd_close,
                          #"contacts"   : cl.cl.cmd_get_contact_names,
                          #"users"      : cl.cl.cmd_get_online_users,
-                         "ping"       : cl.cl.cmd_ping,
-                         "bgping"     : cl.cl.cmd_ping_background,
-                         "add"        : cl.cl.cmd_add,
-                         "servermode" : cl.cl.cmd_servermode,
-                         "connect"    : cl.cl.cmd_connect,
-                         "auth"       : cl.cl.cmd_authentificate,
-                         "bg"         : cl.cl.cmd_bg,
-                         "sync"       : cl.cl.cmd_sync,
-                         "bgsync"     : cl.cl.cmd_passive_sync,
-                         "ips"        : cl.cl.cmd_ips,
-                         "key"        : cl.cl.cmd_key,
-                         #"verify" : cl.cl.cmd_verify,
-                         "send"       : cl.cl.cmd_send_msg,
-                         "quit"       : self.cmd_close,
-                         "q"          : self.cmd_close,
-                         "show"       : self.cmd_show,
-                         "open"       : self.cmd_open
-                         #"clear" :
-                        }
+                         "ping": cl.cl.cmd_ping,
+                         "bgping": cl.cl.cmd_ping_background,
+                         "add": cl.cl.cmd_add,
+                         "servermode": cl.cl.cmd_servermode,
+                         "connect": cl.cl.cmd_connect,
+                         "auth": cl.cl.cmd_authentificate,
+                         "bg": cl.cl.cmd_bg,
+                         "sync": cl.cl.cmd_sync,
+                         "bgsync": cl.cl.cmd_passive_sync,
+                         "ips": cl.cl.cmd_ips,
+                         "key": cl.cl.cmd_key,
+                         "send": cl.cl.cmd_send_msg,
+                         "quit": self.cmd_close,
+                         "q": self.cmd_close,
+                         "show": self.cmd_show,
+                         "open": self.cmd_open}
 
   def cmd_show(self, file_name):
     try:
@@ -232,7 +228,7 @@ class VimCommandLine(urwid.Edit):
   def get_marked_contacts(self):
     if hasattr(self, 'contact_checkbox'):
       return [u for u in self.contact_checkbox if
-                self.contact_checkbox[u].state]
+              self.contact_checkbox[u].state]
     else:
       return []
 
@@ -240,16 +236,15 @@ class VimCommandLine(urwid.Edit):
     contacts = [urwid.Text("Contacts:")]
     self.contact_checkbox = {}
     for user in self.contacts:
-      user_id  = user[0]
-      on       = urwid.Text(("online", u"ON"))
-      off      = urwid.Text(("offline", u"OFF"))
-      status   = on if user[1] else off
+      user_id = user[0]
+      on = urwid.Text(("online", u"ON"))
+      off = urwid.Text(("offline", u"OFF"))
+      status = on if user[1] else off
       checkbox = urwid.CheckBox(user_id)
 
       self.contact_checkbox[user_id] = checkbox
       contacts += [urwid.Columns([checkbox, status])]
     return VimListBox(urwid.SimpleListWalker(contacts))
-
 
   def open_contacts(self):
     # get contact list
@@ -281,7 +276,7 @@ class VimCommandLine(urwid.Edit):
       for process_id in processes:
         pr = processes[process_id]
         pr_on = not pr.finished.isSet()
-        on  = urwid.Text(("online", u"ON"))
+        on = urwid.Text(("online", u"ON"))
         off = urwid.Text(("offline", u"OFF"))
         status = on if pr_on else off
         prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
@@ -412,36 +407,34 @@ class VimEdit(urwid.Edit):
 
   def __init__(self, **kwargs):
     urwid.Edit.__init__(self, **kwargs)
-    self.mode         = VimEdit.insert_mode
-    self.last_key     = None
+    self.mode = VimEdit.insert_mode
+    self.last_key = None
     self.double_press = False
-    self.initialized  = None
+    self.initialized = None
 
-    commands = {'cli_enter_cmdline'   : self.cmd_enter_cmdline,
-                'cli_delete_one'      : self.cmd_delete_one,
-                'cli_delete'          : self.cmd_delete,
-                'cli_insert'          : self.cmd_insert,
-                'cli_append'          : self.cmd_append,
-                'cli_delete'          : self.cmd_delete,
-                'cli_newline_low'     : self.cmd_newline_low,
-                'cli_newline_high'    : self.cmd_newline_high,
-                'cli_move_left'       : self.cmd_move_left,
-                'cli_move_right'      : self.cmd_move_right,
-                'cli_move_down'       : self.cmd_move_down,
-                'cli_move_up'         : self.cmd_move_up,
-                'cli_scroll_msg_up'   : self.cmd_scroll_msg_up,
-                'cli_scroll_msg_down' : self.cmd_scroll_msg_down
-                }
+    commands = {'cli_enter_cmdline': self.cmd_enter_cmdline,
+                'cli_delete_one': self.cmd_delete_one,
+                'cli_delete': self.cmd_delete,
+                'cli_insert': self.cmd_insert,
+                'cli_append': self.cmd_append,
+                'cli_delete': self.cmd_delete,
+                'cli_newline_low': self.cmd_newline_low,
+                'cli_newline_high': self.cmd_newline_high,
+                'cli_move_left': self.cmd_move_left,
+                'cli_move_right': self.cmd_move_right,
+                'cli_move_down': self.cmd_move_down,
+                'cli_move_up': self.cmd_move_up,
+                'cli_scroll_msg_up': self.cmd_scroll_msg_up,
+                'cli_scroll_msg_down': self.cmd_scroll_msg_down}
 
     self.command_dict = {}
     for cmd in commands:
-      if not cmd in ep.cli_command_dict:
+      if cmd not in ep.cli_command_dict:
         sys.stderr.write('ERROR: Command ' + cmd + ' not mapped')
         cl.cl.commandQueue.put(p2pCommand('shutdown'))
         sys.exit()
       for mapped_key in ep.cli_command_dict[cmd]:
         self.command_dict[mapped_key] = commands[cmd]
-
 
   def cmd_scroll_msg_up(self):
     ez_cli.vimmsgbox.keypress((self.maxcol, 20), 'up')
@@ -503,13 +496,15 @@ class VimEdit(urwid.Edit):
     self.cmd_newline_low(shift=-1)
 
   def cmd_move_left(self, pressed=CURSOR_LEFT):
-    if self.p==0: return pressed
-    p = move_prev_char(self.edit_text,0,self.p)
+    if self.p == 0:
+      return pressed
+    p = move_prev_char(self.edit_text, 0, self.p)
     self.set_edit_pos(p)
 
   def cmd_move_right(self):
-    if self.p >= len(self.edit_text): return CURSOR_RIGHT
-    p = move_next_char(self.edit_text,self.p,len(self.edit_text))
+    if self.p >= len(self.edit_text):
+      return CURSOR_RIGHT
+    p = move_next_char(self.edit_text, self.p, len(self.edit_text))
     self.set_edit_pos(p)
 
   def cmd_move_down(self, shift=1):
@@ -546,7 +541,7 @@ class VimEdit(urwid.Edit):
       else:
         #urwid.emit_signal(self, 'done', self, self.get_edit_text())
         for u in ez_cli.commandline.get_marked_contacts():
-          cl.cl.cmd_send_msg(u,self.get_edit_text())
+          cl.cl.cmd_send_msg(u, self.get_edit_text())
           ez_cli.status_update(u)
         self.set_edit_text('')
         #self.get_edit_text()
@@ -568,7 +563,7 @@ class VimEdit(urwid.Edit):
       self.last_key = key
       self.mode = VimEdit.command_mode
       urwid.emit_signal(self, 'command_mode', self, 'command mode')
-      self.cmd_move_left(pressed = key)
+      self.cmd_move_left(pressed=key)
 
     elif self.mode == VimEdit.insert_mode:
       urwid.Edit.keypress(self, size, key)
@@ -598,38 +593,37 @@ class ez_cli_urwid(urwid.Frame):
         +-------------------+
   """
 
-  def __init__(self, name = '', logging = False, *args, **kwargs):
-    self.vimedit       = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
-                                 multiline = True)
-    self.commandline   = VimCommandLine(self.vimedit, u'')
+  def __init__(self, name='', logging=False, *args, **kwargs):
+    self.vimedit = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
+                           multiline=True)
+    self.commandline = VimCommandLine(self.vimedit, u'')
 
     if ep.cli_start_in_insertmode:
-      self.vimedit.mode  = VimEdit.insert_mode
+      self.vimedit.mode = VimEdit.insert_mode
       self.commandline.set_edit_text(u'insert mode')
     else:
-      self.vimedit.mode  = VimEdit.command_mode
+      self.vimedit.mode = VimEdit.command_mode
       self.commandline.set_edit_text(u'command mode')
 
-    self.vimedit_f     = urwid.Filler(self.vimedit, valign = 'top')
-    self.vimedit_b     = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
+    self.vimedit_f = urwid.Filler(self.vimedit, valign='top')
+    self.vimedit_b = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
-    self.vimmsgbox     = VimMsgBox(logo_file = 'misc/logo.txt')
+    self.vimmsgbox = VimMsgBox(logo_file='misc/logo.txt')
     #self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
-    self.vimbox      = urwid.Pile([self.vimmsgbox_b, self.vimedit])
+    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit])
     #self.vimbox.set_focus(1)
-    self.vimbox_f    = urwid.Filler(self.vimbox, valign = 'top')
-
+    self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
 
     if ep.cli_status_height > 0:
-      self.statusline    = VimStatusline()
+      self.statusline = VimStatusline()
       for i in range(ep.cli_status_height-1):
         self.statusline.update_content('')
 
-      self.statusline_b  = urwid.BoxAdapter(self.statusline,
-                                            ep.cli_status_height)
+      self.statusline_b = urwid.BoxAdapter(self.statusline,
+                                           ep.cli_status_height)
 
     if hasattr(self, 'statusline'):
       self.command_and_status = urwid.Pile([self.statusline_b,
@@ -637,10 +631,9 @@ class ez_cli_urwid(urwid.Frame):
     else:
       self.command_and_status = self.commandline
 
-    focus_map = {
-    'heading': 'focus heading',
-    'options': 'focus options',
-    'line': 'focus line'}
+    focus_map = {'heading': 'focus heading',
+                 'options': 'focus options',
+                 'line': 'focus line'}
 
     class HorizontalBoxes(urwid.Columns):
       def __init__(self):
@@ -651,7 +644,7 @@ class ez_cli_urwid(urwid.Frame):
           del self.contents[self.focus_position + 1:]
 
         self.contents.append((urwid.AttrMap(box, 'options', focus_map),
-            self.options('weight', weight)))
+                             self.options('weight', weight)))
         self.focus_position = len(self.contents) - 1
 
       def close_box(self):
@@ -661,7 +654,7 @@ class ez_cli_urwid(urwid.Frame):
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
     self.top_f = urwid.Filler(self.top, 'top', ep.cli_msg_height +
-        ep.cli_edit_height)
+                              ep.cli_edit_height)
 
     urwid.Frame.__init__(self, self.top_f, footer=self.command_and_status)
 
@@ -678,12 +671,12 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
     signal.signal(signal.SIGINT, self.__close__)
 
-    self.name    = name
+    self.name = name
     self.logging = logging
     # TODO: (bcn 2014-10-19) This should also log errors
     if self.logging:
-      self.logger = open(ep.join(ep.location['log'], name + '_ez_cli_session.log'),
-                         'w')
+      self.logger = open(ep.join(ep.location['log'],
+                                 name + '_ez_cli_session.log'), 'w')
 
   def status_update(self, content):
     if self.logging:
@@ -751,11 +744,10 @@ def received_output(data):
       except:
         reply = None
       while reply:
-        if ((reply.replyType == p2pReply.success) or
-            (reply.replyType == p2pReply.error)):
+        if((reply.replyType == p2pReply.success) or
+           (reply.replyType == p2pReply.error)):
           status = "success" if reply.replyType == p2pReply.success else "ERROR"
-          ez_cli.status_update(
-                    ('Client reply %s: %s' % (status, reply.data)))
+          ez_cli.status_update(('Client reply %s: %s' % (status, reply.data)))
         elif reply.replyType == p2pReply.msg:
           # decrypt msg and print it on the screen
           if reply.data.recipient == cl.cl.name:
@@ -767,7 +759,7 @@ def received_output(data):
         else:
           # this case should not happen! (if theres something in the queue it
           # must be success,error or msg)
-          ez_cli.status_update( ('Client reply: nada' ))
+          ez_cli.status_update(('Client reply: nada'))
         try:
           reply = cl.cl.replyQueue.get(block=False)
         except:
@@ -809,8 +801,8 @@ try:
     sys.exit()
   cl.init_client(args[0], **ep.process_preferences)
   if not options.verbose:
-    ep.cli_status_height = 0 # disable statusline
-  ez_cli = ez_cli_urwid(name = args[0], logging = options.logging)
+    ep.cli_status_height = 0  # disable statusline
+  ez_cli = ez_cli_urwid(name=args[0], logging=options.logging)
 except ep.DomainError, err:
   sys.stderr.write('ERROR: %s\n' % str(err))
   cl.cl.commandQueue.put(p2pCommand('shutdown'))
@@ -829,10 +821,10 @@ if options.filename:
     with open(options.filename, 'r') as f:
       lines = f.readlines()
       for line in lines:
-        ez_cli.commandline.evaluate_command(line.replace('\n',''))
+        ez_cli.commandline.evaluate_command(line.replace('\n', ''))
   except IOError as e:
     ez_cli.status_update("Loading script failed. I/O error({0}): {1}".
-                          format(e.errno, e.strerror))
+                         format(e.errno, e.strerror))
   except:
     print "Unexpected error:", sys.exc_info()[0]
     raise
