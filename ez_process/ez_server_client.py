@@ -10,7 +10,7 @@ from ez_process_base import ez_process_base, p2pReply, p2pCommand
 import cPickle as pickle
 import ez_message as em
 import random
-import ez_crypto as ec
+from ez_gpg import ez_gpg
 
 #==============================================================================#
 #                            class ez_server_client                            #
@@ -18,7 +18,7 @@ import ez_crypto as ec
 
 class ez_server_client(ez_process_base):
 
-  authentifcation_words = {}
+  #authentifcation_words = {}
   authentifications = {}
 
   def __init__(self, *args, **kwargs):
@@ -108,7 +108,7 @@ class ez_server_client(ez_process_base):
 
     self.replyQueue.put(self.success('started authentification_in'))
     msg = str(random.random())
-    self.authentifcation_words[user_id] = msg
+    #self.authentifcation_words[user_id] = msg
 
     master = (host, port)
     cmd_dct = {'msg': msg, 'user_id': self.name}
@@ -150,9 +150,8 @@ class ez_server_client(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    er = ec.eZ_RSA()
     try:
-      sig = er.sign(er.get_private_key(self.name), str(msg))
+      sig = ez_gpg.sign_msg(str(msg))
     except:
       self.replyQueue.put(self.error('Failed to sign message.'))
       return
@@ -200,10 +199,8 @@ class ez_server_client(ez_process_base):
     self.replyQueue.put(self.success('started authentification_verify'))
     try:
       # check that the decripted message matches the original message.
-      er = ec.eZ_RSA()
-      if er.verify(er.get_public_key(user_id),
-                   self.authentifcation_words[user_id],
-                   reply_msg):
+      if ez_gpg.verify_signed_msg(reply_msg):
+        #self.authentifcation_words[user_id],
         cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
         self.add_client(**cmd_dct)
         self.client_authentificated(**cmd_dct)

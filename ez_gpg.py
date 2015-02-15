@@ -118,6 +118,19 @@ class ez_gpg(object):
     msg = self.gpg.decrypt_msg(cipher)
     return msg
 
+  @classmethod
+  def sign_msg(self, msg):
+    signed_msg = self.gpg.sign(msg)
+    return signed_msg
+
+  @classmethod
+  def verify_signed_msg(self, signed_msg):
+    verified = self.gpg.verify(signed_msg)
+    if(verified.trust_level is not None and
+       verified.trust_level >= verified.TRUST_FULLY):
+      return True
+    else:
+      return False
 
 ################################################################################
 #                                     main                                     #
@@ -126,13 +139,27 @@ class ez_gpg(object):
 if __name__ == '__main__':
   #ez_gpg.generate_key('yolo')
   data = 'randomdata'
-  print ez_gpg.gpg.list_keys()
+  #print ez_gpg.gpg.list_keys()
   #print(gpg.list_keys())
   #print find_key('gsec')
   #fp = find_key('gsec')
   #print  gpg.import_keys(fp)
   #print gpg.encrypt(data, fp)
-  try:
-    print ez_gpg.encrypt_msg('yolo', data)
-  except Exception as e:
-    print(e)
+  #try:
+    #print ez_gpg.encrypt_msg('yolo', data)
+  #except Exception as e:
+    #print(e)
+
+  #signed_data = ez_gpg.gpg.sign(data.data)
+  #verified = ez_gpg.gpg.verify(signed_data)
+
+  #stream = open("example.txt", "rb")
+
+  signed_data = ez_gpg.gpg.sign(data)
+
+  verified = ez_gpg.gpg.verify(signed_data.data)
+  print "verified:", verified.__dict__
+  if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
+    print('Trust level: %s' % verified.trust_text)
+
+  #print "Verified" if verified else "Unverified"

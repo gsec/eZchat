@@ -86,6 +86,11 @@ class ez_process_base(object):
       if(isinstance(self.__dict__[attr], types.FunctionType) or
          type(self.__dict__[attr]) is classmethod):
         handler[attr] = self.__dict__[attr]
+    return handler
+
+  @classmethod
+  def get_bases_handler(self):
+    handler = {}
     # add parent class functions
     for parent in (u for u in self.__bases__ if u is not object):
       parent_handler = parent.get_handler()

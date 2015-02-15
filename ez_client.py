@@ -80,6 +80,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     else:
       acception_rules = kwargs['acception_rules']
       self.set_acception_rules(**acception_rules)
+    print "kwargs['acception_rules']:", kwargs['acception_rules']
 
     self.timeout = CLIENT_TIMEOUT
 
@@ -95,7 +96,14 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     else:
       global_rule = 'Deny'
 
-    self.handlers = ez_process.get_handler()
+    self.handlers = ez_process.get_bases_handler()
+    self.handlers.update(self.get_handler())
+
+    for handler in self.handlers:
+      if handler in acception_rules:
+        self.handler_rules[handler] = acception_rules[handler]
+      else:
+        self.handler_rules[handler] = global_rule
 
 #===================#
 #  client receive   #
