@@ -56,7 +56,7 @@ class ez_ping(ez_process_base):
       return
 
     process_id = ('ping_reply', user_id)
-    if not process_id in self.background_processes:
+    if process_id not in self.background_processes:
 
       if 'success_callback' in cmd.data:
         self.success_callback[process_id] = cmd.data['success_callback']
@@ -75,32 +75,32 @@ class ez_ping(ez_process_base):
               self.replyQueue.put(cmd)
           except:
             cmd = self.error('Failed to remove user : ' + user_id +
-                               ' from ips.')
+                             ' from ips.')
             self.replyQueue.put(cmd)
           del self.background_processes[process_id]
 
-      if not user_id in self.ips:
+      if user_id not in self.ips:
         self.replyQueue.put(self.error("user not in client list"))
         if testing:
           return str(user_id) + " is not in client list"
       else:
-        master  = self.ips[user_id]
+        master = self.ips[user_id]
         cmd_dct = {'user_id': user_id}
-        ping    = {'ping_reply': cmd_dct}
-        msg     = pickle.dumps(ping)
+        ping = {'ping_reply': cmd_dct}
+        msg = pickle.dumps(ping)
         try:
           self.sockfd.sendto(msg, master)
           bgp = p2pCommand('start_background_process',
-                {'process_id'    : process_id,
-                 'callback'      : error_callback,
-                 'interval'      : epp.ping_reply_timeout})
+                           {'process_id': process_id,
+                            'callback': error_callback,
+                            'interval': epp.ping_reply_timeout})
           self.commandQueue.put(bgp)
 
         except IOError as e:
           self.replyQueue.put(self.error(str(e)))
           self.replyQueue.put(self.error("ping unsuccessful"))
     else:
-      self.replyQueue.put(self.error("cannot ping again, " + \
+      self.replyQueue.put(self.error("cannot ping again, " +
                                      "still waiting for response"))
 
   def ping_reply(self, cmd):
@@ -122,8 +122,8 @@ class ez_ping(ez_process_base):
       self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
 
     cmd_dct = {'user_id': user_id}
-    ping    = {'ping_success': cmd_dct}
-    msg     = pickle.dumps(ping)
+    ping = {'ping_success': cmd_dct}
+    msg = pickle.dumps(ping)
     try:
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
@@ -146,8 +146,8 @@ class ez_ping(ez_process_base):
 
     #user_id, user_addr = cmd.data
     if user_id in self.ips:
-      if (self.ips[user_id] == user_addr or
-          socket.gethostbyname('ez') == user_addr[0]):
+      if(self.ips[user_id] == user_addr or
+         socket.gethostbyname('ez') == user_addr[0]):
         process_id = ('ping_reply', user_id)
         pr = self.background_processes[process_id]
         pr.finished.set()
@@ -166,7 +166,7 @@ class ez_ping(ez_process_base):
       #return True
     #else:
     self.replyQueue.put(self.error("Received ping_success, source unknown: " +
-        str(user_addr)))
+                                   str(user_addr)))
     return False
 
   def ping_background(self, cmd):
@@ -194,8 +194,8 @@ class ez_ping(ez_process_base):
         self.reset_background_process(process_id)
 
     bgp = p2pCommand('start_background_process',
-            {'process_id'    : process_id,
-             'callback'      : ping_background_func,
-             'interval'      : epp.ping_bg_timeout,
-             'callback_args' : (self.commandQueue, self.ips, )})
+                     {'process_id': process_id,
+                      'callback': ping_background_func,
+                      'interval': epp.ping_bg_timeout,
+                      'callback_args': (self.commandQueue, self.ips, )})
     self.commandQueue.put(bgp)

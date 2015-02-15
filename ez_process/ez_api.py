@@ -10,7 +10,8 @@ import cPickle as pickle
 from ez_process_base import ez_process_base, p2pCommand
 
 # adding the eZchat path to search directory
-import sys, os
+import sys
+import os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              os.pardir))
 import ez_user as eu
@@ -52,8 +53,10 @@ class ez_api(ez_process_base):
     #msg_db_name = 'sqlite:///:memory:'
     # Doesn't work, however, as you seem to be relying on files. There
     # is also no need for seperate user and msg databases.
-    user_db_name = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_contacts'
-    msg_db_name  = 'sqlite:///' + ep.join(ep.location['db'], self.name) + '_messages'
+    user_db_name = ('sqlite:///' + ep.join(ep.location['db'], self.name) +
+                    '_contacts')
+    msg_db_name = ('sqlite:///' + ep.join(ep.location['db'], self.name) +
+                   '_messages')
 
     # uncomment here -> problem with private/public keys
     # TODO: (bcn 2014-10-19) It is peculiar that it works in the cli when both
@@ -61,11 +64,11 @@ class ez_api(ez_process_base):
     # both versions. We should craft a test that is closer to the implementation
     # used in ez_process and find the problem.
     #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
-    self.UserDatabase  = eu.user_database
-    self.MsgDatabase  = em.MessageDatabase(localdb=msg_db_name)
+    self.UserDatabase = eu.user_database
+    self.MsgDatabase = em.MessageDatabase(localdb=msg_db_name)
 
     if not self.UserDatabase.in_DB(name=self.name):
-      self.myself = eu.User(name=self.name, current_ip = '127.0.0.1:222')
+      self.myself = eu.User(name=self.name, current_ip='127.0.0.1:222')
       self.UserDatabase.add_entry(self.myself)
     else:
       self.myself = self.UserDatabase.get_entry(name=self.name)
@@ -107,7 +110,7 @@ class ez_api(ez_process_base):
     :type  port: integer
     """
     try:
-      cmd_dct = {'user_id': user_id, 'host': host, 'port':port}
+      cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
       self.add_client(**cmd_dct)
       self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
     except:
@@ -148,7 +151,7 @@ class ez_api(ez_process_base):
     :param port: server port
     :type  port: integer
     """
-    cmd_dct = {'host': host, 'port':int(port)}
+    cmd_dct = {'host': host, 'port': int(port)}
     try:
       self.commandQueue.put(p2pCommand('authentification_request', cmd_dct))
       cmd_dct['user_id'] = 'server'
@@ -171,7 +174,7 @@ class ez_api(ez_process_base):
     :type  port: integer
     """
     #master = (host, int(port))
-    cmd_dct = {'host': host, 'port':int(port)}
+    cmd_dct = {'host': host, 'port': int(port)}
     try:
       self.commandQueue.put(p2pCommand('connect_server', cmd_dct))
       cmd_dct['user_id'] = 'server'
@@ -185,7 +188,6 @@ class ez_api(ez_process_base):
       print ("background_processes:", self.background_processes)
     except:
       self.replyQueue.put(self.error("Syntax error in bp"))
-
 
   def cmd_sync(self, user_id):
     """
@@ -264,12 +266,12 @@ class ez_api(ez_process_base):
                                        ' to the msg database'))
       self.MsgDatabase.add_entry(mx)
 
-      if not user_id in self.ips:
+      if user_id not in self.ips:
         # Strategy: send msg to random guys
         return
 
       data = pickle.dumps(mx)
-      cmd_data = {'user_id': user_id, 'data':data}
+      cmd_data = {'user_id': user_id, 'data': data}
       self.commandQueue.put(p2pCommand('send', cmd_data))
 
     except:

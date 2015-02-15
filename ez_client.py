@@ -9,15 +9,19 @@
 #============#
 #from __future__ import print_function
 
-import sys, errno
-import socket, select
-import Queue, threading
+import sys
+import errno
+import socket
+import select
+import Queue
+import types
+import threading
 import cPickle as pickle
-import ez_message  as em
+import ez_message as em
 
 from datetime import datetime
-from ez_process      import p2pCommand, p2pReply, ez_process
-from ez_simple_cli   import ez_simple_cli
+from ez_process import p2pCommand, p2pReply, ez_process
+from ez_simple_cli import ez_simple_cli
 #from ez_user_methods import ez_user_methods
 #from ez_process      import ez_process_base
 
@@ -43,6 +47,8 @@ class client(ez_process, ez_simple_cli, threading.Thread):
   (IO + incomming msges), the user db and pulling commands/results from the
   queues.
   """
+  handler_rules = {}
+
   def __init__(self, fail_connect=False, **kwargs):
     threading.Thread.__init__(self)
     super(client, self).__init__(**kwargs)
@@ -67,7 +73,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
 
     self.command_history = {}
 
-    if not 'acception_rules' in kwargs:
+    if 'acception_rules' not in kwargs:
       acception_rules = {}
       acception_rules['global_rule'] = 'Allow'
       self.set_acception_rules(**acception_rules)
@@ -89,12 +95,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     else:
       global_rule = 'Deny'
 
-    for handler in self.handlers:
-      if handler in acception_rules:
-        self.handler_rules[handler] = acception_rules[handler]
-      else:
-        self.handler_rules[handler] = global_rule
-
+    self.handlers = ez_process.get_handler()
 
 #===================#
 #  client receive   #
@@ -117,7 +118,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     if not readable:
       return
     sdata, user_addr = self.sockfd.recvfrom(4048)
-    if sdata != None:
+    if sdata is not None:
       try:
         data = pickle.loads(sdata)
       except:
@@ -125,11 +126,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
         self.replyQueue.put(self.error("data not pickled -> rejected"))
         return
 
-      # TODO: nick new interface here Do 07 Aug 2014 12:59:17 CEST
-      # it shouldn't be possible that every user can start commands on other
-      # users clients. We need some security measures here and we may connect
-      # them with options like how often one can be pinged or being requested to
-      # send packages etc.
       if isinstance(data, dict):
         for command in data:
           try:
@@ -152,8 +148,8 @@ class client(ez_process, ez_simple_cli, threading.Thread):
               self.commandQueue.put(user_cmd)
 
           except:
-            self.replyQueue.put(self.error('No acception rule set for command '+
-                                            command + '.'))
+            self.replyQueue.put(self.error('No acception rule set for command' +
+                                           ' ' + command + '.'))
 
       elif isinstance(data, em.Message):
         self.replyQueue.put(self.success("received msg"))
@@ -209,12 +205,10 @@ class client(ez_process, ez_simple_cli, threading.Thread):
         except Queue.Empty:
           pass
 
-
 def init_client(name, **kwargs):
   global cl
   cl = client(name=name, write_to_pipe=True, **kwargs)
   cl.start()
-
 
 if __name__ == "__main__":
 

@@ -43,7 +43,7 @@ class ez_db_sync(ez_process_base):
       user_addr = self.ips[user_id]
       cmd_dct = {'user_id': self.name, 'UID_list': self.MsgDatabase.UID_list()}
       db_sync_request = {'db_sync_request_in': cmd_dct}
-      msg             = pickle.dumps(db_sync_request)
+      msg = pickle.dumps(db_sync_request)
       try:
         self.sockfd.sendto(msg, user_addr)
       except IOError as e:
@@ -54,7 +54,7 @@ class ez_db_sync(ez_process_base):
     Answer to a db_sync_request_out. Do not call.
     """
     try:
-      user_id  = cmd.data['user_id']
+      user_id = cmd.data['user_id']
       UID_list = cmd.data['UID_list']
     except:
       self.replyQueue.put(self.error("user_id/UID_list not properly specified" +
@@ -63,11 +63,11 @@ class ez_db_sync(ez_process_base):
 
     if user_id in self.ips:
       self.replyQueue.put(self.success('Received msg db sync request from: ' +
-                                        user_id))
+                                       user_id))
       user_addr = self.ips[user_id]
-      self.replyQueue.put(self.success('Received '  + str(UID_list)))
+      self.replyQueue.put(self.success('Received ' + str(UID_list)))
       UIDs_to_sync = self.MsgDatabase.complement_entries(UID_list)
-      self.replyQueue.put(self.success('Sending '  + str(UIDs_to_sync)))
+      self.replyQueue.put(self.success('Sending ' + str(UIDs_to_sync)))
       if len(UIDs_to_sync) != 0:
         msges = self.MsgDatabase.get_entries(UIDs_to_sync)
 
@@ -79,12 +79,8 @@ class ez_db_sync(ez_process_base):
           self.commandQueue.put(p2pCommand('send', cmd_dct))
 
   def db_sync_background(self, cmd):
-    # we assign a random, but unique process id
     process_id = ('db_sync_request_out', 'all')
 
-    #=================#
-    #  functionblock  #
-    #=================#
     def db_sync_func(self_timer, queue, user_ips):
       user_ids = user_ips.keys()
 
@@ -92,14 +88,13 @@ class ez_db_sync(ez_process_base):
         cmd_dct = {'user_id': user_id}
         queue.put(p2pCommand('db_sync_request_out', cmd_dct))
 
-      # Reset process
       if process_id in self.background_processes:
         self.reset_background_process(process_id)
 
     bgp = p2pCommand('start_background_process',
-                    {'process_id'    : process_id,
-                     'callback'      : db_sync_func,
-                     'interval'      : epp.db_bgsync_timeout,
-                     'callback_args' : (self.commandQueue, self.ips, )})
+                     {'process_id': process_id,
+                      'callback': db_sync_func,
+                      'interval': epp.db_bgsync_timeout,
+                      'callback_args': (self.commandQueue, self.ips, )})
     self.commandQueue.put(bgp)
 

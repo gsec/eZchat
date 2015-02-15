@@ -58,11 +58,11 @@ class ez_contact(ez_process_base):
       user_addr = self.ips[user_id]
       cmd_dct = {'user': self.myself}
       contact_request = {'contact_request_in': cmd_dct}
-      msg             = pickle.dumps(contact_request)
+      msg = pickle.dumps(contact_request)
       try:
         self.sockfd.sendto(msg, user_addr)
         self.replyQueue.put(self.success("sent contact request: " +
-          str(self.myself.UID)))
+                                         str(self.myself.UID)))
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
 
@@ -82,13 +82,13 @@ class ez_contact(ez_process_base):
       print "user/host/port not properly specified in contact_request_in"
 
     self.replyQueue.put(self.success("received contact request"))
-    assert(self.myself != None)
+    assert(self.myself is not None)
 
     self.replyQueue.put(self.success("sent contact data: " +
-                                      str(self.myself.UID)))
+                                     str(self.myself.UID)))
     cmd_dct = {'user': self.myself}
-    myself  = {'add_contact': cmd_dct}
-    msg     = pickle.dumps(myself)
+    myself = {'add_contact': cmd_dct}
+    msg = pickle.dumps(myself)
     try:
       self.sockfd.sendto(msg, (host, port))
     except IOError as e:
@@ -103,7 +103,8 @@ class ez_contact(ez_process_base):
     if not self.UserDatabase.in_DB(UID=new_user.UID):
       #self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
-      self.replyQueue.put(self.success("new contact registered: " + new_user.UID))
+      self.replyQueue.put(self.success("new contact registered: " +
+                                       new_user.UID))
     else:
       self.replyQueue.put(self.success("User already in database. " +
                                        "Contact updated."))

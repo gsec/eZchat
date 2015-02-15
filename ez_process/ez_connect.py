@@ -6,14 +6,17 @@
 #  Includes  #
 #============#
 
+import os
 import types
-import Queue, thread, threading, os
+import Queue
+import thread
+import threading
 from ez_process_base import ez_process_base, p2pCommand
 
-import cPickle   as pickle
-import ez_user   as eu
+import cPickle as pickle
+import ez_user as eu
 import ez_packet as ep
-import ez_pipe   as pipe
+import ez_pipe as pipe
 
 #==============================================================================#
 #                                  ez_connect                                  #
@@ -61,9 +64,9 @@ class ez_connect(ez_process_base):
     except:
       print "master not properly specified in connect"
 
-    cmd_dct      = {'user_id': self.name}
+    cmd_dct = {'user_id': self.name}
     conn_request = {'connection_request': cmd_dct}
-    msg          = pickle.dumps(conn_request)
+    msg = pickle.dumps(conn_request)
     try:
       if self.fail_connect:
         pass
@@ -73,7 +76,6 @@ class ez_connect(ez_process_base):
         self.replyQueue.put(cmd)
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
-
 
   def connection_request(self, cmd):
     """
@@ -96,10 +98,10 @@ class ez_connect(ez_process_base):
       return
 
     process_id = ('connection_request', user_addr)
-    if not process_id in self.background_processes:
+    if process_id not in self.background_processes:
       cmd_dct = {'user_id': self.name}
       con_holepunch = {'connection_nat_traversal': cmd_dct}
-      msg           = pickle.dumps(con_holepunch)
+      msg = pickle.dumps(con_holepunch)
       try:
         self.sockfd.sendto(msg, user_addr)
 
@@ -109,9 +111,9 @@ class ez_connect(ez_process_base):
           del self.background_processes[process_id]
 
         bgp = p2pCommand('start_background_process',
-              {'process_id'    : process_id,
-               'callback'      : connection_failed_func,
-               'interval'      : 5})
+                         {'process_id': process_id,
+                          'callback': connection_failed_func,
+                          'interval': 5})
         self.commandQueue.put(bgp)
         cmd = self.success("connection request from user:" +
                            str(user_addr) + " with id: " + user_id)
@@ -137,15 +139,15 @@ class ez_connect(ez_process_base):
     #try:
       #user_id, user_addr = cmd.data
     try:
-      user_id   = cmd.data['user_id']
+      user_id = cmd.data['user_id']
       user_addr = (cmd.data['host'], cmd.data['port'])
     except:
       print ("user_id/host/port not properly specified in" +
              "connection_nat_traversal")
       return
     cmd_dct = {'user_id': self.name}
-    con_success     = {'connection_success': cmd_dct}
-    msg             = pickle.dumps(con_success)
+    con_success = {'connection_success': cmd_dct}
+    msg = pickle.dumps(con_success)
 
     cmd = self.success("nat traversal succeded: " + str(user_addr))
     cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
@@ -153,7 +155,6 @@ class ez_connect(ez_process_base):
 
     self.replyQueue.put(cmd)
     self.sockfd.sendto(msg, user_addr)
-
 
   def connection_success(self, cmd):
     """
@@ -166,8 +167,8 @@ class ez_connect(ez_process_base):
     """
     try:
       user_id = cmd.data['user_id']
-      host    = cmd.data['host']
-      port    = cmd.data['port']
+      host = cmd.data['host']
+      port = cmd.data['port']
     except:
       print "user_id, host, port not properly specified in connection_success"
 
@@ -179,15 +180,15 @@ class ez_connect(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("user: " + str(user_addr) +" with id: " + \
-                                      user_id + " has connected"))
+    self.replyQueue.put(self.success("user: " + str(user_addr) + " with id: " +
+                        user_id + " has connected"))
 
     cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
 
     if hasattr(self, 'server'):
-      con_success     = {'connection_server_success': {}}
-      msg             = pickle.dumps(con_success)
+      con_success = {'connection_server_success': {}}
+      msg = pickle.dumps(con_success)
 
       self.sockfd.sendto(msg, user_addr)
 
@@ -201,8 +202,8 @@ class ez_connect(ez_process_base):
     - (user_id, (user_ip, user_port)) = cmd.data
     """
     try:
-      host    = cmd.data['host']
-      port    = cmd.data['port']
+      host = cmd.data['host']
+      port = cmd.data['port']
     except:
       print "user_id, host, port not properly specified in connection_success"
 
