@@ -6,32 +6,32 @@
 #  Includes  #
 #============#
 
-import ez_process_base as epb
-import ez_background_process as ebp
-import ez_server_client as esc
-import ez_contact as ec
-import ez_relay as er
-import ez_db_sync as eds
-import ez_ping as ep
-import ez_connect as et
-import ez_api as ea
-import ez_process_preferences as epp
+import ez_process_base
+from ez_background_process import ez_background_process
+from ez_server_client import ez_server_client
+from ez_contact import ez_contact
+from ez_relay import ez_relay
+from ez_db_sync import ez_db_sync
+from ez_ping import ez_ping
+from ez_api import ez_api
+from ez_connect import ez_connect
 
 #===========#
 #  Globals  #
 #===========#
 
-p2pCommand = epb.p2pCommand
-p2pReply = epb.p2pReply
+p2pCommand = ez_process_base.p2pCommand
+p2pReply = ez_process_base.p2pReply
 
-class ez_process(ebp.ez_background_process,
-                 esc.ez_server_client,
-                 ec.ez_contact,
-                 er.ez_relay,
-                 eds.ez_db_sync,
-                 ep.ez_ping,
-                 ea.ez_api,
-                 et.ez_connect):
+
+class ez_process(ez_background_process,
+                 ez_server_client,
+                 ez_contact,
+                 ez_relay,
+                 ez_db_sync,
+                 ez_ping,
+                 ez_api,
+                 ez_connect):
   def __init__(self, **kwargs):
     super(ez_process, self).__init__(**kwargs)
 

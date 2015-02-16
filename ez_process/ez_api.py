@@ -240,11 +240,10 @@ class ez_api(ez_process_base):
       self.replyQueue.put(self.error("Syntax error in key"))
 
   def cmd_send_msg(self, user_id, msg):
-    """
-    Send an encrypted message.
+    """ Sends an encrypted message.
 
-    The method requires the the target client to be online. The encryption can
-    be done only if a valid public key of the targets client is available.
+    The method requires the target client to be online. The encryption can only
+    be done if a valid public key of the targets client is available.
 
     :param user_id: clients username
     :type  user_id: string
@@ -252,6 +251,7 @@ class ez_api(ez_process_base):
     :param msg: message
     :type  msg: string
     """
+
     try:
       if not self.UserDatabase.in_DB(name=user_id):
         # raise error instead

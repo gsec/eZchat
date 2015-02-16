@@ -11,10 +11,10 @@ import Queue
 import thread
 import threading
 
+
 #==============================================================================#
 #                                 class Timer                                  #
 #==============================================================================#
-
 class Timer(threading._Timer):
   """
   Timer instances are used in the client class to start timed non-blocking
