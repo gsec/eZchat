@@ -28,18 +28,18 @@ class ez_gpg(object):
       #return ep.join(ep.location['gpg'], fname)
 
   @classmethod
-  def find_key(self, nickname=None):
-    if nickname is None:
+  def find_key(self, user=None):
+    if user is None:
       print("yolowtf!!")
       return None
 
-    thatkey = [(any(nickname in u for u in key['uids']))
+    thatkey = [(any(user in u for u in key['uids']))
                for key in self.gpg.list_keys()]
     if not any(thatkey):
       raise Exception('Key not found')
     thatkey = self.gpg.list_keys()[thatkey.index(True)]
     print "nick, fingerprint"
-    print nickname, thatkey['fingerprint']
+    print user, thatkey['fingerprint']
     return thatkey['fingerprint']
 
   @classmethod
