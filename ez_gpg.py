@@ -125,7 +125,7 @@ class ez_gpg(object):
 
   @classmethod
   def verify_signed_msg(self, signed_msg):
-    verified = self.gpg.verify(signed_msg)
+    verified = self.gpg.verify(signed_msg.data)
     if(verified.trust_level is not None and
        verified.trust_level >= verified.TRUST_FULLY):
       return True
@@ -138,8 +138,14 @@ class ez_gpg(object):
 
 if __name__ == '__main__':
   #ez_gpg.generate_key('yolo')
-  data = 'randomdata'
+  #data = 'randomdata'
   #print ez_gpg.gpg.list_keys()
+
+  #with open('ez.pub', 'r') as f:
+    #ez_key = f.read()
+    #ez_gpg.gpg.import_keys(ez_key)
+
+    #f.write(ez_gpg.gpg.export_keys(u'8D38E2A7CC1D9602'))
   #print(gpg.list_keys())
   #print find_key('gsec')
   #fp = find_key('gsec')
@@ -162,4 +168,4 @@ if __name__ == '__main__':
   if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
     print('Trust level: %s' % verified.trust_text)
 
-  #print "Verified" if verified else "Unverified"
+  print "Verified" if verified else "Unverified"
