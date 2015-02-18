@@ -18,6 +18,8 @@ import ez_user as eu
 import ez_message as em
 import ez_preferences as ep
 
+from ez_gpg import ez_gpg
+
 #==============================================================================#
 #                                 class ez_api                                 #
 #==============================================================================#
@@ -77,7 +79,6 @@ class ez_api(ez_process_base):
     """ Client shutdown """
     self.enableCLI = False
     self.commandQueue.put(p2pCommand('shutdown'))
-    return
 
   #def cmd_get_online_users(self):
     ##return [(user, self.ips[user]) for user in self.ips]

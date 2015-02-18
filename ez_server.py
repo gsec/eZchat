@@ -17,7 +17,7 @@ if __name__ == "__main__":
   acception_rules['ping_reply']              = 'Allow'
 
   prefs = {'acception_rules':acception_rules}
-  cl = client(name = "server", **prefs)
+  cl = client(name = "eZchat", **prefs)
 
   cl.enableCLI = True
   cl.commandQueue.put(p2pCommand('servermode', cmd_dct))
