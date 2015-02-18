@@ -7,6 +7,7 @@
 #============#
 
 from ez_process_base import ez_process_base, p2pReply
+from ez_gpg import ez_gpg
 import cPickle as pickle
 
 #==============================================================================#
@@ -66,10 +67,10 @@ class ez_contact(ez_process_base):
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
 
+
   def contact_request_in(self, cmd):
     """
-    User asks for contact data. We might have an options here restricting the
-    users being allowed to request contact data.
+    User asks for contact data.
 
     - cmd.data['user'] = user (User class instance)
     - host, port automatically filled by the receive method (see ez_p2p.py)
@@ -101,12 +102,13 @@ class ez_contact(ez_process_base):
       self.replyQueue.put(self.error("User not properly specified " +
                                      "in add_contact"))
     if not self.UserDatabase.in_DB(UID=new_user.UID):
-      #self.myself  = eu.User(name=self.name)
       self.UserDatabase.add_entry(new_user)
       self.replyQueue.put(self.success("new contact registered: " +
                                        new_user.UID))
+      ez_gpg.import_key(new_user.public_key)
     else:
       self.replyQueue.put(self.success("User already in database. " +
                                        "Contact updated."))
-      #self.myself = self.UserDatabase.update_entry(new_user)
+      ez_gpg.import_key(new_user.public_key)
+      self.UserDatabase.update_entry(new_user)
 

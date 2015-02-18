@@ -30,17 +30,31 @@ class ez_gpg(object):
   @classmethod
   def find_key(self, nickname=None):
     if nickname is None:
-      print("yolowtf!!")
-      return None
+      raise ValueError('No nickname given')
 
     thatkey = [(any(nickname in u for u in key['uids']))
                for key in self.gpg.list_keys()]
+
     if not any(thatkey):
       raise Exception('Key not found')
+
     thatkey = self.gpg.list_keys()[thatkey.index(True)]
-    print "nick, fingerprint"
-    print nickname, thatkey['fingerprint']
     return thatkey['fingerprint']
+
+  @classmethod
+  def export_key(self, fingerprint=None, nickname=None):
+    if fingerprint:
+      return self.gpg.export_keys(fingerprint)
+    elif nickname:
+      try:
+        fingerprint = self.find_key(nickname)
+      except:
+        raise
+      return self.gpg.export_keys(fingerprint)
+
+  @classmethod
+  def import_key(self, publickey):
+    self.gpg.import_keys(publickey)
 
   @classmethod
   def check_keys(self, key_id=None, remote_check=True):
@@ -161,11 +175,13 @@ if __name__ == '__main__':
 
   #stream = open("example.txt", "rb")
 
-  signed_data = ez_gpg.gpg.sign(data)
+  #signed_data = ez_gpg.gpg.sign(data)
 
-  verified = ez_gpg.gpg.verify(signed_data.data)
-  print "verified:", verified.__dict__
-  if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
-    print('Trust level: %s' % verified.trust_text)
+  #verified = ez_gpg.gpg.verify(signed_data.data)
+  #print "verified:", verified.__dict__
+  #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
+    #print('Trust level: %s' % verified.trust_text)
 
-  print "Verified" if verified else "Unverified"
+  #print "Verified" if verified else "Unverified"
+
+  print ez_gpg.export_key(nickname='eZchat')
