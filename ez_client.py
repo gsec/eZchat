@@ -22,8 +22,6 @@ import ez_message as em
 from datetime import datetime
 from ez_process import p2pCommand, p2pReply, ez_process
 from ez_simple_cli import ez_simple_cli
-#from ez_user_methods import ez_user_methods
-#from ez_process      import ez_process_base
 
 CLIENT_TIMEOUT = 0.1
 
@@ -76,11 +74,12 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     if 'acception_rules' not in kwargs:
       acception_rules = {}
       acception_rules['global_rule'] = 'Allow'
+      acception_rules = {'global_rule': 'Allow'}
       self.set_acception_rules(**acception_rules)
     else:
       acception_rules = kwargs['acception_rules']
+      acception_rules = {'global_rule': 'Allow'}
       self.set_acception_rules(**acception_rules)
-    print "kwargs['acception_rules']:", kwargs['acception_rules']
 
     self.timeout = CLIENT_TIMEOUT
 
@@ -123,15 +122,16 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       readable, _, _ = select.select([self.sockfd], [], [], 0)
     except:
       readable = None
+
     if not readable:
       return
-    sdata, user_addr = self.sockfd.recvfrom(4048)
+
+    sdata, user_addr = self.sockfd.recvfrom(8096)
     if sdata is not None:
       try:
         data = pickle.loads(sdata)
-      except:
-        print "sdata:", sdata
-        self.replyQueue.put(self.error("data not pickled -> rejected"))
+      except Exception as e:
+        self.replyQueue.put(self.error(str(e)))
         return
 
       if isinstance(data, dict):
@@ -148,7 +148,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
                 execute = False
             else:
               execute = False
-
             if execute:
               cmd_dct = data[command]
               cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
