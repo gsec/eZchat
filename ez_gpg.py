@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #encoding: utf-8
+import re
 import os
 import gnupg
 import ez_preferences as ep
@@ -146,13 +147,23 @@ class ez_gpg(object):
     else:
       return False
 
+  @classmethod
+  def separate_msg_signature(self, signed_msg):
+    pat = '[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)'
+    try:
+      msg = re.search(pat, signed_msg.data, re.MULTILINE).groups(0)[0]
+    except:
+      raise Exception('Failed to extract the message.')
+
+    return msg
+
 ################################################################################
 #                                     main                                     #
 ################################################################################
 
 if __name__ == '__main__':
   #ez_gpg.generate_key('yolo')
-  #data = 'randomdata'
+  data = 'randomdata'
   #print ez_gpg.gpg.list_keys()
 
   #with open('ez.pub', 'r') as f:
@@ -175,8 +186,13 @@ if __name__ == '__main__':
 
   #stream = open("example.txt", "rb")
 
-  #signed_data = ez_gpg.gpg.sign(data)
-
+  signed_data = ez_gpg.gpg.sign(data)
+  print "signed_data:", signed_data.data
+  import re
+  pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
+  msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
+  print "msg.groups():", msg.groups()[0]
+  #print "signed_data.data:", signed_data.data
   #verified = ez_gpg.gpg.verify(signed_data.data)
   #print "verified:", verified.__dict__
   #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
@@ -184,4 +200,4 @@ if __name__ == '__main__':
 
   #print "Verified" if verified else "Unverified"
 
-  print ez_gpg.export_key(nickname='eZchat')
+  #print ez_gpg.export_key(nickname='eZchat')

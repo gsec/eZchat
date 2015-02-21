@@ -9,6 +9,7 @@
 from ez_process_base import ez_process_base, p2pReply, p2pCommand
 import cPickle as pickle
 import ez_message as em
+import re
 import random
 from ez_gpg import ez_gpg
 
@@ -18,7 +19,7 @@ from ez_gpg import ez_gpg
 
 class ez_server_client(ez_process_base):
 
-  #authentifcation_words = {}
+  authentifcation_words = {}
   authentifications = {}
 
   def __init__(self, *args, **kwargs):
@@ -107,8 +108,10 @@ class ez_server_client(ez_process_base):
       return
 
     self.replyQueue.put(self.success('started authentification_in'))
+
+    # The message to-be signed is a random float between 0 and 1
     msg = str(random.random())
-    #self.authentifcation_words[user_id] = msg
+    self.authentifcation_words[user_id] = msg
 
     master = (host, port)
     cmd_dct = {'msg': msg, 'user_id': self.name}
@@ -149,6 +152,15 @@ class ez_server_client(ez_process_base):
       pr.finished.set()
       pr.cancel()
       del self.background_processes[process_id]
+
+    isdigit = re.search('^(0\.\d+)$', msg)
+    try:
+      assert(len(isdigit.groups()) == 1)
+    except:
+      err_msg = ('Verification rejected.  The message to-be signed is not a' +
+                 ' positive float smaller 1.')
+      self.replyQueue.put(self.error(err_msg))
+      return
 
     try:
       sig = ez_gpg.sign_msg(str(msg))
@@ -201,18 +213,26 @@ class ez_server_client(ez_process_base):
       # check that the decripted message matches the original message.
       if ez_gpg.verify_signed_msg(reply_msg):
         #self.authentifcation_words[user_id],
-        cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
-        self.add_client(**cmd_dct)
-        self.client_authentificated(**cmd_dct)
+        auth_msg = ez_gpg.separate_msg_signature(reply_msg)
+        if auth_msg == self.authentifcation_words[user_id]:
+          cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
+          self.add_client(**cmd_dct)
+          self.client_authentificated(**cmd_dct)
 
-        auth_success = {'authentification_success': {}}
-        msg = pickle.dumps(auth_success)
+          auth_success = {'authentification_success': {}}
+          msg = pickle.dumps(auth_success)
 
-        master = (host, port)
-        self.sockfd.sendto(msg, master)
+          master = (host, port)
+          self.sockfd.sendto(msg, master)
+
+          self.replyQueue.put(self.success('User trusted and correct msg.'))
+        else:
+          self.replyQueue.put(self.error('Declined user: ' + user_id +
+                                         '. Wrong msg: ' + auth_msg))
 
     except:
-      self.replyQueue.put(self.success('Declined user: ' + user_id))
+      self.replyQueue.put(self.error('Declined user: ' + user_id +
+                                     '. Not trusted.'))
 
   def authentification_success(self, cmd):
     """
