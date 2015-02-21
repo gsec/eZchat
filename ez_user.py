@@ -6,8 +6,9 @@
 #  Includes  #
 #============#
 from Crypto.Hash import SHA # Shorter IDs than with 256
-import ez_crypto as ec
 import ez_database as ed
+
+from ez_gpg import ez_gpg
 
 #==============================================================================#
 #                                  class User                                  #
@@ -37,9 +38,14 @@ class User(object):
       self.name = name
       if public_key:
         self.public_key = public_key
+      # if no public key provided  the key is retrieved from the key ring
       else:
-        er = ec.eZ_RSA()
-        self.public_key = er.generate_keys(self.name)
+        try:
+          self.public_key = ez_gpg.export_key(nickname=name)
+        except:
+          # We could allow the user to generate a key at this stage
+          raise
+
       self.UID = SHA.new(self.name + self.public_key).hexdigest()
 
       self.IP = current_ip
