@@ -112,8 +112,9 @@ class ez_gui(Ui_gui_mainwindow_setup, QtGui.QDialog):
     self.textShow.insertPlainText(self.data)
     self.textShow.moveCursor(QtGui.QTextCursor.End)
 """
-    
 
-app = QtGui.QApplication(sys.argv)
-win = ez_gui()
-sys.exit(app.exec_())
+
+if __name__ == "__main__":
+  app = QtGui.QApplication(sys.argv)
+  win = ez_gui()
+  sys.exit(app.exec_())
