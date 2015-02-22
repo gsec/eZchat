@@ -98,7 +98,7 @@ class ez_ping(ez_process_base):
       self.error("cannot ping again, still waiting for response")
 
   @command_args
-  def ping_reply(self, user_id, user_addr):
+  def ping_reply(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -107,10 +107,15 @@ class ez_ping(ez_process_base):
     :param user_id: User nickname
     :type  user_id: string
 
-    :param user_addr: Endpoint of a Server/Client (Ip, Port)
-    :type  user_addr: (string, int)
+
+    :param host: Ip of a Server/Client
+    :type  host: string
+
+    :param port: Port of a Server/Client
+    :type  port: int
     """
 
+    user_addr = (host, port)
     if not epp.silent_ping:
       self.success("ping request from: " + str(user_addr))
 
@@ -122,7 +127,8 @@ class ez_ping(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def ping_success(self, user_id, user_addr):
+  @command_args
+  def ping_success(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -131,10 +137,14 @@ class ez_ping(ez_process_base):
     :param user_id: User nickname
     :type  user_id: string
 
-    :param user_addr: Endpoint of a Server/Client (Ip, Port)
-    :type  user_addr: (string, int)
+    :param host: Ip of a Server/Client
+    :type  host: string
+
+    :param port: Port of a Server/Client
+    :type  port: int
     """
 
+    user_addr = (host, port)
     if user_id in self.ips:
       if(self.ips[user_id] == user_addr or
          socket.gethostbyname('ez') == user_addr[0]):

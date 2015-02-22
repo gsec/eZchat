@@ -168,6 +168,7 @@ def command_args(process_func):
         assert(arg in cmd.data)
         kwargs[arg] = cmd.data[arg]
       except:
-        raise Exception('Missing argument: ' + arg)
+        err_msg = 'Missing argument: ' + arg + ' in function: ' + process_func.__name__
+        raise Exception(err_msg)
     return process_func(self, **kwargs)
   return assign_args
