@@ -11,7 +11,7 @@ import types
 import Queue
 import thread
 import threading
-from ez_process_base import ez_process_base, p2pCommand
+from ez_process_base import ez_process_base, p2pCommand, command_args
 
 import cPickle as pickle
 import ez_user as eu
@@ -49,7 +49,8 @@ class ez_connect(ez_process_base):
 #  UDP-Holepunching methods  #
 #============================#
 
-  def connect(self, cmd):
+  @command_args
+  def connect(self, master):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -57,12 +58,9 @@ class ez_connect(ez_process_base):
     from client B/A. Client A/B starts a connection_request, but in practice
     only one of the two 'connects' get passed the clients NAT.
 
-    - (user_ip, user_port) = cmd.data
+    :param master: Endpoint of a Server/Client (Ip, Port)
+    :type  master: (string, int)
     """
-    try:
-      master = cmd.data['master']
-    except:
-      print "master not properly specified in connect"
 
     cmd_dct = {'user_id': self.name}
     conn_request = {'connection_request': cmd_dct}
@@ -72,12 +70,12 @@ class ez_connect(ez_process_base):
         pass
       else:
         self.sockfd.sendto(msg, master)
-        cmd = self.success("start connection with " + str(master))
-        self.replyQueue.put(cmd)
+        self.success("start connection with " + str(master))
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
-  def connection_request(self, cmd):
+  @command_args
+  def connection_request(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -88,14 +86,12 @@ class ez_connect(ez_process_base):
     process is started, informing, if necessary, client A of the failed
     connection process.
 
-    - (user_id, (user_ip, user_port)) = cmd.data
+    :param user_id: User nickname
+    :type  user_id: string
+
+    :param user_addr: Endpoint of a Server/Client (Ip, Port)
+    :type  user_addr: (string, int)
     """
-    try:
-      user_id = cmd.data['user_id']
-      user_addr = (cmd.data['host'], cmd.data['port'])
-    except:
-      print "user_id/host/port not properly specified in connection_request"
-      return
 
     process_id = ('connection_request', user_addr)
     if process_id not in self.background_processes:
@@ -106,8 +102,7 @@ class ez_connect(ez_process_base):
         self.sockfd.sendto(msg, user_addr)
 
         def connection_failed_func(self_timer):
-          cmd = self.error("connection failed with: " + str(user_addr))
-          self.replyQueue.put(cmd)
+          self.error("connection failed with: " + str(user_addr))
           del self.background_processes[process_id]
 
         bgp = p2pCommand('start_background_process',
@@ -115,36 +110,30 @@ class ez_connect(ez_process_base):
                           'callback': connection_failed_func,
                           'interval': 5})
         self.commandQueue.put(bgp)
-        cmd = self.success("connection request from user:" +
-                           str(user_addr) + " with id: " + user_id)
-
-        self.replyQueue.put(cmd)
+        self.success("connection request from user:" +
+                     str(user_addr) + " with id: " + user_id)
 
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
-        self.replyQueue.put(self.error("connection unsuccessful"))
+        self.error(str(e))
+        self.error("connection unsuccessful")
     else:
-      cmd = self.error("cannot connect again, still waiting for response")
-      self.replyQueue.put(cmd)
+      self.error("cannot connect again, still waiting for response")
 
-  def connection_nat_traversal(self, cmd):
+  @command_args
+  def connection_nat_traversal(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
 
     NAT traversal succeded for client A and the connection is established.
     Client B is added to the db and is also informed about the connection.
 
-    - (user_id, (user_ip, user_port)) = cmd.data
+    :param user_id: User nickname
+    :type  user_id: string
+
+    :param user_addr: Endpoint of a Server/Client (Ip, Port)
+    :type  user_addr: (string, int)
     """
-    #try:
-      #user_id, user_addr = cmd.data
-    try:
-      user_id = cmd.data['user_id']
-      user_addr = (cmd.data['host'], cmd.data['port'])
-    except:
-      print ("user_id/host/port not properly specified in" +
-             "connection_nat_traversal")
-      return
+
     cmd_dct = {'user_id': self.name}
     con_success = {'connection_success': cmd_dct}
     msg = pickle.dumps(con_success)
@@ -156,21 +145,23 @@ class ez_connect(ez_process_base):
     self.replyQueue.put(cmd)
     self.sockfd.sendto(msg, user_addr)
 
-  def connection_success(self, cmd):
+  @command_args
+  def connection_success(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
     Client B receives the news that Client A succeded and Client B adds Client A
     to the user db.
 
-    - (user_id, (user_ip, user_port)) = cmd.data
+    :param user_id: User nickname
+    :type  user_id: string
+
+    :param host: Ip of a Server/Client
+    :type  host: string
+
+    :param port: Port of a Server/Client
+    :type  port: int
     """
-    try:
-      user_id = cmd.data['user_id']
-      host = cmd.data['host']
-      port = cmd.data['port']
-    except:
-      print "user_id, host, port not properly specified in connection_success"
 
     user_addr = (host, port)
     process_id = ('connection_request', user_addr)
@@ -180,8 +171,8 @@ class ez_connect(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("user: " + str(user_addr) + " with id: " +
-                        user_id + " has connected"))
+    self.success("user: " + str(user_addr) + " with id: " +
+                 user_id + " has connected")
 
     cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
@@ -192,20 +183,20 @@ class ez_connect(ez_process_base):
 
       self.sockfd.sendto(msg, user_addr)
 
-  def connection_server_success(self, cmd):
+  @command_args
+  def connection_server_success(self, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
     Client B receives the news that Client A succeded and Client B adds Client A
     to the user db.
 
-    - (user_id, (user_ip, user_port)) = cmd.data
+    :param host: Ip of a Server/Client
+    :type  host: string
+
+    :param port: Port of a Server/Client
+    :type  port: int
     """
-    try:
-      host = cmd.data['host']
-      port = cmd.data['port']
-    except:
-      print "user_id, host, port not properly specified in connection_success"
 
     user_addr = (host, port)
     process_id = 'connect_server'
@@ -215,4 +206,4 @@ class ez_connect(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("Connection with server established"))
+    self.success("Connection with server established")

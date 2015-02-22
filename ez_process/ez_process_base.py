@@ -119,11 +119,15 @@ class ez_process_base(object):
 
   # client related
   def success(self, success_msg=None):
-    return p2pReply(p2pReply.success, success_msg)
+    cmd = p2pReply(p2pReply.success, success_msg)
+    self.replyQueue.put(cmd)
+    #return p2pReply(p2pReply.success, success_msg)
 
   # client related
   def error(self, error_msg=None):
-    return p2pReply(p2pReply.error, error_msg)
+    cmd = p2pReply(p2pReply.error, error_msg)
+    self.replyQueue.put(cmd)
+    #return p2pReply(p2pReply.error, error_msg)
 
   # MsgDb update
   def msg(self, msg=None):

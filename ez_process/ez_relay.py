@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base
+from ez_process_base import ez_process_base, command_args
 import cPickle as pickle
 
 #==============================================================================#
@@ -26,12 +26,14 @@ class ez_relay(ez_process_base):
 
     super(ez_relay, self).__init__(*args, **kwargs)
 
-  def ips_request(self, cmd):
-    try:
-      user_id = cmd.data['user_id']
-    except:
-      print "user id not properly specified in ips_request"
-      return
+  @command_args
+  def ips_request(self, user_id):
+    """
+    Request connection with other clients.
+
+    :param user_id: User nickname
+    :type  user_id: string
+    """
 
     if user_id not in self.ips:
       print "self.ips:", self.ips
@@ -44,16 +46,24 @@ class ez_relay(ez_process_base):
         self.sockfd.sendto(msg, master)
 
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
-        self.replyQueue.put(self.error("ips_request unsuccessful"))
+        self.error(str(e))
+        self.error("ips_request unsuccessful")
 
-  def distributeIPs(self, cmd):
-    try:
-      user_id = cmd.data['user_id']
-      host = cmd.data['host']
-      port = cmd.data['port']
-    except:
-      print "user_id, host, port not properly specified in distributeIPs"
+  @command_args
+  def distributeIPs(self, user_id, host, port):
+    """
+    Starts the connection process between the user specified by user_id, host,
+    port and all other users simultaneously.
+
+    :param user_id: User nickname
+    :type  user_id: string
+
+    :param host: Ip of a Server/Client
+    :type  host: string
+
+    :param port: Port of a Server/Client
+    :type  port: int
+    """
 
     master = (host, port)
     other_users = {u_id: self.ips[u_id] for u_id in self.ips
@@ -69,6 +79,6 @@ class ez_relay(ez_process_base):
       try:
         self.sockfd.sendto(msg, master)
         self.sockfd.sendto(msg2, other_users[other_id])
-        self.replyQueue.put(self.success("distributed IPs"))
+        self.success("distributed IPs")
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
+        self.error(str(e))

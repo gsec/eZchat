@@ -7,7 +7,7 @@
 #============#
 
 import socket
-from ez_process_base import ez_process_base, p2pCommand
+from ez_process_base import ez_process_base, p2pCommand, command_args
 import cPickle as pickle
 import ez_process_preferences as epp
 
@@ -71,18 +71,13 @@ class ez_ping(ez_process_base):
           try:
             del self.ips[user_id]
             if not epp.silent_ping:
-              cmd = self.success('Removed user : ' + user_id + ' from ips')
-              self.replyQueue.put(cmd)
+              self.success('Removed user : ' + user_id + ' from ips')
           except:
-            cmd = self.error('Failed to remove user : ' + user_id +
-                             ' from ips.')
-            self.replyQueue.put(cmd)
+            self.error('Failed to remove user : ' + user_id + ' from ips.')
           del self.background_processes[process_id]
 
       if user_id not in self.ips:
-        self.replyQueue.put(self.error("user not in client list"))
-        if testing:
-          return str(user_id) + " is not in client list"
+        self.error("user not in client list")
       else:
         master = self.ips[user_id]
         cmd_dct = {'user_id': user_id}
@@ -97,29 +92,27 @@ class ez_ping(ez_process_base):
           self.commandQueue.put(bgp)
 
         except IOError as e:
-          self.replyQueue.put(self.error(str(e)))
-          self.replyQueue.put(self.error("ping unsuccessful"))
+          self.error(str(e))
+          self.error("ping unsuccessful")
     else:
-      self.replyQueue.put(self.error("cannot ping again, " +
-                                     "still waiting for response"))
+      self.error("cannot ping again, still waiting for response")
 
-  def ping_reply(self, cmd):
+  @command_args
+  def ping_reply(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
 
     Client As ping request arrived and Client B responds with a ping_success
 
-    - (user_id, (user_ip, user_port)) = cmd.data
+    :param user_id: User nickname
+    :type  user_id: string
+
+    :param user_addr: Endpoint of a Server/Client (Ip, Port)
+    :type  user_addr: (string, int)
     """
-    try:
-      user_id = cmd.data['user_id']
-      user_addr = (cmd.data['host'], cmd.data['port'])
-    except:
-      self.replyQueue.put(self.error("user_id/host/port not properly " +
-                                     "specified in ping_reply"))
 
     if not epp.silent_ping:
-      self.replyQueue.put(self.success("ping request from: " + str(user_addr)))
+      self.success("ping request from: " + str(user_addr))
 
     cmd_dct = {'user_id': user_id}
     ping = {'ping_success': cmd_dct}
@@ -127,24 +120,21 @@ class ez_ping(ez_process_base):
     try:
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
-  def ping_success(self, cmd):
+  def ping_success(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
 
     The ping process succeded and Client A cancels the timer background process.
 
-    - (user_id, (user_ip, user_port)) = cmd.data
-    """
-    try:
-      user_id = cmd.data['user_id']
-      user_addr = (cmd.data['host'], cmd.data['port'])
-    except:
-      self.replyQueue.put(self.error("user_id/host/port not properly " +
-                                     "specified in ping_success"))
+    :param user_id: User nickname
+    :type  user_id: string
 
-    #user_id, user_addr = cmd.data
+    :param user_addr: Endpoint of a Server/Client (Ip, Port)
+    :type  user_addr: (string, int)
+    """
+
     if user_id in self.ips:
       if(self.ips[user_id] == user_addr or
          socket.gethostbyname('ez') == user_addr[0]):
@@ -158,18 +148,18 @@ class ez_ping(ez_process_base):
           del self.success_callback[process_id]
         else:
           if not epp.silent_ping:
-            self.replyQueue.put(self.success("ping success: " + user_id))
+            self.success("ping success: " + user_id)
         return True
 
     #if socket.gethostbyname('ez') == user_addr[0]:
       #self.replyQueue.put(self.success("ping success: " + user_id))
       #return True
     #else:
-    self.replyQueue.put(self.error("Received ping_success, source unknown: " +
-                                   str(user_addr)))
+    self.error("Received ping_success, source unknown: " + str(user_addr))
     return False
 
-  def ping_background(self, cmd):
+  @command_args
+  def ping_background(self):
     process_id = ('ping_reply', 'all')
 
     # define the function called by the timer after the countdown

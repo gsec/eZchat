@@ -48,17 +48,16 @@ class ez_server_client(ez_process_base):
     cmd_dct = {'user_id': self.name}
     auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
-    self.replyQueue.put(self.success('Started authentication.'))
+    self.success('Started authentication.')
 
     def authentication_failed_func(self_timer, host, port, user_id):
-      cmd = self.error("Authentication with server failed, retrying.")
-      self.replyQueue.put(cmd)
+      self.error("Authentication with server failed, retrying.")
       conn_success = {'authentication_in': {'user_id': user_id}}
       msg = pickle.dumps(conn_success)
       try:
         self.sockfd.sendto(msg, master)
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
+        self.error(str(e))
 
       process_id = ('authentication', (host, port))
       if process_id in self.background_processes:
@@ -76,7 +75,7 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
   @command_args
   def authentication_in(self, user_id, host, port):
@@ -95,7 +94,7 @@ class ez_server_client(ez_process_base):
     :type  port: integer
     """
 
-    self.replyQueue.put(self.success('started authentication_in'))
+    self.success('started authentication_in')
 
     # The message to-be signed is a random float between 0 and 1
     msg = str(random.random())
@@ -108,7 +107,7 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
   @command_args
   def authentication_out(self, msg, host, port):
@@ -141,13 +140,13 @@ class ez_server_client(ez_process_base):
     except:
       err_msg = ('Verification rejected.  The message to be signed is not a' +
                  ' positive float smaller 1.')
-      self.replyQueue.put(self.error(err_msg))
+      self.error(err_msg)
       return
 
     try:
       sig = ez_gpg.sign_msg(str(msg))
     except:
-      self.replyQueue.put(self.error('Failed to sign message.'))
+      self.error('Failed to sign message.')
       return
 
     master = (host, port)
@@ -156,9 +155,8 @@ class ez_server_client(ez_process_base):
     msg = pickle.dumps(auth_vfy)
 
     def authentication_verify_failed_func(self_timer, host, port):
-      cmd = self.error("Authentication verification response. " +
-                       "Connection has probably been rejected.")
-      self.replyQueue.put(cmd)
+      self.error("Authentication verification response. " +
+                 "Connection has probably been rejected.")
 
       process_id = ('authentication_verify', (host, port))
       if process_id in self.background_processes:
@@ -178,7 +176,7 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
   @command_args
   def authentication_verify(self, reply_msg, user_id, host, port):
@@ -199,7 +197,7 @@ class ez_server_client(ez_process_base):
     :type  port: integer
     """
 
-    self.replyQueue.put(self.success('started authentication_verify'))
+    self.success('started authentication_verify')
     try:
       # check that the decripted message matches the original message.
       if ez_gpg.verify_signed_msg(reply_msg):
@@ -215,14 +213,12 @@ class ez_server_client(ez_process_base):
           master = (host, port)
           self.sockfd.sendto(msg, master)
 
-          self.replyQueue.put(self.success('User trusted and correct msg.'))
+          self.success('User trusted and correct msg.')
         else:
-          self.replyQueue.put(self.error('Declined user: ' + user_id +
-                                         '. Wrong msg: ' + auth_msg))
+          self.error('Declined user: ' + user_id + '. Wrong msg: ' + auth_msg)
 
     except:
-      self.replyQueue.put(self.error('Declined user: ' + user_id +
-                                     '. Not trusted.'))
+      self.error('Declined user: ' + user_id + '. Not trusted.')
 
   @command_args
   def authentication_success(self, host, port):
@@ -240,8 +236,7 @@ class ez_server_client(ez_process_base):
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("Authentication with server " +
-                                     "established"))
+    self.success("Authentication with server established")
 
   def client_authenticated(self, **kwargs):
     try:
@@ -249,8 +244,8 @@ class ez_server_client(ez_process_base):
       master = (kwargs['host'], int(kwargs['port']))
       self.authentications[master] = user_id
     except:
-      self.replyQueue.put(self.error('user_id, host, port not properly ' +
-                                     'specified in authentication_success'))
+      self.error('user_id, host, port not properly ' +
+                 'specified in authentication_success')
 
 #==================#
 #  connect_server  #
@@ -271,17 +266,16 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.replyQueue.put(self.error(str(e)))
+      self.error(str(e))
 
     def connection_failed_func(self_timer, host, port, user_id):
-      cmd = self.error("connection to server failed, retrying")
-      self.replyQueue.put(cmd)
+      self.error("connection to server failed, retrying")
       conn_success = {'connection_success': {'user_id': user_id}}
       msg = pickle.dumps(conn_success)
       try:
         self.sockfd.sendto(msg, master)
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
+        self.error(str(e))
 
       process_id = 'connect_server'
       if process_id in self.background_processes:
@@ -302,7 +296,7 @@ class ez_server_client(ez_process_base):
     Start listening on port.
     """
     self.sockfd.bind((str(host), int(port)))
-    self.replyQueue.put(self.success("listening socket"))
+    self.success("listening socket")
     self.server = True
 
   def shutdown(self, *args):
@@ -328,7 +322,7 @@ class ez_server_client(ez_process_base):
       try:
         self.sockfd.sendto(data, user_addr)
       except IOError as e:
-        self.replyQueue.put(self.error(str(e)))
+        self.error(str(e))
 
     else:
       self.replyQueue.put(p2pReply(p2pReply.error, "not connected to user"))
