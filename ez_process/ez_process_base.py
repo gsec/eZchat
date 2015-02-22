@@ -128,3 +128,42 @@ class ez_process_base(object):
   # MsgDb update
   def msg(self, msg=None):
     return p2pReply(p2pReply.msg, msg)
+
+
+#==============================================================================#
+#                                 command_args                                 #
+#==============================================================================#
+
+def command_args(process_func):
+  """
+  Decorator which extracts the arguments from the p2pCommand instance cmd
+  (:py:class:`ez_process.ez_process_base.p2pCommand`) and passes them to the
+  function.
+  """
+  def assign_args(self, cmd):
+    try:
+      assert(isinstance(cmd, p2pCommand))
+    except:
+      err_msg = 'Queued function needs to be called with a p2pCommand instance'
+      raise TypeError(err_msg)
+
+    # arguments passed to process_func
+    kwargs = {}
+
+    # the number of arguments the function has
+    n_args = process_func.func_code.co_argcount
+
+    # self is not considered as argument
+    args = (arg for arg in process_func.func_code.co_varnames[:n_args]
+            if arg != 'self')
+
+    # we require that the arguments specified for the function are present in
+    # cmd
+    for arg in args:
+      try:
+        assert(arg in cmd.data)
+        kwargs[arg] = cmd.data[arg]
+      except:
+        raise Exception('Missing argument: ' + arg)
+    return process_func(self, **kwargs)
+  return assign_args

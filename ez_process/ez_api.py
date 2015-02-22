@@ -139,9 +139,9 @@ class ez_api(ez_process_base):
     except:
       self.replyQueue.put(self.error("Syntax error in servermode"))
 
-  def cmd_authentificate(self, host, port):
+  def cmd_authenticate(self, host, port):
     """
-    Connect to a server with authentification.
+    Connect to a server with authentication.
 
     A connection to a server enables the use of
     :py:meth:`ez_process.ez_api.ez_api.cmd_ips`.
@@ -154,12 +154,12 @@ class ez_api(ez_process_base):
     """
     cmd_dct = {'host': host, 'port': int(port)}
     try:
-      self.commandQueue.put(p2pCommand('authentification_request', cmd_dct))
+      self.commandQueue.put(p2pCommand('authentication_request', cmd_dct))
       cmd_dct['user_id'] = 'server'
       self.add_client(**cmd_dct)
-      self.replyQueue.put(self.success("Started cmd_authentificate"))
+      self.replyQueue.put(self.success("Started cmd_authenticate"))
     except:
-      self.replyQueue.put(self.error("Syntax error in cmd_authentificate"))
+      self.replyQueue.put(self.error("Syntax error in cmd_authenticate"))
 
   def cmd_connect(self, host, port):
     """

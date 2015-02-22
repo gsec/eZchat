@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base, p2pReply, p2pCommand
+from ez_process_base import ez_process_base, p2pReply, p2pCommand, command_args
 import cPickle as pickle
 import ez_message as em
 import re
@@ -19,63 +19,56 @@ from ez_gpg import ez_gpg
 
 class ez_server_client(ez_process_base):
 
-  authentifcation_words = {}
-  authentifications = {}
+  authentication_words = {}
+  authentications = {}
 
   def __init__(self, *args, **kwargs):
     super(ez_server_client, self).__init__(*args, **kwargs)
 
 #============================#
-#  authentification process  #
+#  authentication process  #
 #============================#
 
-  def authentification_request(self, cmd):
+  @command_args
+  def authentication_request(self, host, port):
     """
-    Start an authenticiation process.
+    Start an authentication process.
 
-    :param cmd: The connection process requires the keywords ``'host'`` and
-                ``'port'`` specifying the clients/servers endpoint.
-    :type  cmd: p2pCommand instance. See
-    :py:class:`ez_process.ez_process_base.p2pCommand` on how to queue commands.
+    :param host: specifying the clients/servers IP
+    :type  host: string
+
+    :param host: specifying the clients/servers port
+    :type  host: int
+
+    See :py:class:`ez_process.ez_process_base.p2pCommand` on how to queue
+    commands.
     """
-    try:
-      assert('host' in cmd.data)
-      host = cmd.data['host']
-    except:
-      print "no host specified in connect_server"
-      return
-    try:
-      assert('port' in cmd.data)
-      port = int(cmd.data['port'])
-    except:
-      print "no port specified in servermode"
-      return
 
     master = (host, port)
     cmd_dct = {'user_id': self.name}
-    auth_in = {'authentification_in': cmd_dct}
+    auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
-    self.replyQueue.put(self.success('Started authentification.'))
+    self.replyQueue.put(self.success('Started authentication.'))
 
-    def authentification_failed_func(self_timer, host, port, user_id):
-      cmd = self.error("Authentification with server failed, retrying.")
+    def authentication_failed_func(self_timer, host, port, user_id):
+      cmd = self.error("Authentication with server failed, retrying.")
       self.replyQueue.put(cmd)
-      conn_success = {'authentification_in': {'user_id': user_id}}
+      conn_success = {'authentication_in': {'user_id': user_id}}
       msg = pickle.dumps(conn_success)
       try:
         self.sockfd.sendto(msg, master)
       except IOError as e:
         self.replyQueue.put(self.error(str(e)))
 
-      process_id = ('authentification', (host, port))
+      process_id = ('authentication', (host, port))
       if process_id in self.background_processes:
         # Reset process.
         self.reset_background_process(process_id)
 
-    process_id = ('authentification', (host, port))
+    process_id = ('authentication', (host, port))
     bgp = p2pCommand('start_background_process',
                      {'process_id': process_id,
-                      'callback': authentification_failed_func,
+                      'callback': authentication_failed_func,
                       'interval': 5,
                       'callback_args': (host, port, self.name)})
     self.commandQueue.put(bgp)
@@ -85,9 +78,10 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
-  def authentification_in(self, cmd):
+  @command_args
+  def authentication_in(self, user_id, host, port):
     """
-    A client requests a proposes an authentification.
+    A client requests a proposes an authentication.
 
     All arguments are specified as keyword arguments in cmd.data.
 
@@ -100,31 +94,26 @@ class ez_server_client(ez_process_base):
     :param port: hosts port
     :type  port: integer
     """
-    try:
-      user_id = cmd.data['user_id']
-      host, port = cmd.data['host'], cmd.data['port']
-    except:
-      print "user_id/host/port not properly specified in authentification_in."
-      return
 
-    self.replyQueue.put(self.success('started authentification_in'))
+    self.replyQueue.put(self.success('started authentication_in'))
 
     # The message to-be signed is a random float between 0 and 1
     msg = str(random.random())
-    self.authentifcation_words[user_id] = msg
+    self.authentication_words[user_id] = msg
 
     master = (host, port)
     cmd_dct = {'msg': msg, 'user_id': self.name}
-    auth_out = {'authentification_out': cmd_dct}
+    auth_out = {'authentication_out': cmd_dct}
     msg = pickle.dumps(auth_out)
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
-  def authentification_out(self, cmd):
+  @command_args
+  def authentication_out(self, msg, host, port):
     """
-    A client response for authentification.
+    A client response for authentication.
 
     All arguments are specified as keyword arguments in cmd.data.
 
@@ -138,15 +127,8 @@ class ez_server_client(ez_process_base):
     :param port: hosts port
     :type  port: integer
     """
-    try:
-      msg = cmd.data['msg']
-      user_id = cmd.data['user_id']
-      host, port = cmd.data['host'], cmd.data['port']
-    except:
-      print "user_id/host/port not properly specified in authentification_out."
-      return
 
-    process_id = ('authentification', (host, port))
+    process_id = ('authentication', (host, port))
     if process_id in self.background_processes:
       pr = self.background_processes[process_id]
       pr.finished.set()
@@ -157,7 +139,7 @@ class ez_server_client(ez_process_base):
     try:
       assert(len(isdigit.groups()) == 1)
     except:
-      err_msg = ('Verification rejected.  The message to-be signed is not a' +
+      err_msg = ('Verification rejected.  The message to be signed is not a' +
                  ' positive float smaller 1.')
       self.replyQueue.put(self.error(err_msg))
       return
@@ -170,25 +152,25 @@ class ez_server_client(ez_process_base):
 
     master = (host, port)
     cmd_dct = {'reply_msg': sig, 'user_id': self.name}
-    auth_vfy = {'authentification_verify': cmd_dct}
+    auth_vfy = {'authentication_verify': cmd_dct}
     msg = pickle.dumps(auth_vfy)
 
-    def authentification_verify_failed_func(self_timer, host, port):
-      cmd = self.error("Authentification verification response. " +
+    def authentication_verify_failed_func(self_timer, host, port):
+      cmd = self.error("Authentication verification response. " +
                        "Connection has probably been rejected.")
       self.replyQueue.put(cmd)
 
-      process_id = ('authentification_verify', (host, port))
+      process_id = ('authentication_verify', (host, port))
       if process_id in self.background_processes:
         pr = self.background_processes[process_id]
         pr.finished.set()
         pr.cancel()
         del self.background_processes[process_id]
 
-    process_id = ('authentification_verify', (host, port))
+    process_id = ('authentication_verify', (host, port))
     bgp = p2pCommand('start_background_process',
                      {'process_id': process_id,
-                      'callback': authentification_verify_failed_func,
+                      'callback': authentication_verify_failed_func,
                       'interval': 5,
                       'callback_args': (host, port,)})
     self.commandQueue.put(bgp)
@@ -198,28 +180,36 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.replyQueue.put(self.error(str(e)))
 
-  def authentification_verify(self, cmd):
-    try:
-      reply_msg = cmd.data['reply_msg']
-      user_id = cmd.data['user_id']
-      host, port = cmd.data['host'], cmd.data['port']
-    except:
-      self.replyQueue.put(self.error('reply_msg, host, port not properly ' +
-                                     'specified in authentification_verify'))
-      return
+  @command_args
+  def authentication_verify(self, reply_msg, user_id, host, port):
+    """
+    Validates the signature and the returned message.
 
-    self.replyQueue.put(self.success('started authentification_verify'))
+    :param reply_msg: The message which has to be encrypted and send back to the
+    server
+    :type  msg: ? todo  gpg sign instance
+
+    :param user_id: id specifying the username
+    :type  user_id: string
+
+    :param host: hosts IP
+    :type  host: string
+
+    :param port: hosts port
+    :type  port: integer
+    """
+
+    self.replyQueue.put(self.success('started authentication_verify'))
     try:
       # check that the decripted message matches the original message.
       if ez_gpg.verify_signed_msg(reply_msg):
-        #self.authentifcation_words[user_id],
         auth_msg = ez_gpg.separate_msg_signature(reply_msg)
-        if auth_msg == self.authentifcation_words[user_id]:
+        if auth_msg == self.authentication_words[user_id]:
           cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
           self.add_client(**cmd_dct)
-          self.client_authentificated(**cmd_dct)
+          self.client_authenticated(**cmd_dct)
 
-          auth_success = {'authentification_success': {}}
+          auth_success = {'authentication_success': {}}
           msg = pickle.dumps(auth_success)
 
           master = (host, port)
@@ -234,64 +224,46 @@ class ez_server_client(ez_process_base):
       self.replyQueue.put(self.error('Declined user: ' + user_id +
                                      '. Not trusted.'))
 
-  def authentification_success(self, cmd):
+  @command_args
+  def authentication_success(self, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
     Client B receives the news that Client A succeded and Client B adds Client A
     to the user db.
     """
-    try:
-      host = cmd.data['host']
-      port = cmd.data['port']
-    except:
-      self.replyQueue.put(self.error('host, port not properly specified in ' +
-                                     'authentification_success'))
-      return
 
-    process_id = ('authentification_verify', (host, port))
+    process_id = ('authentication_verify', (host, port))
     if process_id in self.background_processes:
       pr = self.background_processes[process_id]
       pr.finished.set()
       pr.cancel()
       del self.background_processes[process_id]
 
-    self.replyQueue.put(self.success("Authentification with server " +
+    self.replyQueue.put(self.success("Authentication with server " +
                                      "established"))
 
-  def client_authentificated(self, **kwargs):
+  def client_authenticated(self, **kwargs):
     try:
       user_id = kwargs['user_id']
       master = (kwargs['host'], int(kwargs['port']))
-      self.authentifications[master] = user_id
+      self.authentications[master] = user_id
     except:
       self.replyQueue.put(self.error('user_id, host, port not properly ' +
-                                     'specified in authentification_success'))
+                                     'specified in authentication_success'))
 
 #==================#
 #  connect_server  #
 #==================#
 
-  def connect_server(self, cmd):
+  @command_args
+  def connect_server(self, host, port):
     """
     Connects to an endpoint without the use of NAT traversal techniques. The
     endpoint should be a server(-like) system listening on some port.
-
-    - (host_ip, host_port) = cmd.data
     """
-    try:
-      assert('host' in cmd.data)
-      host = cmd.data['host']
-    except:
-      print "no host specified in connect_server"
-      return
-    try:
-      assert('port' in cmd.data)
-      port = int(cmd.data['port'])
-    except:
-      print "no port specified in servermode"
-      return
 
+    port = int(port)
     master = (host, port)
     cmd_dct = {'user_id': self.name}
     conn_success = {'connection_success': cmd_dct}
@@ -324,27 +296,11 @@ class ez_server_client(ez_process_base):
                       'callback_args': (host, port, self.name)})
     self.commandQueue.put(bgp)
 
-  def servermode(self, cmd):
+  @command_args
+  def servermode(self, host, port):
     """
-    Start listening on port. Mandatory arguments:
-
-    - cmd.data['host'] = host
-    - cmd.data['port'] = port
+    Start listening on port.
     """
-    try:
-      assert('host' in cmd.data)
-      host = cmd.data['host']
-    except:
-      print "no host specified in servermode"
-      return
-
-    try:
-      assert('port' in cmd.data)
-      port = cmd.data['port']
-    except:
-      print "no port specified in servermode"
-      return
-
     self.sockfd.bind((str(host), int(port)))
     self.replyQueue.put(self.success("listening socket"))
     self.server = True
@@ -354,24 +310,18 @@ class ez_server_client(ez_process_base):
       self.sockfd.close()
     self.alive.clear()
 
-  def send(self, cmd):
+  @command_args
+  def send(self, user_id, data):
     """
-    Send data to a user. Mandatory arguments:
+    Send data to a user.
 
-    - cmd.data['user_id'] = user_id
-    - cmd.data['data']    = data
+    :param user_id: id specifying the username
+    :type  user_id: string
+
+
+    :param data: The message or pickled object to be sent.
+    :type  data: string
     """
-    try:
-      assert('user_id' in cmd.data)
-      user_id = cmd.data['user_id']
-    except:
-      print "user not registered"
-
-    try:
-      assert('data' in cmd.data)
-      data = cmd.data['data']
-    except:
-      print "No data which could be sent"
 
     if user_id in self.ips:
       user_addr = self.ips[user_id]
