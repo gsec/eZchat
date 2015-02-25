@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base, p2pReply, command_args
+from ez_process_base import ez_process_base, p2pReply
 from ez_gpg import ez_gpg
 import cPickle as pickle
 
@@ -40,7 +40,6 @@ class ez_contact(ez_process_base):
     else:
       self.error('"user not found/removed": ' + user_id)
 
-  @command_args
   def contact_request_out(self, user_id):
     """
     Method for exchanging public keys.
@@ -60,7 +59,6 @@ class ez_contact(ez_process_base):
       except IOError as e:
         self.error(str(e))
 
-  @command_args
   def contact_request_in(self, user, host, port):
     """
     User asks for contact data.
@@ -87,7 +85,6 @@ class ez_contact(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def add_contact(self, user):
     """
     User admitted to the User database.

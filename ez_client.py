@@ -20,7 +20,7 @@ import cPickle as pickle
 import ez_message as em
 
 from datetime import datetime
-from ez_process import p2pCommand, p2pReply, ez_process
+from ez_process import p2pCommand, p2pReply, ez_process, command_args
 from ez_simple_cli import ez_simple_cli
 
 CLIENT_TIMEOUT = 0.1
@@ -108,7 +108,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
 #  client receive   #
 #===================#
 
-  def receive(self, cmd):
+  def receive(self):
     """
     The receive function supports 3 types of data:
 
@@ -185,7 +185,8 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
-        msg = self.handlers[cmd.funcStr](self, cmd)
+        print "cmd.funcStr:", cmd.funcStr
+        msg = command_args(self.handlers[cmd.funcStr])(self, cmd)
       except Queue.Empty:
         pass
       readable = []

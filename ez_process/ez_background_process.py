@@ -87,30 +87,15 @@ class ez_background_process(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_background_process, self).__init__(*args, **kwargs)
 
-  def start_background_process(self, cmd):
+  def start_background_process(self, process_id, callback, **kwargs):
     # construct background cmd allowing to reset the process
     bg_cmd = {}
-
-    # Registering mandatory arguments
-    try:
-      assert('process_id' in cmd.data)
-      process_id = cmd.data['process_id']
-    except:
-      print "no process_id given for background processes"
-      return
     bg_cmd['process_id'] = process_id
-
-    try:
-      assert('callback' in cmd.data)
-      callback = cmd.data['callback']
-    except:
-      print "no callback given for background processes"
-      return
     bg_cmd['callback'] = callback
 
     # Default value of the time period is 5 seconds
-    if 'interval' in cmd.data:
-      interval = cmd.data['interval']
+    if 'interval' in kwargs:
+      interval = kwargs['interval']
     else:
       interval = 5
     bg_cmd['interval'] = interval
@@ -118,12 +103,12 @@ class ez_background_process(ez_process_base):
     # generate Timer instance
     pr = Timer(interval, callback)
     # and add possibly callback args and kwargs
-    if 'callback_args' in cmd.data:
-      pr.callback_args = cmd.data['callback_args']
-      bg_cmd['callback_args'] = cmd.data['callback_args']
-    if 'callback_kwargs' in cmd.data:
-      pr.callback_kwargs = cmd.data['callback_kwargs']
-      bg_cmd['callback_kwargs'] = cmd.data['callback_kwargs']
+    if 'callback_args' in kwargs:
+      pr.callback_args = kwargs['callback_args']
+      bg_cmd['callback_args'] = kwargs['callback_args']
+    if 'callback_kwargs' in kwargs:
+      pr.callback_kwargs = kwargs['callback_kwargs']
+      bg_cmd['callback_kwargs'] = kwargs['callback_kwargs']
 
     # construct background process
     bgp = p2pCommand('start_background_process', bg_cmd)

@@ -7,7 +7,7 @@
 #============#
 
 import socket
-from ez_process_base import ez_process_base, p2pCommand, command_args
+from ez_process_base import ez_process_base, p2pCommand
 import cPickle as pickle
 import ez_process_preferences as epp
 
@@ -39,30 +39,22 @@ class ez_ping(ez_process_base):
 #  ping methods  #
 #================#
 
-  def ping_request(self, cmd, testing=False):
+  def ping_request(self, user_id, **kwargs):
     """
     Starts a ping request. Client A must be connected to Client B, i.e. they
     must be both in clients user database, otherwise the ping process fails. To
     enforce the precondition the argument requires the user_id. The user_addr is
     retrieved from the user db.
-
-    - user_id = cmd.data
     """
-    try:
-      assert('user_id' in cmd.data)
-      user_id = cmd.data['user_id']
-    except:
-      print "no user_id in cmd.data"
-      return
 
     process_id = ('ping_reply', user_id)
     if process_id not in self.background_processes:
 
-      if 'success_callback' in cmd.data:
-        self.success_callback[process_id] = cmd.data['success_callback']
+      if 'success_callback' in kwargs:
+        self.success_callback[process_id] = kwargs['success_callback']
 
-      if 'error_callback' in cmd.data:
-        error_callback = cmd.data['error_callback']
+      if 'error_callback' in kwargs:
+        error_callback = kwargs['error_callback']
       else:
         def error_callback(self_timer):
           if not epp.silent_ping:
@@ -97,7 +89,6 @@ class ez_ping(ez_process_base):
     else:
       self.error("cannot ping again, still waiting for response")
 
-  @command_args
   def ping_reply(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
@@ -127,7 +118,6 @@ class ez_ping(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def ping_success(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
@@ -168,7 +158,6 @@ class ez_ping(ez_process_base):
     self.error("Received ping_success, source unknown: " + str(user_addr))
     return False
 
-  @command_args
   def ping_background(self):
     process_id = ('ping_reply', 'all')
 

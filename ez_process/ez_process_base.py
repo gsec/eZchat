@@ -121,13 +121,11 @@ class ez_process_base(object):
   def success(self, success_msg=None):
     cmd = p2pReply(p2pReply.success, success_msg)
     self.replyQueue.put(cmd)
-    #return p2pReply(p2pReply.success, success_msg)
 
   # client related
   def error(self, error_msg=None):
     cmd = p2pReply(p2pReply.error, error_msg)
     self.replyQueue.put(cmd)
-    #return p2pReply(p2pReply.error, error_msg)
 
   # MsgDb update
   def msg(self, msg=None):
@@ -152,10 +150,13 @@ def command_args(process_func):
       raise TypeError(err_msg)
 
     # arguments passed to process_func
-    kwargs = {}
+    fargs = {}
 
     # the number of arguments the function has
     n_args = process_func.func_code.co_argcount
+
+    # co_flags bitmap: 1=optimized | 2=newlocals | 4=*arg | 8=**arg
+    additional_kwargs = process_func.func_code.co_flags & 8
 
     # self is not considered as argument
     args = (arg for arg in process_func.func_code.co_varnames[:n_args]
@@ -166,9 +167,15 @@ def command_args(process_func):
     for arg in args:
       try:
         assert(arg in cmd.data)
-        kwargs[arg] = cmd.data[arg]
+        fargs[arg] = cmd.data[arg]
       except:
-        err_msg = 'Missing argument: ' + arg + ' in function: ' + process_func.__name__
+        err_msg = ('Missing argument: ' + arg + ' in function: ' +
+                   process_func.__name__)
         raise Exception(err_msg)
-    return process_func(self, **kwargs)
+
+    # add kwargs if the function accepts it
+    if additional_kwargs:
+      kwargs = {u: cmd.data[u] for u in cmd.data if u not in fargs}
+      fargs.update(kwargs)
+    return process_func(self, **fargs)
   return assign_args

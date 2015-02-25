@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base, command_args
+from ez_process_base import ez_process_base
 import cPickle as pickle
 
 #==============================================================================#
@@ -26,7 +26,6 @@ class ez_relay(ez_process_base):
 
     super(ez_relay, self).__init__(*args, **kwargs)
 
-  @command_args
   def ips_request(self, user_id):
     """
     Request connection with other clients.
@@ -49,7 +48,6 @@ class ez_relay(ez_process_base):
         self.error(str(e))
         self.error("ips_request unsuccessful")
 
-  @command_args
   def distributeIPs(self, user_id, host, port):
     """
     Starts the connection process between the user specified by user_id, host,

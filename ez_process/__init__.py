@@ -22,7 +22,7 @@ from ez_connect import ez_connect
 
 p2pCommand = ez_process_base.p2pCommand
 p2pReply = ez_process_base.p2pReply
-
+command_args = ez_process_base.command_args
 
 class ez_process(ez_background_process,
                  ez_server_client,

@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 
-from ez_process_base import ez_process_base, p2pReply, p2pCommand, command_args
+from ez_process_base import ez_process_base, p2pReply, p2pCommand
 import cPickle as pickle
 import ez_message as em
 import re
@@ -29,7 +29,6 @@ class ez_server_client(ez_process_base):
 #  authentication process  #
 #============================#
 
-  @command_args
   def authentication_request(self, host, port):
     """
     Start an authentication process.
@@ -77,7 +76,6 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def authentication_in(self, user_id, host, port):
     """
     A client requests a proposes an authentication.
@@ -109,7 +107,6 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def authentication_out(self, msg, host, port):
     """
     A client response for authentication.
@@ -178,7 +175,6 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def authentication_verify(self, reply_msg, user_id, host, port):
     """
     Validates the signature and the returned message.
@@ -220,7 +216,6 @@ class ez_server_client(ez_process_base):
     except:
       self.error('Declined user: ' + user_id + '. Not trusted.')
 
-  @command_args
   def authentication_success(self, host, port):
     """
     Not to be called by the user, but automatically invoked.
@@ -251,7 +246,6 @@ class ez_server_client(ez_process_base):
 #  connect_server  #
 #==================#
 
-  @command_args
   def connect_server(self, host, port):
     """
     Connects to an endpoint without the use of NAT traversal techniques. The
@@ -290,7 +284,6 @@ class ez_server_client(ez_process_base):
                       'callback_args': (host, port, self.name)})
     self.commandQueue.put(bgp)
 
-  @command_args
   def servermode(self, host, port):
     """
     Start listening on port.
@@ -304,7 +297,6 @@ class ez_server_client(ez_process_base):
       self.sockfd.close()
     self.alive.clear()
 
-  @command_args
   def send(self, user_id, data):
     """
     Send data to a user.

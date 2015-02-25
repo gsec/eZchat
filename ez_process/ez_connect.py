@@ -11,7 +11,7 @@ import types
 import Queue
 import thread
 import threading
-from ez_process_base import ez_process_base, p2pCommand, command_args
+from ez_process_base import ez_process_base, p2pCommand
 
 import cPickle as pickle
 import ez_user as eu
@@ -49,7 +49,6 @@ class ez_connect(ez_process_base):
 #  UDP-Holepunching methods  #
 #============================#
 
-  @command_args
   def connect(self, master):
     """
     Not to be called by the user, but automatically invoked.
@@ -74,7 +73,6 @@ class ez_connect(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  @command_args
   def connection_request(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
@@ -119,7 +117,6 @@ class ez_connect(ez_process_base):
     else:
       self.error("cannot connect again, still waiting for response")
 
-  @command_args
   def connection_nat_traversal(self, user_id, user_addr):
     """
     Not to be called by the user, but automatically invoked.
@@ -145,7 +142,6 @@ class ez_connect(ez_process_base):
     self.replyQueue.put(cmd)
     self.sockfd.sendto(msg, user_addr)
 
-  @command_args
   def connection_success(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
@@ -183,7 +179,6 @@ class ez_connect(ez_process_base):
 
       self.sockfd.sendto(msg, user_addr)
 
-  @command_args
   def connection_server_success(self, host, port):
     """
     Not to be called by the user, but automatically invoked.
