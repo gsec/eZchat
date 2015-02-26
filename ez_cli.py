@@ -63,12 +63,10 @@ class ez_cli_urwid(urwid.Frame):
     self.vimedit_b = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
     self.vimmsgbox = VimMsgBox(logo_file='misc/logo.txt')
-    #self.vimmsgbox_f   = urwid.Filler(self.vimmsgbox, valign = 'bottom')
 
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
     self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit])
-    #self.vimbox.set_focus(1)
     self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
 
     if ep.cli_status_height > 0:
@@ -140,7 +138,6 @@ class ez_cli_urwid(urwid.Frame):
 
     self.name = name
     self.logging = logging
-    # TODO: (bcn 2014-10-19) This should also log errors
     if self.logging:
       self.logger = open(ep.join(ep.location['log'],
                                  name + '_ez_cli_session.log'), 'w')
@@ -174,7 +171,6 @@ class ez_cli_urwid(urwid.Frame):
 
   def mode_notifier(self, edit, new_edit_text):
     self.commandline.set_edit_text(str(new_edit_text))
-    #edit.set_edit_text(str(new_edit_text))
 
   def enter_msgbox(self):
     self.vimbox.set_focus(0)
@@ -199,106 +195,99 @@ class ez_cli_urwid(urwid.Frame):
       self.logger.close()
     raise urwid.ExitMainLoop()
 
-#==============================================================================#
-#                                  FUNCTIONS                                   #
-#==============================================================================#
-
-def received_output(data):
-  categories = {p2pReply.success: 'success',
-                p2pReply.error:   'error',
-                p2pReply.msg:     'msg'
-                }
-  if 'status' in data.strip():
-      try:
-        reply = cl.cl.replyQueue.get(block=False)
-      except:
-        reply = None
-      while reply:
-        if((reply.replyType == p2pReply.success) or
-           (reply.replyType == p2pReply.error)):
-          status = "success" if reply.replyType == p2pReply.success else "ERROR"
-          ez_cli.status_update(('Client reply %s: %s' % (status, reply.data)))
-        elif reply.replyType == p2pReply.msg:
-          # decrypt msg and print it on the screen
-          if reply.data.recipient == cl.cl.name:
-            try:
-              ez_cli.msg_update((str(reply.data.clear_text())))
-            except Exception, e:
-              ez_cli.status_update("<p>Error: %s</p>" % str(e))
-
-        else:
-          # this case should not happen! (if theres something in the queue it
-          # must be success,error or msg)
-          ez_cli.status_update(('Client reply: nada'))
+  def received_output(self, data):
+    categories = {p2pReply.success: 'success',
+                  p2pReply.error:   'error',
+                  p2pReply.msg:     'msg'
+                  }
+    if 'status' in data.strip():
         try:
           reply = cl.cl.replyQueue.get(block=False)
         except:
           reply = None
-  else:
-    # this case should not happen! (if theres something in the queue, it
-    # must be success,error or msg)
-    ez_cli.statusline.update_content(data)
-  return True
+        while reply:
+          if((reply.replyType == p2pReply.success) or
+             (reply.replyType == p2pReply.error)):
+            status = ("success" if reply.replyType == p2pReply.success
+                      else "ERROR")
+            self.status_update(('Client reply %s: %s' % (status, reply.data)))
+          elif reply.replyType == p2pReply.msg:
+            # decrypt msg and print it on the screen
+            if reply.data.recipient == cl.cl.name:
+              try:
+                self.msg_update((str(reply.data.clear_text())))
+              except Exception, e:
+                self.status_update("<p>Error: %s</p>" % str(e))
 
-#==============================================================================#
-#                               GLOBAL INSTANCES                               #
-#==============================================================================#
+          else:
+            # this case should not happen! (if theres something in the queue it
+            # must be success,error or msg)
+            self.status_update('Client sent unknown status.')
+          try:
+            reply = cl.cl.replyQueue.get(block=False)
+          except:
+            reply = None
+    else:
+      # this case should not happen! (if theres something in the queue, it
+      # must be success,error or msg)
+      self.status_update('Client sent unknown status.')
+    return True
+
+if __name__ == "__main__":
+
 #========================#
 #  command line options  #
 #========================#
+  usage = "usage: %prog [options] name"
+  parser = OptionParser(usage)
 
-usage = "usage: %prog [options] name"
-parser = OptionParser(usage)
+  parser.add_option("-s", "--script", dest="filename",
+                    help="run eZchat with script", metavar="FILE")
 
-# parse options
-parser.add_option("-s", "--script", dest="filename",
-                  help="run eZchat with script", metavar="FILE")
+  parser.add_option("-q", "--quiet",
+                    action="store_false", dest="verbose", default=True,
+                    help="don't print status messages")
 
-parser.add_option("-q", "--quiet",
-                  action="store_false", dest="verbose", default=True,
-                  help="don't print status messages")
+  parser.add_option("-l", "--log",
+                    action="store_true", dest="logging", default=False,
+                    help="log status to .name_eZsession.log")
 
-parser.add_option("-l", "--log",
-                  action="store_true", dest="logging", default=False,
-                  help="log status to .name_eZsession.log")
+  (options, args) = parser.parse_args()
 
-(options, args) = parser.parse_args()
-
-try:
-  ep.init_cli_preferences()
-  if not len(args) == 1:
-    print 'Please give your name as argument'
+  try:
+    ep.init_cli_preferences()
+    if not len(args) == 1:
+      print 'Please give your name as argument'
+      sys.exit()
+    cl.init_client(args[0], **ep.process_preferences)
+    if not options.verbose:
+      ep.cli_status_height = 0  # disable statusline
+    ez_cli = ez_cli_urwid(name=args[0], logging=options.logging)
+  except ep.DomainError, err:
+    sys.stderr.write('ERROR: %s\n' % str(err))
+    cl.cl.commandQueue.put(p2pCommand('shutdown'))
     sys.exit()
-  cl.init_client(args[0], **ep.process_preferences)
-  if not options.verbose:
-    ep.cli_status_height = 0  # disable statusline
-  ez_cli = ez_cli_urwid(name=args[0], logging=options.logging)
-except ep.DomainError, err:
-  sys.stderr.write('ERROR: %s\n' % str(err))
-  cl.cl.commandQueue.put(p2pCommand('shutdown'))
-  sys.exit()
 
 #==============#
 #  MAIN LOOPS  #
 #==============#
 
-loop = urwid.MainLoop(ez_cli, ep.palette)
-pipe.pipe = loop.watch_pipe(received_output)
+  loop = urwid.MainLoop(ez_cli, ep.palette)
+  pipe.pipe = loop.watch_pipe(ez_cli.received_output)
 
-# start eZchat with script
-if options.filename:
-  try:
-    with open(options.filename, 'r') as f:
-      lines = f.readlines()
-      for line in lines:
-        ez_cli.commandline.evaluate_command(line.replace('\n', ''))
-  except IOError as e:
-    ez_cli.status_update("Loading script failed. I/O error({0}): {1}".
-                         format(e.errno, e.strerror))
-  except:
-    print "Unexpected error:", sys.exc_info()[0]
-    raise
+  # start eZchat with script
+  if options.filename:
+    try:
+      with open(options.filename, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+          ez_cli.commandline.evaluate_command(line.replace('\n', ''))
+    except IOError as e:
+      ez_cli.status_update("Loading script failed. I/O error({0}): {1}".
+                           format(e.errno, e.strerror))
+    except:
+      print "Unexpected error:", sys.exc_info()[0]
+      raise
 
-loop.run()
-
-cl.cl.commandQueue.put(p2pCommand('shutdown'))
+  loop.run()
+  cl.cl.commandQueue.put(p2pCommand('shutdown'))
