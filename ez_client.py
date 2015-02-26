@@ -1,13 +1,10 @@
 #==============================================================================#
 #                                  ez_client                                   #
 #==============================================================================#
-# TODO: (bcn 2014-08-08) when this file only contains the client class, it
-# should be renamed to ez_client.py ?!
 
 #============#
 #  Includes  #
 #============#
-#from __future__ import print_function
 
 import sys
 import errno
@@ -67,7 +64,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     except socket.error, msg:
       error_msg = 'Bind failed. Error Code: ' + str(msg[0]) + ' Message ' + \
                   msg[1]
-      self.replyQueue.put(self.error(error_msg))
+      self.error(error_msg)
 
     self.command_history = {}
 
@@ -155,18 +152,17 @@ class client(ez_process, ez_simple_cli, threading.Thread):
               self.commandQueue.put(user_cmd)
 
           except:
-            self.replyQueue.put(self.error('No acception rule set for command' +
-                                           ' ' + command + '.'))
+            self.error('No acception rule set for command ' + command + '.')
 
       elif isinstance(data, em.Message):
-        self.replyQueue.put(self.success("received msg"))
+        self.success("received msg")
         self.MsgDatabase.add_entry(data)
         if self.enableCLI:
           print "data.clear_text():", data.clear_text()
         self.replyQueue.put(self.msg(data))
       else:
         # raw data
-        self.replyQueue.put(self.success(data))
+        self.success(data)
         return data
 
     else:
@@ -219,7 +215,6 @@ def init_client(name, **kwargs):
   cl.start()
 
 if __name__ == "__main__":
-
   try:
     name = sys.argv[1]
   except (IndexError, ValueError):
