@@ -148,7 +148,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
             if execute:
               cmd_dct = data[command]
               cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
-              user_cmd = p2pCommand(command, cmd_dct)
               self.enqueue(command, cmd_dct)
 
           except:
