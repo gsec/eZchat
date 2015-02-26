@@ -1,14 +1,6 @@
 # encoding=utf-8 ==============================================================#
 #                                  ez_cli.py                                   #
 #==============================================================================#
-# TODO: (bcn 2014-08-10) Allow to scroll in LICENSE and other files. Most likely
-# we want to use a text widget that also allows to center the logo when we have
-# varying width
-# The built-in Text widget allows for scrolling. To do so, you have to focus
-# the corresponding Text widget and press Up/Down (which can be mapped to j/k).
-# We can implement scrolling even without focussing the Text widget.
-# Assume we press `shift-j` and we want the text widget to scoll down. We simply
-# need to capture `shift-j` and forward `down` to the text widget.
 
 import sys
 import types
@@ -37,7 +29,7 @@ import ez_pipe as pipe
 class VimMsgBox(urwid.ListBox):
   """Prototype for our message box"""
 
-  signals = ['exit_msgbox', 'status_update']
+  signals = ['exit_msgbox', 'status_update', 'close_box', 'keypress']
 
   def __init__(self, logo_file=None, divider=True, *args, **kwargs):
     self.display_logo(logo_file, divider)
@@ -48,7 +40,7 @@ class VimMsgBox(urwid.ListBox):
                          'k': self.cmd_move_up,
                          #'down' : self.cmd_exit_msgbox,
                          #'up' : self.cmd_unhandled,
-                         'q': self.cmd_close_list,
+                         'q': self.cmd_close_box,
                          # Blocking left & right arrow key.
                          'left': self.cmd_unhandled,
                          'right': self.cmd_unhandled}
@@ -108,16 +100,17 @@ class VimMsgBox(urwid.ListBox):
   def cmd_move_down(self, size):
     urwid.ListBox.keypress(self, size, 'down')
 
-  def cmd_close_list(self, *args):
-    ez_cli.top.close_box()
+  def cmd_close_box(self, *args):
+    urwid.emit_signal(self, 'close_box')
 
   def keypress(self, size, key):
     # press any key to skip logo
     if self.logo_displayed:
       self.cmd_exit_msgbox()
+
       # The idea here is that the first keypress is already processed which
       # to my opinion feels better.
-      ez_cli.vimedit.keypress((size[0],), key)
+      urwid.emit_signal(self, 'keypress', (size[0],), key)
       return
     try:
       return self.command_dict[key](size)
@@ -130,13 +123,15 @@ class VimMsgBox(urwid.ListBox):
 
 class VimListBox(urwid.ListBox):
 
+  signals = ['close_box']
+
   def __init__(self, *args, **kwargs):
     urwid.ListBox.__init__(self, *args, **kwargs)
     self.command_dict = {'j': self.cmd_move_down,
                          'k': self.cmd_move_up,
                          'down': self.cmd_move_down,
                          'up': self.cmd_move_up,
-                         'q': self.cmd_close_list,
+                         'q': self.cmd_close_box,
                          # Blocking left & right arrow key.
                          'left': self.cmd_unhandled,
                          'right': self.cmd_unhandled}
@@ -150,8 +145,8 @@ class VimListBox(urwid.ListBox):
   def cmd_move_down(self, size):
     urwid.ListBox.keypress(self, size, 'down')
 
-  def cmd_close_list(self, *args):
-    ez_cli.top.close_box()
+  def cmd_close_box(self, *args):
+    urwid.emit_signal(self, 'close_box')
 
   def keypress(self, size, key):
     try:
@@ -185,7 +180,9 @@ class VimCommandLine(urwid.Edit):
   """
   Evaluates commands that are typed in command mode.
   """
-  signals = ['command_line_exit', 'exit_ez_chat', 'status_update']
+  signals = ['command_line_exit', 'exit_ez_chat', 'status_update',
+             'close_box', 'open_box', 'clear_msgbox', 'msg_update',
+             'status_update']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, vimedit, *args, **kwargs):
@@ -268,7 +265,9 @@ class VimCommandLine(urwid.Edit):
 
     self.contacts = contacts
     c_list = self.contact_list()
-    ez_cli.top.open_box(c_list, 50)
+
+    urwid.connect_signal(c_list, 'close_box', self.cmd_close_box)
+    urwid.emit_signal(self, 'open_box', c_list, 50)
 
   def open_processes(self):
     def process_list(processes):
@@ -284,7 +283,11 @@ class VimCommandLine(urwid.Edit):
 
     processes = cl.cl.background_processes
     lst = process_list(processes)
-    ez_cli.top.open_box(lst, 50)
+    urwid.connect_signal(lst, 'close_box', self.cmd_close_box)
+    urwid.emit_signal(self, 'open_box', lst, 50)
+
+  def cmd_close_box(self, *args):
+    urwid.emit_signal(self, 'close_box')
 
   def cmd_open(self, *args):
     if args[0] == 'contacts':
@@ -294,13 +297,15 @@ class VimCommandLine(urwid.Edit):
     elif args[0] == 'messages':
       UIDs = cl.cl.MsgDatabase.UID_list()
       msgs = cl.cl.MsgDatabase.get_entries(UIDs)
-      ez_cli.vimmsgbox.clear_msgbox()
+
+      urwid.emit_signal(self, 'clear_msgbox')
       for msg in msgs:
         if msg.recipient == cl.cl.name:
           try:
-            ez_cli.msg_update((str(msg.clear_text())))
+            urwid.emit_signal(self, 'msg_update', str(msg.clear_text()))
           except Exception, e:
-            ez_cli.status_update("<p>Error: %s</p>" % str(e))
+            urwid.emit_signal(self, 'status_update',
+                              "<p>Error: %s</p>" % str(e))
 
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
@@ -330,16 +335,17 @@ class VimCommandLine(urwid.Edit):
 
     # Empty cmdline
     except IndexError:
-      ez_cli.status_update('<Esc> for normal mode')
+      urwid.emit_signal(self, 'status_update', '<Esc> for normal mode')
 
     # Unkown command
     except KeyError:
-      ez_cli.status_update('Command not known')
+      urwid.emit_signal(self, 'status_update', 'Command not known.')
 
     # Arguments have wrong type
     except TypeError as e:
-      ez_cli.status_update('error:' + str(e))
-      ez_cli.status_update(self.command_dict[cmd_and_args[0]].__doc__)
+      urwid.emit_signal(self, 'status_update', 'Error:' + str(e) + '.')
+      cmd_dct = self.command_dict[cmd_and_args[0]].__doc__
+      urwid.emit_signal(self, 'status_update', cmd_dct)
 
     self.set_edit_text(':' + cmd)
 
@@ -390,7 +396,6 @@ class VimCommandLine(urwid.Edit):
 #                                   VimEdit                                    #
 #==============================================================================#
 
-# TODO: (bcn 2014-08-10) Add visual mode
 class VimEdit(urwid.Edit):
   """
   VimEdit encapsulates all vim-like edit functionality.
@@ -401,8 +406,8 @@ class VimEdit(urwid.Edit):
   must be done before the VimEdit instance.
 
   """
-  signals = ['done', 'insert_mode', 'command_mode',
-             'visual_mode', 'command_line']
+  signals = ['done', 'insert_mode', 'command_mode', 'visual_mode',
+             'command_line', 'status_update', 'keypress', 'return_contacts']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, **kwargs):
@@ -437,10 +442,10 @@ class VimEdit(urwid.Edit):
         self.command_dict[mapped_key] = commands[cmd]
 
   def cmd_scroll_msg_up(self):
-    ez_cli.vimmsgbox.keypress((self.maxcol, 20), 'up')
+    urwid.emit_signal(self, 'keypress', (self.maxcol, 20), 'up')
 
   def cmd_scroll_msg_down(self):
-    ez_cli.vimmsgbox.keypress((self.maxcol, 20), 'down')
+    urwid.emit_signal(self, 'keypress', (self.maxcol, 20), 'down')
 
   def cmd_enter_cmdline(self):
     urwid.emit_signal(self, 'command_line', self, ':')
@@ -521,6 +526,13 @@ class VimEdit(urwid.Edit):
   def cmd_move_up(self):
     self.cmd_move_down(shift=-1)
 
+  def cmd_send_msg(self, contacts):
+    msg = self.get_edit_text()
+    for contact in contacts:
+      cl.cl.cmd_send_msg(contact, msg)
+      urwid.emit_signal(self, 'status_update', contact)
+    self.set_edit_text('')
+
   def keypress(self, size, key):
     (self.maxcol,) = size
     self.p = self.edit_pos
@@ -539,12 +551,7 @@ class VimEdit(urwid.Edit):
         key = "\n"
         self.insert_text(key)
       else:
-        #urwid.emit_signal(self, 'done', self, self.get_edit_text())
-        for u in ez_cli.commandline.get_marked_contacts():
-          cl.cl.cmd_send_msg(u, self.get_edit_text())
-          ez_cli.status_update(u)
-        self.set_edit_text('')
-        #self.get_edit_text()
+        urwid.emit_signal(self, 'return_contacts')
       return
 
     # execute commands
@@ -658,17 +665,30 @@ class ez_cli_urwid(urwid.Frame):
 
     urwid.Frame.__init__(self, self.top_f, footer=self.command_and_status)
 
+    # vimedit signals
     urwid.connect_signal(self.vimedit, 'done', self.mode_notifier)
     urwid.connect_signal(self.vimedit, 'insert_mode', self.mode_notifier)
     urwid.connect_signal(self.vimedit, 'command_mode', self.mode_notifier)
     urwid.connect_signal(self.vimedit, 'command_line', self.command_line_mode)
+    urwid.connect_signal(self.vimedit, 'status_update', self.status_update)
+    urwid.connect_signal(self.vimedit, 'keypress', self.vimmsgbox.keypress)
+    urwid.connect_signal(self.vimedit, 'return_contacts', self.return_contacts)
+
+    # msgbox signals
+    urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
+    urwid.connect_signal(self.vimmsgbox, 'keypress', self.vimedit.keypress)
+
+    # commandline signals
     urwid.connect_signal(self.commandline, 'command_line_exit',
                          self.command_line_exit)
-
-    urwid.connect_signal(self.commandline, 'status_update',
-                         self.status_update)
+    urwid.connect_signal(self.commandline, 'status_update', self.status_update)
     urwid.connect_signal(self.commandline, 'exit_ez_chat', self.exit)
-    urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
+    urwid.connect_signal(self.commandline, 'close_box', self.top.close_box)
+    urwid.connect_signal(self.commandline, 'open_box', self.top.open_box)
+    urwid.connect_signal(self.commandline, 'clear_msgbox',
+                         self.vimmsgbox.clear_msgbox)
+    urwid.connect_signal(self.commandline, 'msg_update', self.msg_update)
+
     signal.signal(signal.SIGINT, self.__close__)
 
     self.name = name
@@ -677,6 +697,9 @@ class ez_cli_urwid(urwid.Frame):
     if self.logging:
       self.logger = open(ep.join(ep.location['log'],
                                  name + '_ez_cli_session.log'), 'w')
+
+  def return_contacts(self):
+    self.vimedit.cmd_send_msg(self.commandline.get_marked_contacts())
 
   def status_update(self, content):
     if self.logging:
