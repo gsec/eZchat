@@ -129,8 +129,10 @@ class ez_process_base(object):
 
   # MsgDb update
   def msg(self, msg=None):
-    return p2pReply(p2pReply.msg, msg)
+    self.replyQueue.put(p2pReply(p2pReply.msg, msg))
 
+  def enqueue(self, funcStr, data=None):
+    self.commandQueue.put(p2pCommand(funcStr, data))
 
 #==============================================================================#
 #                                 command_args                                 #

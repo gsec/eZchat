@@ -78,7 +78,7 @@ class ez_api(ez_process_base):
   def cmd_close(self):
     """ Client shutdown """
     self.enableCLI = False
-    self.commandQueue.put(p2pCommand('shutdown'))
+    self.enqueue('shutdown')
 
   #def cmd_get_online_users(self):
     ##return [(user, self.ips[user]) for user in self.ips]
@@ -93,7 +93,7 @@ class ez_api(ez_process_base):
     """Ping a user given his ID."""
     try:
       cmd_dct = {'user_id': user_id}
-      self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
+      self.enqueue('ping_request', cmd_dct)
     except:
       self.error("Syntax error in ping")
 
@@ -113,7 +113,7 @@ class ez_api(ez_process_base):
     try:
       cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
       self.add_client(**cmd_dct)
-      self.commandQueue.put(p2pCommand('ping_request', cmd_dct))
+      self.enqueue('ping_request', cmd_dct)
     except:
       self.error("Syntax error in user")
 
@@ -135,7 +135,7 @@ class ez_api(ez_process_base):
     """
     try:
       cmd_dct = {'host': host, 'port': port}
-      self.commandQueue.put(p2pCommand('servermode', cmd_dct))
+      self.enqueue('servermode', cmd_dct)
     except:
       self.error("Syntax error in servermode")
 
@@ -154,7 +154,7 @@ class ez_api(ez_process_base):
     """
     cmd_dct = {'host': host, 'port': int(port)}
     try:
-      self.commandQueue.put(p2pCommand('authentication_request', cmd_dct))
+      self.enqueue('authentication_request', cmd_dct)
       cmd_dct['user_id'] = 'server'
       self.add_client(**cmd_dct)
       self.success("Started cmd_authenticate")
@@ -177,7 +177,7 @@ class ez_api(ez_process_base):
     #master = (host, int(port))
     cmd_dct = {'host': host, 'port': int(port)}
     try:
-      self.commandQueue.put(p2pCommand('connect_server', cmd_dct))
+      self.enqueue('connect_server', cmd_dct)
       cmd_dct['user_id'] = 'server'
       self.add_client(**cmd_dct)
     except:
@@ -199,7 +199,7 @@ class ez_api(ez_process_base):
     """
     try:
       cmd_dct = {'user_id': user_id}
-      self.commandQueue.put(p2pCommand('db_sync_request_out', cmd_dct))
+      self.enqueue('db_sync_request_out', cmd_dct)
     except:
       self.error("Syntax error in cmd_sync")
 
@@ -209,7 +209,7 @@ class ez_api(ez_process_base):
     ez_process_preferences.
     """
     try:
-      self.commandQueue.put(p2pCommand('db_sync_background'))
+      self.enqueue('db_sync_background')
     except:
       self.error("Error in cmd_passive_sync")
 
@@ -223,7 +223,7 @@ class ez_api(ez_process_base):
     try:
       assert(user_id in self.ips)
       cmd_dct = {'user_id': user_id}
-      self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
+      self.enqueue('ips_request', cmd_dct)
     except:
       self.error("User_id not in known Ips")
 
@@ -236,7 +236,7 @@ class ez_api(ez_process_base):
     """
     try:
       cmd_dct = {'user_id': user_id}
-      self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
+      self.enqueue('contact_request_out', cmd_dct)
     except:
       self.error("Syntax error in key")
 
@@ -272,11 +272,11 @@ class ez_api(ez_process_base):
 
       data = pickle.dumps(mx)
       cmd_data = {'user_id': user_id, 'data': data}
-      self.commandQueue.put(p2pCommand('send', cmd_data))
+      self.enqueue('send', cmd_data)
 
     except:
       self.error("Syntax error in command")
 
   def cmd_ping_background(self):
     """ start background ping process """
-    self.commandQueue.put(p2pCommand('ping_background'))
+    self.enqueue('ping_background')

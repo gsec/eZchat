@@ -128,7 +128,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
       try:
         data = pickle.loads(sdata)
       except Exception as e:
-        self.replyQueue.put(self.error(str(e)))
+        self.error(str(e))
         return
 
       if isinstance(data, dict):
@@ -149,7 +149,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
               cmd_dct = data[command]
               cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
               user_cmd = p2pCommand(command, cmd_dct)
-              self.commandQueue.put(user_cmd)
+              self.enqueue(command, cmd_dct)
 
           except:
             self.error('No acception rule set for command ' + command + '.')
@@ -159,14 +159,14 @@ class client(ez_process, ez_simple_cli, threading.Thread):
         self.MsgDatabase.add_entry(data)
         if self.enableCLI:
           print "data.clear_text():", data.clear_text()
-        self.replyQueue.put(self.msg(data))
+        self.msg(data)
       else:
         # raw data
         self.success(data)
         return data
 
     else:
-      self.replyQueue.put(self.error("Conflict in receive"))
+      self.error("Conflict in receive")
 
 #====================#
 #  client main loop  #
@@ -181,7 +181,6 @@ class client(ez_process, ez_simple_cli, threading.Thread):
     while self.alive.isSet():
       try:
         cmd = self.commandQueue.get(True, self.timeout)
-        print "cmd.funcStr:", cmd.funcStr
         msg = command_args(self.handlers[cmd.funcStr])(self, cmd)
       except Queue.Empty:
         pass
@@ -198,7 +197,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
           self.CLI()
         # socket activated -> there is incoming data
         elif i == self.sockfd:
-          self.commandQueue.put(p2pCommand('receive'))
+          self.enqueue('receive')
 
       # check for messages in the replyQueue
       if self.enableCLI:
