@@ -274,8 +274,8 @@ class ez_api(ez_process_base):
       cmd_data = {'user_id': user_id, 'data': data}
       self.enqueue('send', cmd_data)
 
-    except:
-      self.error("Syntax error in command")
+    except Exception as e:
+      self.error("Syntax error in command: " + str(e))
 
   def cmd_ping_background(self):
     """ start background ping process """
