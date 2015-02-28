@@ -32,6 +32,7 @@ class ez_contact(ez_process_base):
       self.ips[user_id] = (kwargs['host'], int(kwargs['port']))
     except:
       print "user_id/host/port not properly specified in add_client"
+    self.success('Client ' + user_id + 'added.')
 
   def remove_client(self, user_id):
     if user_id in self.ips:
