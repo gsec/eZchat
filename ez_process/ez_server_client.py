@@ -317,4 +317,4 @@ class ez_server_client(ez_process_base):
         self.error(str(e))
 
     else:
-      self.replyQueue.put(p2pReply(p2pReply.error, "not connected to user"))
+      self.error("not connected to user")
