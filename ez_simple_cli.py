@@ -17,7 +17,7 @@ from ez_process import p2pCommand
 class ez_simple_cli(object):
 
   def __init__(self, *args, **kwargs):
-    super(simple_cli, self).__init__(*args, **kwargs)
+    super(ez_simple_cli, self).__init__(*args, **kwargs)
 
 #=======================#
 #  simple build-in cli  #
@@ -64,9 +64,8 @@ class ez_simple_cli(object):
         #_, user_id = data.split()
         bp_ping = p2pCommand('ping_background')
         self.commandQueue.put(bp_ping)
-        #self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
-        self.replyQueue.put(self.error("Syntax error in ping"))
+        self.error("Syntax error in ping")
 
 #============================#
 #  add user to online users  #
@@ -77,7 +76,7 @@ class ez_simple_cli(object):
         self.handlers['add_client'](user_id, (str(host), int(port)))
         self.commandQueue.put(p2pCommand('ping_request', user_id))
       except:
-        self.replyQueue.put(self.error("Syntax error in user"))
+        self.error("Syntax error in user")
 
 #===================#
 #  start listening  #
@@ -87,7 +86,7 @@ class ez_simple_cli(object):
         _, host, port = data.split()
         self.commandQueue.put(p2pCommand('servermode', (host, int(port))))
       except:
-        self.replyQueue.put(self.error("Syntax error in servermode"))
+        self.error("Syntax error in servermode")
 
 #=====================================#
 #  show running background processes  #
@@ -96,14 +95,14 @@ class ez_simple_cli(object):
       try:
         print ("background_processes:", self.background_processes)
       except:
-        self.replyQueue.put(self.error("Syntax error in bp"))
+        self.error("Syntax error in bp")
 
     elif "sync" in str(data[:-1]):
       try:
         _, user_id = data.split()
         self.commandQueue.put(p2pCommand('db_sync_request_out', user_id))
       except:
-        self.replyQueue.put(self.error("Syntax error in ips"))
+        self.error("Syntax error in ips")
 
 
 #==================================================#
@@ -122,7 +121,7 @@ class ez_simple_cli(object):
             self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
 
       except:
-        self.replyQueue.put(self.error("Syntax error in ips"))
+        self.error("Syntax error in ips")
 
 #============================#
 #  add user to contact list  #
@@ -133,7 +132,7 @@ class ez_simple_cli(object):
         cmd_dct = {'user_id': user_id}
         self.commandQueue.put(p2pCommand('contact_request_out', cmd_dct))
       except:
-        self.replyQueue.put(self.error("Syntax error in key"))
+        self.error("Syntax error in key")
 
 #========================#
 #  verify send packages  #
@@ -159,15 +158,16 @@ class ez_simple_cli(object):
         if not self.UserDatabase.in_DB(name=user_id):
           return
 
+        import ez_message as em
         mx = em.Message(self.name, user_id, msg)
         self.MsgDatabase.add_entry(mx)
 
-        if not user_id in self.ips:
+        if user_id not in self.ips:
           return
 
         data = pickle.dumps(mx)
-        cmd_data = {'user_id': user_id, 'data':data}
+        cmd_data = {'user_id': user_id, 'data': data}
         self.commandQueue.put(p2pCommand('send', cmd_data))
 
       except:
-        self.replyQueue.put(self.error("Syntax error in command"))
+        self.error("Syntax error in command")
