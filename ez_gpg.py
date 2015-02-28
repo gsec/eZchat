@@ -21,13 +21,6 @@ class ez_gpg(object):
   gpg = gnupg.GPG(**gpg_params['init'])
   gpg.encoding = gpg_params['encoding']
 
-  #@staticmethod
-  #def gpg_path(systemwide=False, fname=None):
-    #if systemwide:
-      #return os.path.join(os.environ['HOME'], ".ez_gnupg")  # eventually .gnupg
-    #else:
-      #return ep.join(ep.location['gpg'], fname)
-
   @classmethod
   def find_key(self, nickname=None):
     if nickname is None:
@@ -121,16 +114,21 @@ class ez_gpg(object):
 
   @classmethod
   def encrypt_msg(self, nickname, msg):
-    try:
-      fingerprint = self.find_key(nickname)
-    except:
-      raise
-    cipher = self.gpg.encrypt(msg, fingerprint)
+    cipher = self.gpg.encrypt(msg, nickname)
+    status = cipher.status
+    if status != 'encryption ok':
+      if status == 'invalid recipient':
+        raise Exception('Invalid recipient')
+      elif status == '':
+        err_msg = ('User `' + nickname + '` propably found, ' +
+                   'but trust level must be ultimate.')
+        raise Exception(err_msg)
+
     return cipher
 
   @classmethod
   def decrypt_msg(self, cipher):
-    msg = self.gpg.decrypt_msg(cipher)
+    msg = self.gpg.decrypt(cipher.data)
     return msg
 
   @classmethod
@@ -186,12 +184,30 @@ if __name__ == '__main__':
 
   #stream = open("example.txt", "rb")
 
-  signed_data = ez_gpg.gpg.sign(data)
-  print "signed_data:", signed_data.data
-  import re
-  pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
-  msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
-  print "msg.groups():", msg.groups()[0]
+  #import ez_message as em
+  sender = 'jean'
+  recipient = u'jlang'
+  msg = 'hi'
+  #print ez_gpg.gpg.list_keys()
+  cipher = ez_gpg.decrypt_msg(ez_gpg.encrypt_msg(recipient, msg))
+  print cipher
+  #import sys
+  #import cPickle as pickle
+  #print "cipher.status:", cipher.status
+  #ccipher = pickle.dumps(cipher)
+
+  #print sys.getsizeof(ccipher)
+
+  #print ez_gpg.gpg.list_keys()
+  #mx = em.Message(sender, recipient, msg)
+  #print "mx.__dict__:", mx.__dict__
+
+  #signed_data = ez_gpg.gpg.sign(data)
+  #print "signed_data:", signed_data.data
+  #import re
+  #pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
+  #msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
+  #print "msg.groups():", msg.groups()[0]
   #print "signed_data.data:", signed_data.data
   #verified = ez_gpg.gpg.verify(signed_data.data)
   #print "verified:", verified.__dict__
