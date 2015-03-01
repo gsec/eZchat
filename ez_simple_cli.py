@@ -169,5 +169,5 @@ class ez_simple_cli(object):
         cmd_data = {'user_id': user_id, 'data': data}
         self.commandQueue.put(p2pCommand('send', cmd_data))
 
-      except:
-        self.error("Syntax error in command")
+      except Exception as e:
+        self.error("Syntax error in command: " + str(e))
