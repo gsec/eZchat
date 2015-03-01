@@ -34,7 +34,8 @@ class VimEdit(urwid.Edit):
 
   """
   signals = ['done', 'insert_mode', 'command_mode', 'visual_mode',
-             'command_line', 'status_update', 'keypress', 'return_contacts']
+             'command_line', 'status_update', 'keypress', 'return_contacts',
+             'evaluate_command']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, **kwargs):
@@ -57,16 +58,23 @@ class VimEdit(urwid.Edit):
                 'cli_move_down': self.cmd_move_down,
                 'cli_move_up': self.cmd_move_up,
                 'cli_scroll_msg_up': self.cmd_scroll_msg_up,
-                'cli_scroll_msg_down': self.cmd_scroll_msg_down}
+                'cli_scroll_msg_down': self.cmd_scroll_msg_down,
+                'cli_evaluate_command': self.cmd_evaluate_command}
 
     self.command_dict = {}
+    for cmd in ep.cli_define_command:
+      cmd_str = ep.cli_define_command[cmd]
+      commands[cmd] = lambda: self.cmd_evaluate_command(cmd_str)
+
     for cmd in commands:
       if cmd not in ep.cli_command_dict:
-        #sys.stderr.write('ERROR: Command ' + cmd + ' not mapped')
-        cl.cl.commandQueue.put(p2pCommand('shutdown'))
-        #sys.exit()
-      for mapped_key in ep.cli_command_dict[cmd]:
-        self.command_dict[mapped_key] = commands[cmd]
+        cl.cl.enqueue('shutdown')
+      if cmd in ep.cli_command_dict:
+        for mapped_key in ep.cli_command_dict[cmd]:
+          self.command_dict[mapped_key] = commands[cmd]
+
+  def cmd_evaluate_command(self, cmd):
+    urwid.emit_signal(self, 'evaluate_command', cmd)
 
   def cmd_scroll_msg_up(self):
     urwid.emit_signal(self, 'keypress', (self.maxcol, 20), 'up')
@@ -201,5 +209,3 @@ class VimEdit(urwid.Edit):
 
     elif self.mode == VimEdit.insert_mode:
       urwid.Edit.keypress(self, size, key)
-
-

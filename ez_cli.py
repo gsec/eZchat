@@ -118,6 +118,8 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.vimedit, 'status_update', self.status_update)
     urwid.connect_signal(self.vimedit, 'keypress', self.vimmsgbox.keypress)
     urwid.connect_signal(self.vimedit, 'return_contacts', self.return_contacts)
+    urwid.connect_signal(self.vimedit, 'evaluate_command',
+                         self.evaluate_command)
 
     # msgbox signals
     urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
@@ -141,6 +143,9 @@ class ez_cli_urwid(urwid.Frame):
     if self.logging:
       self.logger = open(ep.join(ep.location['log'],
                                  name + '_ez_cli_session.log'), 'w')
+
+  def evaluate_command(self, cmd):
+    self.commandline.evaluate_command(cmd)
 
   def return_contacts(self):
     self.vimedit.cmd_send_msg(self.commandline.get_marked_contacts())
@@ -263,7 +268,7 @@ if __name__ == "__main__":
     if not options.verbose:
       ep.cli_status_height = 0  # disable statusline
     ez_cli = ez_cli_urwid(name=args[0], logging=options.logging)
-  except ep.DomainError, err:
+  except ValueError, err:
     sys.stderr.write('ERROR: %s\n' % str(err))
     cl.cl.commandQueue.put(p2pCommand('shutdown'))
     sys.exit()
