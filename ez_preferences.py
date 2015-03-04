@@ -91,7 +91,7 @@ def init_cli_preferences():
   cli_define_command = {}
   cli_define_command['cli_open_contacts'] = 'open contacts'
   cli_define_command['cli_open_processes'] = 'open processes'
-  #cli_define_command['cli_ping_server'] = 'ping server'
+  cli_define_command['cli_ping_server'] = 'ping server'
 
   global cli_command_dict
   cli_command_dict = {}
@@ -116,7 +116,7 @@ def init_cli_preferences():
   ccd['cli_scroll_msg_down'] = ('J',)
   ccd['cli_open_contacts'] = ('C',)
   ccd['cli_open_processes'] = ('P',)
-  #ccd['cli_ping_server'] = ('S',)
+  ccd['cli_ping_server'] = ('S',)
 
   #=======================#
   #  process preferences  #

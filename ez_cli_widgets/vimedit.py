@@ -64,11 +64,17 @@ class VimEdit(urwid.Edit):
     self.command_dict = {}
     for cmd in ep.cli_define_command:
       cmd_str = ep.cli_define_command[cmd]
-      commands[cmd] = lambda: self.cmd_evaluate_command(cmd_str)
+
+      # need to define different environments for the functions, otherwise
+      # cmd_str is shared and the same for all custom functions see
+      # http://stackoverflow.com/questions/233673/lexical-closures-in-python#235764
+      def construct_func(cmd_str):
+        def eval_cmd(): return self.cmd_evaluate_command(cmd_str)
+        return eval_cmd
+
+      commands[cmd] = construct_func(cmd_str)
 
     for cmd in commands:
-      if cmd not in ep.cli_command_dict:
-        cl.cl.enqueue('shutdown')
       if cmd in ep.cli_command_dict:
         for mapped_key in ep.cli_command_dict[cmd]:
           self.command_dict[mapped_key] = commands[cmd]
