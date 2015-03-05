@@ -8,6 +8,9 @@
 
 from Crypto.Hash import MD5
 import cPickle as pickle
+from ez_process import ez_process_base
+from types import ListType
+from ez_message import Message
 
 #==============================================================================#
 #                                 class Packet                                 #
@@ -138,6 +141,96 @@ class Packets(object):
   def chunks(self, step_size):
     for i in xrange(0, len(self.data), step_size):
       yield self.data[i:i + step_size]
+
+
+#==============================================================================#
+#                                  ez_packet                                   #
+#==============================================================================#
+
+class ez_packet(ez_process_base.ez_process_base):
+  """
+  Provides client methods for handling packets.
+  """
+  def __init__(self, *args, **kwargs):
+    super(ez_packet, self).__init__(*args, **kwargs)
+    self.stored_packets = {}
+
+  def send_packet(self, packet_info, user_id):
+    packets_hash, packet_id = packet_info
+    if packets_hash in self.sent_packets:
+      if packet_id in self.sent_packets[packets_hash].packets:
+        data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
+        if len(data) > 2048:
+          self.error("data larger than 2048 bytes")
+        else:
+          cmd_dct = {'user_id': user_id, 'data': data}
+          self.enqueue('send', cmd_dct)
+      else:
+        self.error("packet_id not in sent_packets")
+    else:
+      self.error("packet not in sent_packets")
+
+  def packet_request(self, packet_info, user_addr):
+    cmd_dct = {'packet_info': packet_info, 'user_id': self.name}
+    packet_cmd = {'send_packet': cmd_dct}
+    msg = pickle.dumps(packet_cmd)
+    try:
+      self.sockfd.sendto(msg, user_addr)
+    except IOError as e:
+      self.error(str(e))
+
+  def handle_packet(self, data, user_addr):
+    packets_hash = data.packets_hash
+    for user_id in self.ips:
+      # packages are dropped if not associated to a known user_id
+      if user_addr == self.ips[user_id]:
+        key = (user_addr, packets_hash)
+        if key not in self.stored_packets:
+          self.stored_packets[key] = Packets()
+          self.stored_packets[key].max_packets = data.max_packets
+          self.stored_packets[key].packets = {}
+
+        packets = self.stored_packets[key]
+        packets.packets_hash = packets_hash
+
+        if data.max_packets == 1 and data.packet_number == 0:
+          self.success(pickle.loads(data.data))
+          return
+
+        packets.packets[data.packet_number] = data
+        self.stored_packets[key] = packets
+
+        self.success("Received package")
+
+        pr_key = ('receive', user_id)
+
+        def update_and_reconstruct(*args):
+          packets = self.stored_packets[key]
+          reconstructed, result = packets.reconstruct_data()
+          if reconstructed:
+            if isinstance(result, ListType):
+              for res in result:
+                if isinstance(res, Message):
+                  self.MsgDatabase.add_entry(res)
+            elif isinstance(result, Message):
+              self.MsgDatabase.add_entry(result)
+
+            self.success(result)
+            if pr_key in self.background_processes:
+              pr = self.background_processes[pr_key]
+              pr.finished.set()
+              pr.cancel()
+              del self.background_processes[pr_key]
+          else:
+            pass
+
+        if packets.max_packets == len(packets.packets):
+          update_and_reconstruct()
+
+        else:
+          if pr_key not in self.background_processes:
+            self.start_background_process(pr_key, update_and_reconstruct, 5)
+
 
 if __name__ == "__main__":
   import doctest

@@ -15,7 +15,6 @@ from ez_process_base import ez_process_base, p2pCommand
 
 import cPickle as pickle
 import ez_user as eu
-import ez_packet as ep
 import ez_pipe as pipe
 
 #==============================================================================#

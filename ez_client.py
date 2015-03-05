@@ -14,7 +14,8 @@ import Queue
 import types
 import threading
 import cPickle as pickle
-import ez_message as em
+from ez_message import Message
+from ez_packet import Packet, ez_packet
 
 from datetime import datetime
 from ez_process import p2pCommand, p2pReply, ez_process, command_args
@@ -26,7 +27,7 @@ CLIENT_TIMEOUT = 0.1
 #                                 class client                                 #
 #==============================================================================#
 
-class client(ez_process, ez_simple_cli, threading.Thread):
+class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
   """
   Client class with builtin queue system, p2p via NAT traversal and reliable udp
   packet system.
@@ -94,6 +95,7 @@ class client(ez_process, ez_simple_cli, threading.Thread):
 
     self.handlers = ez_process.get_bases_handler()
     self.handlers.update(self.get_handler())
+    self.handlers.update(ez_packet.get_bases_handler())
 
     for handler in self.handlers:
       if handler in acception_rules:
@@ -131,41 +133,48 @@ class client(ez_process, ez_simple_cli, threading.Thread):
         self.error(str(e))
         return
 
-      if isinstance(data, dict):
-        for command in data:
-          try:
-            assert(command in self.handler_rules)
-            if self.handler_rules[command] == 'Allow':
-              execute = True
-            elif self.handler_rules[command] == 'Auth':
-              master = (user_addr[0], int(user_addr[1]))
-              if master in self.authentifications:
-                execute = True
-              else:
-                execute = False
-            else:
-              execute = False
-            if execute:
-              cmd_dct = data[command]
-              cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
-              self.enqueue(command, cmd_dct)
-
-          except:
-            self.error('No acception rule set for command ' + command + '.')
-
-      elif isinstance(data, em.Message):
-        self.success("received msg")
-        self.MsgDatabase.add_entry(data)
-        if self.enableCLI:
-          print "data.clear_text():", data.clear_text()
-        self.msg(data)
-      else:
-        # raw data
-        self.success(data)
-        return data
+      self.handle_incomming_data(data, user_addr)
 
     else:
       self.error("Conflict in receive")
+
+  def handle_incomming_data(self, data, user_addr):
+    if isinstance(data, dict):
+      for command in data:
+        try:
+          assert(command in self.handler_rules)
+          if self.handler_rules[command] == 'Allow':
+            execute = True
+          elif self.handler_rules[command] == 'Auth':
+            master = (user_addr[0], int(user_addr[1]))
+            if master in self.authentifications:
+              execute = True
+            else:
+              execute = False
+          else:
+            execute = False
+          if execute:
+            cmd_dct = data[command]
+            cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
+            self.enqueue(command, cmd_dct)
+
+        except:
+          self.error('No acception rule set for command ' + command + '.')
+
+    elif isinstance(data, Message):
+      self.success("received msg")
+      self.MsgDatabase.add_entry(data)
+      if self.enableCLI:
+        print "data.clear_text():", data.clear_text()
+      self.msg(data)
+
+    elif isinstance(data, Packet):
+      self.handle_packet(data, user_addr)
+    else:
+      # raw data
+      self.success(data)
+      return data
+
 
 #====================#
 #  client main loop  #
