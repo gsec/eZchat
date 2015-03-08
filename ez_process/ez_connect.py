@@ -72,7 +72,7 @@ class ez_connect(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def connection_request(self, user_id, user_addr):
+  def connection_request(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -89,7 +89,7 @@ class ez_connect(ez_process_base):
     :param user_addr: Endpoint of a Server/Client (Ip, Port)
     :type  user_addr: (string, int)
     """
-
+    user_addr = (host, port)
     process_id = ('connection_request', user_addr)
     if process_id not in self.background_processes:
       cmd_dct = {'user_id': self.name}
@@ -116,7 +116,7 @@ class ez_connect(ez_process_base):
     else:
       self.error("cannot connect again, still waiting for response")
 
-  def connection_nat_traversal(self, user_id, user_addr):
+  def connection_nat_traversal(self, user_id, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -134,6 +134,7 @@ class ez_connect(ez_process_base):
     con_success = {'connection_success': cmd_dct}
     msg = pickle.dumps(con_success)
 
+    user_addr = (host, port)
     cmd = self.success("nat traversal succeded: " + str(user_addr))
     cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
