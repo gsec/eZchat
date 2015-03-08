@@ -191,7 +191,7 @@ class VimCommandLine(urwid.Edit):
     except TypeError as e:
       urwid.emit_signal(self, 'status_update', 'Error:' + str(e) + '.')
       cmd_dct = self.command_dict[cmd_and_args[0]].__doc__
-      urwid.emit_signal(self, 'status_update', cmd_dct)
+      urwid.emit_signal(self, 'status_update', str(cmd_dct))
 
     self.set_edit_text(':' + cmd)
 
