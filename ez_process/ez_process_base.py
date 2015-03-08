@@ -77,6 +77,8 @@ class ez_process_base(object):
   # terminated successfully
   success_callback = {}
 
+  socket_buffsize = 2024
+
   @classmethod
   def get_handler(self):
     handler = {}

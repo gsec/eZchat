@@ -5,7 +5,7 @@
 #============#
 #  Includes  #
 #============#
-
+from sys import getsizeof
 from ez_process_base import ez_process_base, p2pReply, p2pCommand
 import cPickle as pickle
 import ez_message as em
@@ -311,6 +311,10 @@ class ez_server_client(ez_process_base):
 
     if user_id in self.ips:
       user_addr = self.ips[user_id]
+      if getsizeof(data) > self.socket_buffsize:
+        self.error('Data is too large, must be packed.')
+        return
+
       try:
         self.sockfd.sendto(data, user_addr)
       except IOError as e:

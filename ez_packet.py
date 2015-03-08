@@ -60,7 +60,7 @@ class Packets(object):
   >>> data
   {'hi': ['there', ('how', 'are'), 'you', 2]}
   """
-  def __init__(self, data=None, chunksize=100):
+  def __init__(self, data=None, chunksize=10):
 
     if data is None:
       return
@@ -94,7 +94,7 @@ class Packets(object):
                    packet in packets whiich is corrupted.
     :type  return: (bool, Str)
     >>> random_data = 'r4nb0m'
-    >>> packed_data = Packets(data=random_data)
+    >>> packed_data = Packets(data=random_data, chunksize=10)
     >>> status, data = packed_data.reconstruct_data()
     >>> status
     True
@@ -117,6 +117,15 @@ class Packets(object):
     False
     >>> data
     0
+
+    Or packets may be missing
+
+    >>> del packed_data.packets[1]
+    >>> status, data = packed_data.reconstruct_data()
+    >>> status
+    False
+    >>> data
+    [1]
     """
 
     if len(self.packets) == self.max_packets:
@@ -137,7 +146,6 @@ class Packets(object):
                  if u not in self.packets.keys()]
       return False, missing
 
-  @classmethod
   def chunks(self, step_size):
     for i in xrange(0, len(self.data), step_size):
       yield self.data[i:i + step_size]
@@ -170,15 +178,15 @@ class ez_packet(ez_process_base.ez_process_base):
       self.sent_packets[packets.packets_hash] = packets
 
       for packet_id in packets.packets:
-        #if packet_id != 5:
+        #if packet_id != 1:
         data = pickle.dumps(packets.packets[packet_id])
         if len(data) > 2048:
           self.error("data larger than 2048 bytes")
         else:
           cmd_dct = {'user_id': user_id, 'data': data}
-          self.enqueue('send', cmd_dct)
-    except:
-      self.replyQueue.put(self.error("Syntax error in command"))
+        self.enqueue('send', cmd_dct)
+    except Exception as e:
+      self.error("Syntax error in send_packet: " + str(e))
 
   def resend_packet(self, packet_info, user_id):
     packets_hash, packet_id = packet_info
@@ -204,7 +212,7 @@ class ez_packet(ez_process_base.ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def handle_packet(self, data, user_addr):
+  def handle_packet(self, data, user_addr, handler):
     packets_hash = data.packets_hash
     for user_id in self.ips:
       # packages are dropped if not associated to a known user_id
@@ -219,7 +227,7 @@ class ez_packet(ez_process_base.ez_process_base):
         packets.packets_hash = packets_hash
 
         if data.max_packets == 1 and data.packet_number == 0:
-          self.success(pickle.loads(data.data))
+          handler(pickle.loads(data.data), user_addr)
           return
 
         packets.packets[data.packet_number] = data
@@ -233,28 +241,30 @@ class ez_packet(ez_process_base.ez_process_base):
           packets = self.stored_packets[key]
           reconstructed, result = packets.reconstruct_data()
           if reconstructed:
-            if isinstance(result, ListType):
-              for res in result:
-                if isinstance(res, Message):
-                  self.MsgDatabase.add_entry(res)
-            elif isinstance(result, Message):
-              self.MsgDatabase.add_entry(result)
-
-            self.success(result)
+            handler(result, user_addr)
             if pr_key in self.background_processes:
               pr = self.background_processes[pr_key]
               pr.finished.set()
               pr.cancel()
               del self.background_processes[pr_key]
           else:
-            pass
+            self.error('Packet reconstruction failed')
+            for packet_number in result:
+              cmd_dct = {'packet_info': (packets.packets_hash, packet_number),
+                         'user_addr': user_addr}
+              self.enqueue('packet_request', cmd_dct)
+
+            self.reset_background_process(pr_key)
 
         if packets.max_packets == len(packets.packets):
           update_and_reconstruct()
 
         else:
+          cmd_dct = {'process_id': pr_key,
+                     'callback': update_and_reconstruct,
+                     'interval': 5}
           if pr_key not in self.background_processes:
-            self.start_background_process(pr_key, update_and_reconstruct, 5)
+            self.enqueue('start_background_process', cmd_dct)
 
 
 if __name__ == "__main__":
