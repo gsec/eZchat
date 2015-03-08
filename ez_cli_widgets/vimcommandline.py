@@ -54,6 +54,7 @@ class VimCommandLine(urwid.Edit):
                          "ips": cl.cl.cmd_ips,
                          "key": cl.cl.cmd_key,
                          "send": cl.cl.cmd_send_msg,
+                         "sendpacket": cl.cl.send_packet,
                          "quit": self.cmd_close,
                          "q": self.cmd_close,
                          "show": self.cmd_show,

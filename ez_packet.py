@@ -153,9 +153,34 @@ class ez_packet(ez_process_base.ez_process_base):
   """
   def __init__(self, *args, **kwargs):
     super(ez_packet, self).__init__(*args, **kwargs)
+    # packets are stored until complete
     self.stored_packets = {}
+    # sent packets are stored allowing for being requested again.
+    self.sent_packets = {}
 
-  def send_packet(self, packet_info, user_id):
+  def send_packet(self, user_id, data):
+    try:
+      if not self.UserDatabase.in_DB(name=user_id):
+        return
+
+      if user_id not in self.ips:
+        return
+
+      packets = Packets(data=data)
+      self.sent_packets[packets.packets_hash] = packets
+
+      for packet_id in packets.packets:
+        #if packet_id != 5:
+        data = pickle.dumps(packets.packets[packet_id])
+        if len(data) > 2048:
+          self.error("data larger than 2048 bytes")
+        else:
+          cmd_dct = {'user_id': user_id, 'data': data}
+          self.enqueue('send', cmd_dct)
+    except:
+      self.replyQueue.put(self.error("Syntax error in command"))
+
+  def resend_packet(self, packet_info, user_id):
     packets_hash, packet_id = packet_info
     if packets_hash in self.sent_packets:
       if packet_id in self.sent_packets[packets_hash].packets:
@@ -172,7 +197,7 @@ class ez_packet(ez_process_base.ez_process_base):
 
   def packet_request(self, packet_info, user_addr):
     cmd_dct = {'packet_info': packet_info, 'user_id': self.name}
-    packet_cmd = {'send_packet': cmd_dct}
+    packet_cmd = {'resend_packet': cmd_dct}
     msg = pickle.dumps(packet_cmd)
     try:
       self.sockfd.sendto(msg, user_addr)
