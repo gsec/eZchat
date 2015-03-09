@@ -8,7 +8,7 @@
 
 from Crypto.Hash import MD5
 import cPickle as pickle
-from ez_process import ez_process_base
+from ez_process.ez_process_base import ez_process_base
 from types import ListType
 from ez_message import Message
 
@@ -50,7 +50,7 @@ class Packets(object):
   :param data: data to be packed into chunks
   :type  data: anything which can be pickled
 
-
+  :return: (Bool,
 
   >>> random_data = {'hi': ['there', ('how', 'are'), 'you', 2]}
   >>> packed_data = Packets(data=random_data)
@@ -60,7 +60,8 @@ class Packets(object):
   >>> data
   {'hi': ['there', ('how', 'are'), 'you', 2]}
   """
-  def __init__(self, data=None, chunksize=10):
+  def __init__(self, data=None,
+               chunksize=ez_process_base.socket_buffsize/2):
 
     if data is None:
       return
@@ -116,7 +117,7 @@ class Packets(object):
     >>> status
     False
     >>> data
-    0
+    [0]
 
     Or packets may be missing
 
@@ -130,17 +131,24 @@ class Packets(object):
 
     if len(self.packets) == self.max_packets:
       data = ''
+      bad_packets = None
       for i in self.packets:
         if self.packets[i].verify_hash():
-          t = pickle.dumps(self.packets[i])
-          data += pickle.loads(t).data
+          if bad_packets is None:
+            t = pickle.dumps(self.packets[i])
+            data += pickle.loads(t).data
 
         else:
-          return False, i
-      if Packet.compute_hash(data) == self.packets[0].packets_hash:
-        return True, pickle.loads(data)
+          if bad_packets is None:
+            bad_packets = []
+          bad_packets.append(i)
+      if bad_packets is not None:
+        return False, bad_packets
       else:
-        return False, "checksum error"
+        if Packet.compute_hash(data) == self.packets[0].packets_hash:
+          return True, pickle.loads(data)
+        else:
+          return False, "checksum error"
     else:
       missing = [u for u in range(self.max_packets)
                  if u not in self.packets.keys()]
@@ -150,12 +158,11 @@ class Packets(object):
     for i in xrange(0, len(self.data), step_size):
       yield self.data[i:i + step_size]
 
-
 #==============================================================================#
 #                                  ez_packet                                   #
 #==============================================================================#
 
-class ez_packet(ez_process_base.ez_process_base):
+class ez_packet(ez_process_base):
   """
   Provides client methods for handling packets.
   """

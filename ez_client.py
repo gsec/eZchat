@@ -95,7 +95,8 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
 
     self.handlers = ez_process.get_bases_handler()
     self.handlers.update(self.get_handler())
-    self.handlers.update(ez_packet.get_bases_handler())
+    packet_handlers = ez_packet.get_handler()
+    self.handlers.update(packet_handlers)
 
     for handler in self.handlers:
       if handler in acception_rules:
@@ -125,7 +126,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
     if not readable:
       return
 
-    sdata, user_addr = self.sockfd.recvfrom(8096)
+    sdata, user_addr = self.sockfd.recvfrom(self.socket_buffsize)
     if sdata is not None:
       try:
         data = pickle.loads(sdata)
@@ -169,7 +170,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       self.msg(data)
 
     elif isinstance(data, Packet):
-      self.handle_packet(data, user_addr)
+      self.handle_packet(data, user_addr, self.handle_incomming_data)
     else:
       # raw data
       self.success(data)
