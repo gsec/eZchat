@@ -50,16 +50,16 @@ class DialogDisplay(urwid.Frame):
 
 class DialogPopUp(urwid.PopUpLauncher):
     def __init__(self):
-        self.__super.__init__(urwid.Button("click-me"))
-        urwid.connect_signal(self.original_widget, 'click',
-                             lambda button: self.open_pop_up())
+        self.__super.__init__(urwid.Text("", 'center'))
+        #urwid.connect_signal(self.original_widget, 'click',
+                             #lambda button: self.open_pop_up())
 
     def create_pop_up(self):
         text = 'accept'
         height = 20
         width = 20
         DD = DialogDisplay(text, height, width)
-        DDP = urwid.Padding(DD, 'center', width)
+        #DDP = urwid.Padding(DD, 'center', width)
         #DDP = urwid.Filler(DDP, 'middle', height)
         #DDP = urwid.AttrWrap(DDP, 'border')
         buttons = [("Yes", 0), ("No", 1)]
@@ -76,7 +76,7 @@ class DialogPopUp(urwid.PopUpLauncher):
 
         urwid.connect_signal(DD, 'close',
                              lambda button: self.close_pop_up())
-        return DDP
+        return DD
 
     def get_pop_up_parameters(self):
         return {'left': 0, 'top': 1, 'overlay_width': 32, 'overlay_height': 7}

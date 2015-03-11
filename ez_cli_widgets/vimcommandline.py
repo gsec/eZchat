@@ -27,7 +27,7 @@ class VimCommandLine(urwid.Edit):
   """
   signals = ['command_line_exit', 'exit_ez_chat', 'status_update',
              'close_box', 'open_box', 'clear_msgbox', 'msg_update',
-             'status_update']
+             'status_update', 'open_pop_up']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, vimedit, *args, **kwargs):
@@ -150,8 +150,9 @@ class VimCommandLine(urwid.Edit):
           try:
             urwid.emit_signal(self, 'msg_update', str(msg.clear_text()))
           except Exception, e:
-            urwid.emit_signal(self, 'status_update',
-                              "<p>Error: %s</p>" % str(e))
+            urwid.emit_signal(self, 'status_update', "Error: %s" % str(e))
+    elif args[0] == 'popup':
+      urwid.emit_signal(self, 'open_pop_up')
 
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
@@ -180,7 +181,7 @@ class VimCommandLine(urwid.Edit):
       urwid.emit_signal(self, 'command_line_exit', self, '')
 
     # Empty cmdline
-    except IndexError:
+    except IndexError as e:
       urwid.emit_signal(self, 'status_update', '<Esc> for normal mode')
 
     # Unkown command

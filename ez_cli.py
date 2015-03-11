@@ -68,7 +68,8 @@ class ez_cli_urwid(urwid.Frame):
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
     self.dialog = DialogPopUp()
-    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.dialog, self.vimedit])
+    #self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit, self.dialog])
+    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit])
     self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
 
     if ep.cli_status_height > 0:
@@ -102,8 +103,11 @@ class ez_cli_urwid(urwid.Frame):
         self.focus_position = len(self.contents) - 1
 
       def close_box(self):
-        del self.contents[1]
-        self.focus_position = 0
+        if len(self.contents) > 1:
+          del self.contents[1]
+          self.focus_position = 0
+        else:
+          self.contents = []
 
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
@@ -137,6 +141,7 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.commandline, 'clear_msgbox',
                          self.vimmsgbox.clear_msgbox)
     urwid.connect_signal(self.commandline, 'msg_update', self.msg_update)
+    urwid.connect_signal(self.commandline, 'open_pop_up', self.open_pop_up)
 
     signal.signal(signal.SIGINT, self.__close__)
 
@@ -145,6 +150,13 @@ class ez_cli_urwid(urwid.Frame):
     if self.logging:
       self.logger = open(ep.join(ep.location['log'],
                                  name + '_ez_cli_session.log'), 'w')
+
+  def open_pop_up(self):
+    self.top.close_box()
+    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.dialog])
+    self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
+    self.top.open_box(self.vimbox_f, 50)
+    self.dialog.open_pop_up()
 
   def evaluate_command(self, cmd):
     self.commandline.evaluate_command(cmd)
