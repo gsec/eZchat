@@ -172,4 +172,10 @@ default_db = join(location['db'], 'ez.db')
 # ------- Colors --------
 palette = [('online', 'light green', 'dark green'),
            ('offline', 'dark red', 'light red'),
-           ]
+           ('body', 'black', 'light gray', 'standout'),
+           ('border', 'black', 'dark blue'),
+           ('shadow', 'white', 'black'),
+           ('selectable', 'black', 'dark cyan'),
+           ('focus', 'white', 'dark blue', 'bold'),
+           ('focustext', 'light gray', 'dark blue'),
+           ('popbg', 'white', 'dark blue')]

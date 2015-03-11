@@ -20,7 +20,8 @@ import ez_preferences as ep
 import ez_client as cl
 import ez_pipe as pipe
 
-from ez_cli_widgets import VimMsgBox, VimEdit, VimCommandLine, VimStatusline
+from ez_cli_widgets import (VimMsgBox, VimEdit, VimCommandLine, VimStatusline,
+                            DialogPopUp)
 
 #==============================================================================#
 #                                 ez_cli_urwid                                 #
@@ -66,7 +67,8 @@ class ez_cli_urwid(urwid.Frame):
 
     # combine vimedit and vimmsgbox to vimbox
     self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
-    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit])
+    self.dialog = DialogPopUp()
+    self.vimbox = urwid.Pile([self.vimmsgbox_b, self.dialog, self.vimedit])
     self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
 
     if ep.cli_status_height > 0:
@@ -202,9 +204,8 @@ class ez_cli_urwid(urwid.Frame):
 
   def received_output(self, data):
     categories = {p2pReply.success: 'success',
-                  p2pReply.error:   'error',
-                  p2pReply.msg:     'msg'
-                  }
+                  p2pReply.error: 'error',
+                  p2pReply.msg: 'msg'}
     if 'status' in data.strip():
         try:
           reply = cl.cl.replyQueue.get(block=False)
@@ -222,7 +223,7 @@ class ez_cli_urwid(urwid.Frame):
               try:
                 self.msg_update((str(reply.data.clear_text())))
               except Exception, e:
-                self.status_update("<p>Error: %s</p>" % str(e))
+                self.status_update("Error: %s" % str(e))
 
           else:
             # this case should not happen! (if theres something in the queue it
@@ -277,7 +278,7 @@ if __name__ == "__main__":
 #  MAIN LOOPS  #
 #==============#
 
-  loop = urwid.MainLoop(ez_cli, ep.palette)
+  loop = urwid.MainLoop(ez_cli, ep.palette, pop_ups=True)
   pipe.pipe = loop.watch_pipe(ez_cli.received_output)
 
   # start eZchat with script
