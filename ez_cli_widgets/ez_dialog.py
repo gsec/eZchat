@@ -11,7 +11,7 @@ class DialogDisplay(urwid.Frame):
 
     signals = ['close']
 
-    def __init__(self, text, height, width, body=None):
+    def __init__(self, height, width, text=None, body=None):
         width = int(width)
         if width <= 0:
             width = ('relative', 80)
@@ -26,9 +26,25 @@ class DialogDisplay(urwid.Frame):
 
         self.frame = urwid.Frame(body, focus_part='footer')
         if text is not None:
-            self.frame.header = urwid.Pile([urwid.Text(text),
+            self.frame.header = urwid.Pile([urwid.Text(text, 'center'),
                                            urwid.Divider()])
         w = self.frame
+
+        yes_button = urwid.Button("Yes")
+        urwid.connect_signal(yes_button, 'click', lambda button:
+                             self._emit("close"))
+        yes_button = urwid.AttrWrap(yes_button, 'selectable', 'focus')
+
+        no_button = urwid.Button("No")
+        urwid.connect_signal(no_button, 'click', lambda button:
+                             self._emit("close"))
+        no_button = urwid.AttrWrap(no_button, 'selectable', 'focus')
+
+        buttons = urwid.GridFlow([yes_button, no_button], 10, 3, 1, 'center')
+
+        w.footer = buttons
+        #self.frame.footer = urwid.Pile([urwid.Divider(), no_button],
+                                       #focus_item=1)
 
         # pad area around listbox
         w = urwid.Padding(w, ('fixed left', 2), ('fixed right', 2))
@@ -46,37 +62,29 @@ class DialogDisplay(urwid.Frame):
 
     @staticmethod
     def button_press(button):
+      if button.exitcode == 1:
+        urwid.emit_signal(button.popup, 'close')
+      else:
         raise DialogExit(button.exitcode)
 
 class DialogPopUp(urwid.PopUpLauncher):
-    def __init__(self):
-        self.__super.__init__(urwid.Text("", 'center'))
-        #urwid.connect_signal(self.original_widget, 'click',
-                             #lambda button: self.open_pop_up())
+    def __init__(self, button_text='', text=None):
+      self.text = text
+      self.__super.__init__(urwid.Button(button_text))
+      urwid.connect_signal(self.original_widget, 'click',
+                           lambda button: self.open_pop_up())
 
     def create_pop_up(self):
-        text = 'accept'
         height = 20
         width = 20
-        DD = DialogDisplay(text, height, width)
-        #DDP = urwid.Padding(DD, 'center', width)
-        #DDP = urwid.Filler(DDP, 'middle', height)
-        #DDP = urwid.AttrWrap(DDP, 'border')
-        buttons = [("Yes", 0), ("No", 1)]
-
-        l = []
-        for name, exitcode in buttons:
-            b = urwid.Button(name, DialogDisplay.button_press)
-            b.exitcode = exitcode
-            b = urwid.AttrWrap(b, 'selectable', 'focus')
-            l.append(b)
-        DD.buttons = urwid.GridFlow(l, 10, 3, 1, 'center')
-        DD.frame.footer = urwid.Pile([urwid.Divider(), DD.buttons],
-                                     focus_item=1)
+        DD = DialogDisplay(height, width, text=self.text)
+        DDP = urwid.Padding(DD, 'center', width)
+        DDP = urwid.Filler(DDP, 'middle', height)
+        DDP = urwid.AttrWrap(DDP, 'border')
 
         urwid.connect_signal(DD, 'close',
                              lambda button: self.close_pop_up())
-        return DD
+        return DDP
 
     def get_pop_up_parameters(self):
         return {'left': 0, 'top': 1, 'overlay_width': 32, 'overlay_height': 7}
@@ -90,7 +98,6 @@ if __name__ == "__main__":
              ('focustext', 'light gray', 'dark blue'),
              ('popbg', 'white', 'dark blue')]
 
-  fill = urwid.Filler(urwid.Padding(DialogPopUp(), 'center', 15))
+  fill = urwid.Filler(urwid.Padding(DialogPopUp('push me'), 'center', 15))
   loop = urwid.MainLoop(fill, palette, pop_ups=True)
   loop.run()
-

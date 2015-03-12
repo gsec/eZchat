@@ -124,7 +124,10 @@ class VimCommandLine(urwid.Edit):
         on = urwid.Text(("online", u"ON"))
         off = urwid.Text(("offline", u"OFF"))
         status = on if pr_on else off
-        prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
+        from ez_dialog import DialogPopUp
+        process_pop_up = DialogPopUp(str(process_id), 'End process?')
+        prs += [process_pop_up]
+        #prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
       return VimListBox(urwid.SimpleListWalker(prs))
 
     processes = cl.cl.background_processes
