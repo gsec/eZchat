@@ -49,26 +49,33 @@ class ez_cli_urwid(urwid.Frame):
   """
 
   def __init__(self, name='', logging=False, *args, **kwargs):
-    self.vimedit = VimEdit(caption=('VimEdit', u'eZchat\n\n'),
+    self.vimedit = VimEdit(caption=('VimEdit', ('bold', u'eZchat\n\n')),
                            multiline=True)
+
     self.commandline = VimCommandLine(self.vimedit, u'')
+    self.commandline._attrib = [('border', 1)]
+
+    self.commandline_attr = urwid.AttrWrap(self.commandline, 'shadow')
 
     if ep.cli_start_in_insertmode:
       self.vimedit.mode = VimEdit.insert_mode
-      self.commandline.set_edit_text(u'insert mode')
+      self.commandline.set_edit_text(u' insert mode')
     else:
       self.vimedit.mode = VimEdit.command_mode
-      self.commandline.set_edit_text(u'command mode')
+      self.commandline.set_edit_text(u' command mode')
 
     self.vimedit_f = urwid.Filler(self.vimedit, valign='top')
     self.vimedit_b = urwid.BoxAdapter(self.vimedit_f, ep.cli_edit_height)
 
     self.vimmsgbox = VimMsgBox(logo_file='misc/logo.txt')
 
+    vimmsgframe = urwid.Frame(self.vimmsgbox)
+    attr = urwid.AttrWrap(urwid.Text(('border', ' ')), 'shadow')
+    vimmsgframe.footer = attr
+
     # combine vimedit and vimmsgbox to vimbox
-    self.vimmsgbox_b = urwid.BoxAdapter(self.vimmsgbox, ep.cli_msg_height)
+    self.vimmsgbox_b = urwid.BoxAdapter(vimmsgframe, ep.cli_msg_height)
     self.dialog = DialogPopUp()
-    #self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit, self.dialog])
     self.vimbox = urwid.Pile([self.vimmsgbox_b, self.vimedit])
     self.vimbox_f = urwid.Filler(self.vimbox, valign='top')
 
@@ -82,10 +89,10 @@ class ez_cli_urwid(urwid.Frame):
 
     if hasattr(self, 'statusline'):
       self.command_and_status = urwid.Pile([self.statusline_b,
-                                            self.commandline])
+                                            self.commandline_attr])
     else:
-      self.command_and_status = self.commandline
-
+      self.command_and_status = self.commandline_attr
+    command_and_status_attr = urwid.AttrMap(self.command_and_status, 'body')
     focus_map = {'heading': 'focus heading',
                  'options': 'focus options',
                  'line': 'focus line'}
@@ -111,10 +118,10 @@ class ez_cli_urwid(urwid.Frame):
 
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
-    self.top_f = urwid.Filler(self.top, 'top', ep.cli_msg_height +
+    self.top_f = urwid.Filler(self.top, 'bottom', ep.cli_msg_height +
                               ep.cli_edit_height)
 
-    urwid.Frame.__init__(self, self.top_f, footer=self.command_and_status)
+    urwid.Frame.__init__(self, self.top_f, footer=command_and_status_attr)
 
     # vimedit signals
     urwid.connect_signal(self.vimedit, 'done', self.mode_notifier)
@@ -189,7 +196,7 @@ class ez_cli_urwid(urwid.Frame):
     self.exit()
 
   def mode_notifier(self, edit, new_edit_text):
-    self.commandline.set_edit_text(str(new_edit_text))
+    self.commandline.set_edit_text(' ' + str(new_edit_text))
 
   def enter_msgbox(self):
     self.vimbox.set_focus(0)
@@ -205,7 +212,7 @@ class ez_cli_urwid(urwid.Frame):
     self.set_focus('footer')
 
   def command_line_exit(self, edit, new_edit_text):
-    self.commandline.set_edit_text('command mode')
+    self.commandline.set_edit_text(' command mode')
     self.set_focus('body')
 
   def exit(self, *args):

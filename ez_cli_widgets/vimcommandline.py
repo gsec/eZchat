@@ -76,7 +76,8 @@ class VimCommandLine(urwid.Edit):
       return []
 
   def contact_list(self):
-    contacts = [urwid.Text("Contacts:")]
+    shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
+    contacts = [shadowline, urwid.Text(('bold', 'Contacts:'))]
     self.contact_checkbox = {}
     for user in self.contacts:
       user_id = user[0]
@@ -117,7 +118,8 @@ class VimCommandLine(urwid.Edit):
 
   def open_processes(self):
     def process_list(processes):
-      prs = [urwid.Text("Processes:")]
+      shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
+      prs = [shadowline, urwid.Text(('bold', 'Processes:'))]
       for process_id in processes:
         pr = processes[process_id]
         pr_on = not pr.finished.isSet()

@@ -178,4 +178,5 @@ palette = [('online', 'light green', 'dark green'),
            ('selectable', 'black', 'dark cyan'),
            ('focus', 'white', 'dark blue', 'bold'),
            ('focustext', 'light gray', 'dark blue'),
-           ('popbg', 'white', 'dark blue')]
+           ('popbg', 'white', 'dark blue'),
+           ('bold', 'bold', 'default')]
