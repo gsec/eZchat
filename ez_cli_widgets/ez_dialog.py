@@ -3,15 +3,16 @@
 #==============================================================================#
 
 import urwid
+from vimbutton import VimButton
 
 class DialogExit(Exception):
     pass
 
 class DialogDisplay(urwid.Frame):
 
-    signals = ['close']
+    signals = ['no', 'yes']
 
-    def __init__(self, height, width, text=None, body=None):
+    def __init__(self, height, width, text):
         width = int(width)
         if width <= 0:
             width = ('relative', 80)
@@ -19,32 +20,28 @@ class DialogDisplay(urwid.Frame):
         if height <= 0:
             height = ('relative', 80)
 
-        self.body = body
-        if body is None:
-            # fill space with nothing
-            body = urwid.Filler(urwid.Divider(), 'top')
-
+        body = urwid.Filler(urwid.Pile([urwid.Text(text, 'center'),
+                                       urwid.Divider()]))
         self.frame = urwid.Frame(body, focus_part='footer')
-        if text is not None:
-            self.frame.header = urwid.Pile([urwid.Text(text, 'center'),
-                                           urwid.Divider()])
         w = self.frame
 
-        yes_button = urwid.Button("Yes")
+        yes_button = VimButton("Yes")
         urwid.connect_signal(yes_button, 'click', lambda button:
-                             self._emit("close"))
+                             self._emit("yes"))
+        urwid.connect_signal(yes_button, 'close', lambda:
+                             self._emit("no"))
         yes_button = urwid.AttrWrap(yes_button, 'selectable', 'focus')
 
-        no_button = urwid.Button("No")
+        no_button = VimButton("No")
         urwid.connect_signal(no_button, 'click', lambda button:
-                             self._emit("close"))
+                             self._emit("no"))
+        urwid.connect_signal(no_button, 'close', lambda:
+                             self._emit("no"))
         no_button = urwid.AttrWrap(no_button, 'selectable', 'focus')
 
-        buttons = urwid.GridFlow([yes_button, no_button], 10, 3, 1, 'center')
+        buttons = urwid.Columns([no_button, yes_button])
 
         w.footer = buttons
-        #self.frame.footer = urwid.Pile([urwid.Divider(), no_button],
-                                       #focus_item=1)
 
         # pad area around listbox
         w = urwid.Padding(w, ('fixed left', 2), ('fixed right', 2))
@@ -68,26 +65,37 @@ class DialogDisplay(urwid.Frame):
         raise DialogExit(button.exitcode)
 
 class DialogPopUp(urwid.PopUpLauncher):
-    def __init__(self, button_text='', text=None):
-      self.text = text
-      self.__super.__init__(urwid.Button(button_text))
-      urwid.connect_signal(self.original_widget, 'click',
-                           lambda button: self.open_pop_up())
 
-    def create_pop_up(self):
-        height = 20
-        width = 20
-        DD = DialogDisplay(height, width, text=self.text)
-        DDP = urwid.Padding(DD, 'center', width)
-        DDP = urwid.Filler(DDP, 'middle', height)
-        DDP = urwid.AttrWrap(DDP, 'border')
+  signals = ['update']
 
-        urwid.connect_signal(DD, 'close',
-                             lambda button: self.close_pop_up())
-        return DDP
+  def __init__(self, button_text='', text=None,
+               success_callback=lambda *args: None):
+    self.text = text
+    self.success_callback = success_callback
+    self.__super.__init__(urwid.Button(button_text))
+    urwid.connect_signal(self.original_widget, 'click',
+                         lambda button: self.open_pop_up())
 
-    def get_pop_up_parameters(self):
-        return {'left': 0, 'top': 1, 'overlay_width': 32, 'overlay_height': 7}
+  def create_pop_up(self):
+      height = 10
+      width = 20
+      DD = DialogDisplay(height, width, text=self.text)
+
+      # no: just close the popup
+      urwid.connect_signal(DD, 'no', lambda button: self.close_pop_up())
+
+      # yes: call callback, close popup and update list.
+      urwid.connect_signal(DD, 'yes', self.success_callback)
+      urwid.connect_signal(DD, 'yes', lambda button: self.close_pop_up())
+      urwid.connect_signal(DD, 'yes', lambda button: self._emit('update'))
+
+      DD = urwid.Padding(DD, 'center', width)
+      DD = urwid.Filler(DD, 'middle', height)
+
+      return DD
+
+  def get_pop_up_parameters(self):
+      return {'left': 0, 'top': 1, 'overlay_width': 32, 'overlay_height': 5}
 
 if __name__ == "__main__":
   palette = [('body', 'black', 'light gray', 'standout'),

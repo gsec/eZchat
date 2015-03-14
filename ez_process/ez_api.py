@@ -280,3 +280,23 @@ class ez_api(ez_process_base):
   def cmd_ping_background(self):
     """ start background ping process """
     self.enqueue('ping_background')
+
+  def cmd_stop_background_process(self, process_id, queued=False):
+    """
+    Stops a backgroundprocess specified by a process_id.
+
+    :process_id: Usually a tuple of strings. See, for instance,
+                 :py:meth:`ez_process.ez_ping.ez_ping.ping_background`.
+
+    This process is by default not queued.
+    """
+    try:
+      assert(len(process_id) > 0)
+    except:
+      raise Exception('No process ID given.')
+
+    cmd_dct = {'process_id': process_id}
+    if queued:
+      self.enqueue('stop_background_process', cmd_dct)
+    else:
+      self.stop_background_process(process_id)

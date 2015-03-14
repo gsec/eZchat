@@ -58,7 +58,8 @@ class VimCommandLine(urwid.Edit):
                          "quit": self.cmd_close,
                          "q": self.cmd_close,
                          "show": self.cmd_show,
-                         "open": self.cmd_open}
+                         "open": self.cmd_open,
+                         'stop': cl.cl.cmd_stop_background_process}
 
   def cmd_show(self, file_name):
     try:
@@ -116,26 +117,40 @@ class VimCommandLine(urwid.Edit):
     urwid.connect_signal(c_list, 'close_box', self.cmd_close_box)
     urwid.emit_signal(self, 'open_box', c_list, 50)
 
-  def open_processes(self):
-    def process_list(processes):
-      shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
-      prs = [shadowline, urwid.Text(('bold', 'Processes:'))]
-      for process_id in processes:
-        pr = processes[process_id]
-        pr_on = not pr.finished.isSet()
-        on = urwid.Text(("online", u"ON"))
-        off = urwid.Text(("offline", u"OFF"))
-        status = on if pr_on else off
-        from ez_dialog import DialogPopUp
-        process_pop_up = DialogPopUp(str(process_id), 'End process?')
-        prs += [process_pop_up]
-        #prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
-      return VimListBox(urwid.SimpleListWalker(prs))
-
+  def process_list(self, update=False):
     processes = cl.cl.background_processes
-    lst = process_list(processes)
-    urwid.connect_signal(lst, 'close_box', self.cmd_close_box)
-    urwid.emit_signal(self, 'open_box', lst, 50)
+    shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
+    prs = [shadowline, urwid.Text(('bold', 'Processes:'))]
+    for process_id in processes:
+      pr = processes[process_id]
+      pr_on = not pr.finished.isSet()
+      on = urwid.Text(("online", u"ON"))
+      off = urwid.Text(("offline", u"OFF"))
+      status = on if pr_on else off
+      from ez_dialog import DialogPopUp
+
+      def close_process(process_id):
+        def eval_cmd(*args): return cl.cl.cmd_stop_background_process(process_id)
+        return eval_cmd
+
+      process_pop_up = DialogPopUp(str(process_id), text='End process?',
+                                   success_callback=close_process(process_id))
+
+      urwid.connect_signal(process_pop_up, 'update',
+                           lambda *args: self.process_list(update=True))
+      prs += [process_pop_up]
+      #prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
+    if update:
+      self.slw[:] = prs
+    else:
+      self.slw = urwid.SimpleListWalker(prs)
+    #return VimListBox(self.slw)
+
+  def open_processes(self):
+    self.process_list()
+    vimlistbox = VimListBox(self.slw)
+    urwid.connect_signal(vimlistbox, 'close_box', self.cmd_close_box)
+    urwid.emit_signal(self, 'open_box', vimlistbox, 50)
 
   def cmd_close_box(self, *args):
     urwid.emit_signal(self, 'close_box')
@@ -198,6 +213,8 @@ class VimCommandLine(urwid.Edit):
       urwid.emit_signal(self, 'status_update', 'Error:' + str(e) + '.')
       cmd_dct = self.command_dict[cmd_and_args[0]].__doc__
       urwid.emit_signal(self, 'status_update', str(cmd_dct))
+    except Exception as e:
+      urwid.emit_signal(self, 'status_update', str(e))
 
     self.set_edit_text(':' + cmd)
 
