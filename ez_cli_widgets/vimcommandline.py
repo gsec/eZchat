@@ -130,7 +130,11 @@ class VimCommandLine(urwid.Edit):
       from ez_dialog import DialogPopUp
 
       def close_process(process_id):
-        def eval_cmd(*args): return cl.cl.cmd_stop_background_process(process_id)
+        def eval_cmd(*args):
+          try:
+            cl.cl.cmd_stop_background_process(process_id)
+          except Exception, e:
+            urwid.emit_signal(self, 'status_update', "Error: %s" % str(e))
         return eval_cmd
 
       process_pop_up = DialogPopUp(str(process_id), text='End process?',

@@ -120,11 +120,14 @@ class ez_background_process(ez_process_base):
     thread.start_new_thread(pr.run, ())
 
   def stop_background_process(self, process_id):
+    try:
       pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
-      del self.background_process_cmds[process_id]
+    except:
+      raise Exception('No process with id: ' + str(process_id) + ' running.')
+    pr.finished.set()
+    pr.cancel()
+    del self.background_processes[process_id]
+    del self.background_process_cmds[process_id]
 
   def stop_background_processes(self):
     for process_id in self.background_processes:
