@@ -12,6 +12,19 @@ from ez_process.ez_process_base import ez_process_base
 from types import ListType
 from ez_message import Message
 
+import os
+import tempfile
+from contextlib import contextmanager
+
+# creates a temporary file object used in doctest
+@contextmanager
+def tempinput(data):
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(data)
+    temp.close()
+    yield temp.name
+    os.unlink(temp.name)
+
 #==============================================================================#
 #                                 class Packet                                 #
 #==============================================================================#
@@ -21,12 +34,15 @@ class Packet(object):
   The Packet type is used to make UDP sends reliable. See Packets for
   functionality.
   """
-  def __init__(self, data="", packet_number=1, max_packets=1, packets_hash=""):
+  def __init__(self, data="", packet_number=1, max_packets=1,
+               packets_hash="", **kwargs):
     self.data = data
     self.packet_number = packet_number
     self.max_packets = max_packets
     self.packet_hash = MD5.new(self.data).digest()
     self.packets_hash = packets_hash
+    for kwarg in kwargs:
+      setattr(self, kwarg, kwargs[kwarg])
 
   def verify_hash(self):
     return self.packet_hash == self.compute_hash(self.data)
@@ -47,10 +63,13 @@ class Packets(object):
   Packet a hash is computed allowing the recipient to check whether the sent
   package is corrupted.
 
-  :param data: data to be packed into chunks
-  :type  data: anything which can be pickled
+  :param data: python objects or filepath
+  :type  data: anything which can be pickled or filepath
 
-  :return: (Bool,
+  :return: (Bool, data or filepath)
+
+
+  test for python object
 
   >>> random_data = {'hi': ['there', ('how', 'are'), 'you', 2]}
   >>> packed_data = Packets(data=random_data)
@@ -59,19 +78,53 @@ class Packets(object):
   True
   >>> data
   {'hi': ['there', ('how', 'are'), 'you', 2]}
+
+  test for file object
+
+  >>> with tempinput('randomtext.') as tempfilename:
+  ...   packet_data = Packets(filepath=tempfilename)
+  >>> fout = tempfile.NamedTemporaryFile()
+  >>> status, filepath = packet_data.reconstruct_data(filepath=fout.name)
+  >>> status
+  True
+  >>> open(filepath, 'r').read()
+  'randomtext.'
   """
-  def __init__(self, data=None,
+
+  def __init__(self, data=None, filepath=None,
                chunksize=ez_process_base.socket_buffsize/2):
+    try:
+      assert((data is None) ^ (filepath is None))
+    except:
+      raise ValueError('Data (exclusive) or filepath must be set.')
 
-    if data is None:
-      return
+    if filepath:
+      from cPickle import load
+      try:
+        data = open(filepath, 'rb')
+        self.filename = data.name
 
-    self.data = pickle.dumps(data)
-    self.packets_hash = Packet.compute_hash(self.data)
-    if len(self.data) > chunksize:
-      self.data = [u for u in self.chunks(chunksize)]
+        # file is read as a whole into memory and the hash is computed
+        # -> this may take long for large files
+        self.data = data.read()
+      except Exception, e:
+        raise Exception('Could not load data: ' + str(e))
+
+      self.packets_hash = Packet.compute_hash(self.data)
+
+      if len(self.data) > chunksize:
+        self.data = [u for u in self.chunks(chunksize)]
+      else:
+        self.data = [self.data]
+
     else:
-      self.data = [self.data]
+      self.data = pickle.dumps(data)
+
+      self.packets_hash = Packet.compute_hash(self.data)
+      if len(self.data) > chunksize:
+        self.data = [u for u in self.chunks(chunksize)]
+      else:
+        self.data = [self.data]
 
     self.packets = {}
     self.max_packets = len(self.data)
@@ -81,10 +134,12 @@ class Packets(object):
                      "packet_number": i,
                      "max_packets": self.max_packets,
                      "packets_hash": self.packets_hash}
+      if hasattr(self, 'filename'):
+        packet_args.update({'filename': self.filename})
 
       self.packets[i] = Packet(**packet_args)
 
-  def reconstruct_data(self):
+  def reconstruct_data(self, filepath=None):
     """
     Reconstructs the data from the Packets instance and performs checksum
     checks.
@@ -129,14 +184,19 @@ class Packets(object):
     [1]
     """
 
+    # data is not unpicked if stored to the hard disk
+    if filepath is not None:
+      unpickle = False
+    else:
+      unpickle = True
+
     if len(self.packets) == self.max_packets:
       data = ''
       bad_packets = None
       for i in self.packets:
         if self.packets[i].verify_hash():
           if bad_packets is None:
-            t = pickle.dumps(self.packets[i])
-            data += pickle.loads(t).data
+            data += self.packets[i].data
 
         else:
           if bad_packets is None:
@@ -146,7 +206,16 @@ class Packets(object):
         return False, bad_packets
       else:
         if Packet.compute_hash(data) == self.packets[0].packets_hash:
-          return True, pickle.loads(data)
+          if unpickle:
+            return True, pickle.loads(data)
+          else:
+            try:
+              fout = open(filepath, 'w')
+              fout.write(data)
+            except:
+              return False, 'Error when writing to filepath'
+
+            return True, filepath
         else:
           return False, "checksum error"
     else:
