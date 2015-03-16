@@ -4,6 +4,7 @@
 
 import urwid
 from vimbutton import VimButton
+from types import StringType, ListType
 
 class DialogExit(Exception):
     pass
@@ -20,8 +21,16 @@ class DialogDisplay(urwid.Frame):
         if height <= 0:
             height = ('relative', 80)
 
-        body = urwid.Filler(urwid.Pile([urwid.Text(text, 'center'),
-                                       urwid.Divider()]))
+        if type(text) is StringType:
+
+          body = urwid.Filler(urwid.Pile([urwid.Text(text, 'center'),
+                                         urwid.Divider()]))
+        elif type(text) is urwid.Text:
+          body = urwid.Filler(urwid.Pile([text, urwid.Divider()]))
+
+        elif type(text) is ListType:
+          body = urwid.Filler(urwid.Pile(text + [urwid.Divider()]))
+
         self.frame = urwid.Frame(body, focus_part='footer')
         w = self.frame
 
@@ -68,18 +77,28 @@ class DialogPopUp(urwid.PopUpLauncher):
 
   signals = ['update']
 
-  def __init__(self, button_text='', text=None,
+  def __init__(self, button_text='', additional_widgets=None, pop_up_text=None,
                success_callback=lambda *args: None):
-    self.text = text
+    self.pop_up_text = pop_up_text
     self.success_callback = success_callback
-    self.__super.__init__(urwid.Button(button_text))
-    urwid.connect_signal(self.original_widget, 'click',
+
+    button = urwid.Button(button_text)
+    if additional_widgets is None:
+      self.__super.__init__(button)
+
+    elif type(additional_widgets) is urwid.Text:
+      self.__super.__init__(urwid.Pile([button, additional_widgets]))
+
+    elif type(additional_widgets) is ListType:
+      self.__super.__init__(urwid.Pile([button] + additional_widgets))
+
+    urwid.connect_signal(button, 'click',
                          lambda button: self.open_pop_up())
 
   def create_pop_up(self):
       height = 10
       width = 20
-      DD = DialogDisplay(height, width, text=self.text)
+      DD = DialogDisplay(height, width, text=self.pop_up_text)
 
       # no: just close the popup
       urwid.connect_signal(DD, 'no', lambda button: self.close_pop_up())

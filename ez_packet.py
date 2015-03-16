@@ -92,9 +92,12 @@ class Packets(object):
   """
 
   def __init__(self, data=None, filepath=None,
-               chunksize=ez_process_base.socket_buffsize/2):
+               chunksize=1):
+               #chunksize=ez_process_base.socket_buffsize/2):
     try:
-      assert((data is None) ^ (filepath is None))
+      both_none = (data is None) and (filepath is None)
+      one = (data is None) ^ (filepath is None)
+      assert(one or both_none)
     except:
       raise ValueError('Data (exclusive) or filepath must be set.')
 
@@ -252,15 +255,14 @@ class ez_packet(ez_process_base):
 
       packets = Packets(data=data)
       self.sent_packets[packets.packets_hash] = packets
-
       for packet_id in packets.packets:
-        #if packet_id != 1:
-        data = pickle.dumps(packets.packets[packet_id])
-        if len(data) > 2048:
-          self.error("data larger than 2048 bytes")
-        else:
-          cmd_dct = {'user_id': user_id, 'data': data}
-        self.enqueue('send', cmd_dct)
+        if packet_id != 1:
+          data = pickle.dumps(packets.packets[packet_id])
+          if len(data) > 2048:
+            self.error("data larger than 2048 bytes")
+          else:
+            cmd_dct = {'user_id': user_id, 'data': data}
+          self.enqueue('send', cmd_dct)
     except Exception as e:
       self.error("Syntax error in send_packet: " + str(e))
 
@@ -289,6 +291,25 @@ class ez_packet(ez_process_base):
       self.error(str(e))
 
   def handle_packet(self, data, user_addr, handler):
+    """
+    Handles incoming packets. A `packet session` is started and received
+    packages are stored in *stored_packets*. A background process is started
+    tracking the status of the session. If packages are missing or corrupted,
+    the method :py:meth:`ez_packet.ez_packet.packet_request`is invoked
+    automatically. When the packet is reconstructed completely the associated
+    *stored_packets* entry is deleted.
+
+
+    :param data: Packed data
+    :type  data: Packet
+
+    :param user_addr: The user address tuple (host, port) from whom the packet
+                      is received.
+    :type  user_addr: (string, int)
+
+    :param handler: A handler how to proceed when the packet is reconstructed.
+    :type  handler: function
+    """
     packets_hash = data.packets_hash
     for user_id in self.ips:
       # packages are dropped if not associated to a known user_id
@@ -311,7 +332,8 @@ class ez_packet(ez_process_base):
 
         self.success("Received package")
 
-        pr_key = ('receive', user_id)
+        #pr_key = ('receive', user_id)
+        pr_key = key
 
         def update_and_reconstruct(*args):
           packets = self.stored_packets[key]

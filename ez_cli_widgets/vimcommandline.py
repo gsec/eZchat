@@ -137,7 +137,8 @@ class VimCommandLine(urwid.Edit):
             urwid.emit_signal(self, 'status_update', "Error: %s" % str(e))
         return eval_cmd
 
-      process_pop_up = DialogPopUp(str(process_id), text='End process?',
+      process_pop_up = DialogPopUp(str(process_id), additional_widgets=status,
+                                   pop_up_text='End process?',
                                    success_callback=close_process(process_id))
 
       urwid.connect_signal(process_pop_up, 'update',
@@ -150,8 +151,46 @@ class VimCommandLine(urwid.Edit):
       self.slw = urwid.SimpleListWalker(prs)
     #return VimListBox(self.slw)
 
+  def packets_list(self, update=False):
+    packets = cl.cl.stored_packets
+    shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
+    pcts = [shadowline, urwid.Text(('bold', 'Packets:'))]
+    for packet_id in packets:
+      from ez_dialog import DialogPopUp
+      max_packets = str(packets[packet_id].max_packets)
+      received_packets = str(len(packets[packet_id].packets))
+      # will be replaced by progress bar
+      status = urwid.Text(str(received_packets) + '/' + str(max_packets))
+      def close_packets(packet_id):
+        def eval_cmd(*args):
+          del cl.cl.stored_packets[packet_id]
+          try:
+            cl.cl.cmd_stop_background_process(packet_id)
+          except Exception, e:
+            urwid.emit_signal(self, 'status_update', "Error: %s" % str(e))
+        return eval_cmd
+
+      process_pop_up = DialogPopUp(str(packet_id), additional_widgets=status,
+                                   pop_up_text='End packet?',
+                                   success_callback=close_packets(packet_id))
+
+      urwid.connect_signal(process_pop_up, 'update',
+                           lambda *args: self.process_list(update=True))
+      pcts += [process_pop_up]
+      #prs += [urwid.Columns([urwid.Text(str(process_id)), status])]
+    if update:
+      self.slw[:] = pcts
+    else:
+      self.slw = urwid.SimpleListWalker(pcts)
+
   def open_processes(self):
     self.process_list()
+    vimlistbox = VimListBox(self.slw)
+    urwid.connect_signal(vimlistbox, 'close_box', self.cmd_close_box)
+    urwid.emit_signal(self, 'open_box', vimlistbox, 50)
+
+  def open_packets(self):
+    self.packets_list()
     vimlistbox = VimListBox(self.slw)
     urwid.connect_signal(vimlistbox, 'close_box', self.cmd_close_box)
     urwid.emit_signal(self, 'open_box', vimlistbox, 50)
@@ -164,6 +203,8 @@ class VimCommandLine(urwid.Edit):
       self.open_contacts()
     elif args[0] == 'processes':
       self.open_processes()
+    elif args[0] == 'packets':
+      self.open_packets()
     elif args[0] == 'messages':
       UIDs = cl.cl.MsgDatabase.UID_list()
       msgs = cl.cl.MsgDatabase.get_entries(UIDs)
