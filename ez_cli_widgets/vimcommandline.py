@@ -161,6 +161,7 @@ class VimCommandLine(urwid.Edit):
       received_packets = str(len(packets[packet_id].packets))
       # will be replaced by progress bar
       status = urwid.Text(str(received_packets) + '/' + str(max_packets))
+
       def close_packets(packet_id):
         def eval_cmd(*args):
           del cl.cl.stored_packets[packet_id]
@@ -222,7 +223,6 @@ class VimCommandLine(urwid.Edit):
   def cmd_close(self):
     with open(ep.command_history, 'w') as f:
       f.write('\n'.join(self.command_lines))
-
     urwid.emit_signal(self, 'exit_ez_chat')
 
   def __close__(self):
@@ -259,7 +259,8 @@ class VimCommandLine(urwid.Edit):
       cmd_dct = self.command_dict[cmd_and_args[0]].__doc__
       urwid.emit_signal(self, 'status_update', str(cmd_dct))
     except Exception as e:
-      urwid.emit_signal(self, 'status_update', str(e))
+      # close cmd
+      raise
 
     self.set_edit_text(':' + cmd)
 
