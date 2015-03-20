@@ -142,7 +142,7 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.commandline, 'command_line_exit',
                          self.command_line_exit)
     urwid.connect_signal(self.commandline, 'status_update', self.status_update)
-    urwid.connect_signal(self.commandline, 'exit_ez_chat', self.exit)
+    urwid.connect_signal(self.commandline, 'exit_ez_chat', self.__close__)
     urwid.connect_signal(self.commandline, 'close_box', self.top.close_box)
     urwid.connect_signal(self.commandline, 'open_box', self.top.open_box)
     urwid.connect_signal(self.commandline, 'clear_msgbox',
@@ -192,7 +192,7 @@ class ez_cli_urwid(urwid.Frame):
     self.vimmsgbox.body.set_focus(focus)
 
   def __close__(self, *args):
-    self.commandline.cmd_close()
+    #self.commandline.cmd_close()
     self.exit()
 
   def mode_notifier(self, edit, new_edit_text):
@@ -216,6 +216,7 @@ class ez_cli_urwid(urwid.Frame):
     self.set_focus('body')
 
   def exit(self, *args):
+    self.status_update("hi")
     cl.cl.cmd_close()
     if self.logging:
       self.logger.close()
