@@ -6,6 +6,7 @@
 #  Includes  #
 #============#
 
+import sys
 from ez_process_base import ez_process_base, p2pReply
 from ez_gpg import ez_gpg
 import cPickle as pickle
@@ -49,16 +50,11 @@ class ez_contact(ez_process_base):
     :type  user_id: string
     """
 
-    if user_id in self.ips:
-      user_addr = self.ips[user_id]
-      cmd_dct = {'user': self.myself}
-      contact_request = {'contact_request_in': cmd_dct}
-      msg = pickle.dumps(contact_request)
-      try:
-        self.sockfd.sendto(msg, user_addr)
-        self.success("sent contact request: " + str(self.myself.UID))
-      except IOError as e:
-        self.error(str(e))
+    cmd_dct = {'user': self.myself}
+    contact_request = {'contact_request_in': cmd_dct}
+    data = pickle.dumps(contact_request)
+    send_cmd = {'user_id': user_id, 'data': data}
+    self.enqueue('send', send_cmd)
 
   def contact_request_in(self, user, host, port):
     """

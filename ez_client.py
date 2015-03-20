@@ -104,6 +104,36 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       else:
         self.handler_rules[handler] = global_rule
 
+#===============#
+#  client send  #
+#===============#
+
+  def send(self, user_id, data):
+    """
+    Send data to a user.
+
+    :param user_id: id specifying the username
+    :type  user_id: string
+
+    :param data: The message or pickled object to be sent.
+    :type  data: string
+    """
+    if user_id in self.ips:
+      user_addr = self.ips[user_id]
+      #data_pickled = pickle.dumps(data)
+      if sys.getsizeof(data) > self.socket_buffsize:
+        send_packet_cmd = {'user_id': user_id, 'data': data}
+        self.enqueue('send_packet', send_packet_cmd)
+        return
+
+      try:
+        self.sockfd.sendto(data, user_addr)
+      except IOError as e:
+        self.error(str(e))
+
+    else:
+      self.error("not connected to user")
+
 #===================#
 #  client receive   #
 #===================#
@@ -193,6 +223,8 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
         msg = command_args(self.handlers[cmd.funcStr])(self, cmd)
       except Queue.Empty:
         pass
+      #except Exception, e:
+        #self.error('ERROR: ' + str(e))
       readable = []
       try:
         if self.enableCLI:

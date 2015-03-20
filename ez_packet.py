@@ -6,6 +6,7 @@
 #  Includes  #
 #============#
 
+import sys
 from Crypto.Hash import MD5
 import cPickle as pickle
 from ez_process.ez_process_base import ez_process_base
@@ -91,9 +92,8 @@ class Packets(object):
   'randomtext.'
   """
 
-  def __init__(self, data=None, filepath=None,
-               chunksize=1):
-               #chunksize=ez_process_base.socket_buffsize/2):
+  def __init__(self, data=None, filepath=None, pickle_data=True,
+               chunksize=ez_process_base.socket_buffsize/2):
     try:
       both_none = (data is None) and (filepath is None)
       one = (data is None) ^ (filepath is None)
@@ -121,7 +121,10 @@ class Packets(object):
         self.data = [self.data]
 
     else:
-      self.data = pickle.dumps(data)
+      if pickle_data:
+        self.data = pickle.dumps(data)
+      else:
+        self.data = data
 
       self.packets_hash = Packet.compute_hash(self.data)
       if len(self.data) > chunksize:
@@ -247,22 +250,22 @@ class ez_packet(ez_process_base):
 
   def send_packet(self, user_id, data):
     try:
-      if not self.UserDatabase.in_DB(name=user_id):
-        return
+      #if not self.UserDatabase.in_DB(name=user_id):
+        #self.error('User not in database')
+        #return
 
       if user_id not in self.ips:
         return
 
-      packets = Packets(data=data)
+      packets = Packets(data=data, pickle_data=False)
       self.sent_packets[packets.packets_hash] = packets
       for packet_id in packets.packets:
-        if packet_id != 1:
-          data = pickle.dumps(packets.packets[packet_id])
-          if len(data) > 2048:
-            self.error("data larger than 2048 bytes")
-          else:
-            cmd_dct = {'user_id': user_id, 'data': data}
-          self.enqueue('send', cmd_dct)
+        data = pickle.dumps(packets.packets[packet_id])
+        if len(data) > 2048:
+          self.error("data larger than 2048 bytes")
+        else:
+          cmd_dct = {'user_id': user_id, 'data': data}
+        self.enqueue('send', cmd_dct)
     except Exception as e:
       self.error("Syntax error in send_packet: " + str(e))
 
@@ -271,8 +274,8 @@ class ez_packet(ez_process_base):
     if packets_hash in self.sent_packets:
       if packet_id in self.sent_packets[packets_hash].packets:
         data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
-        if len(data) > 2048:
-          self.error("data larger than 2048 bytes")
+        if sys.getsizeof(data) > self.socket_buffsize:
+          self.error("data larger than buffersize.")
         else:
           cmd_dct = {'user_id': user_id, 'data': data}
           self.enqueue('send', cmd_dct)

@@ -297,28 +297,4 @@ class ez_server_client(ez_process_base):
       self.sockfd.close()
     self.alive.clear()
 
-  def send(self, user_id, data):
-    """
-    Send data to a user.
 
-    :param user_id: id specifying the username
-    :type  user_id: string
-
-
-    :param data: The message or pickled object to be sent.
-    :type  data: string
-    """
-
-    if user_id in self.ips:
-      user_addr = self.ips[user_id]
-      if getsizeof(data) > self.socket_buffsize:
-        self.error('Data is too large, must be packed.')
-        return
-
-      try:
-        self.sockfd.sendto(data, user_addr)
-      except IOError as e:
-        self.error(str(e))
-
-    else:
-      self.error("not connected to user")
