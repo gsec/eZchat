@@ -250,13 +250,6 @@ class ez_packet(ez_process_base):
 
   def send_packet(self, user_specs, data):
     try:
-      #if not self.UserDatabase.in_DB(name=user_id):
-        #self.error('User not in database')
-        #return
-
-      #if user_id not in self.ips:
-        #return
-
       packets = Packets(data=data, pickle_data=False)
       self.sent_packets[packets.packets_hash] = packets
       for packet_id in packets.packets:
@@ -314,58 +307,58 @@ class ez_packet(ez_process_base):
     :type  handler: function
     """
     packets_hash = data.packets_hash
-    for user_id in self.ips:
-      # packages are dropped if not associated to a known user_id
-      if user_addr == self.ips[user_id]:
-        key = (user_addr, packets_hash)
-        if key not in self.stored_packets:
-          self.stored_packets[key] = Packets()
-          self.stored_packets[key].max_packets = data.max_packets
-          self.stored_packets[key].packets = {}
+    # packages are dropped if not associated to a known user_id
+    if user_addr in self.ips.values():
+      key = (user_addr, packets_hash)
+      if key not in self.stored_packets:
+        self.stored_packets[key] = Packets()
+        self.stored_packets[key].max_packets = data.max_packets
+        self.stored_packets[key].packets = {}
 
+      packets = self.stored_packets[key]
+      packets.packets_hash = packets_hash
+
+      if data.max_packets == 1 and data.packet_number == 0:
+        handler(pickle.loads(data.data), user_addr)
+        return
+
+      packets.packets[data.packet_number] = data
+      self.stored_packets[key] = packets
+
+      self.success("Received package")
+
+      #pr_key = ('receive', user_id)
+      pr_key = key
+
+      def update_and_reconstruct(*args):
         packets = self.stored_packets[key]
-        packets.packets_hash = packets_hash
-
-        if data.max_packets == 1 and data.packet_number == 0:
-          handler(pickle.loads(data.data), user_addr)
-          return
-
-        packets.packets[data.packet_number] = data
-        self.stored_packets[key] = packets
-
-        self.success("Received package")
-
-        #pr_key = ('receive', user_id)
-        pr_key = key
-
-        def update_and_reconstruct(*args):
-          packets = self.stored_packets[key]
-          reconstructed, result = packets.reconstruct_data()
-          if reconstructed:
-            handler(result, user_addr)
-            if pr_key in self.background_processes:
-              pr = self.background_processes[pr_key]
-              pr.finished.set()
-              pr.cancel()
-              del self.background_processes[pr_key]
-          else:
-            self.error('Packet reconstruction failed')
-            for packet_number in result:
-              cmd_dct = {'packet_info': (packets.packets_hash, packet_number),
-                         'user_addr': user_addr}
-              self.enqueue('packet_request', cmd_dct)
-
-            self.reset_background_process(pr_key)
-
-        if packets.max_packets == len(packets.packets):
-          update_and_reconstruct()
-
+        self.success('called reconstruct')
+        reconstructed, result = packets.reconstruct_data()
+        if reconstructed:
+          handler(result, user_addr)
+          if pr_key in self.background_processes:
+            pr = self.background_processes[pr_key]
+            pr.finished.set()
+            pr.cancel()
+            del self.background_processes[pr_key]
         else:
-          cmd_dct = {'process_id': pr_key,
-                     'callback': update_and_reconstruct,
-                     'interval': 5}
-          if pr_key not in self.background_processes:
-            self.enqueue('start_background_process', cmd_dct)
+          self.error('Packet reconstruction failed')
+          for packet_number in result:
+            cmd_dct = {'packet_info': (packets.packets_hash, packet_number),
+                       'user_addr': user_addr}
+            self.enqueue('packet_request', cmd_dct)
+
+          self.reset_background_process(pr_key)
+
+      if packets.max_packets == len(packets.packets):
+        update_and_reconstruct()
+
+      else:
+        cmd_dct = {'process_id': pr_key,
+                   'callback': update_and_reconstruct,
+                   'interval': 5}
+        if pr_key not in self.background_processes:
+          self.enqueue('start_background_process', cmd_dct)
 
 
 if __name__ == "__main__":
