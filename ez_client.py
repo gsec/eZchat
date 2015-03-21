@@ -200,7 +200,8 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       self.MsgDatabase.add_entry(data)
       if self.enableCLI:
         print "data.clear_text():", data.clear_text()
-      self.msg(data)
+      else:
+        self.msg(data)
 
     elif isinstance(data, Packet):
       self.handle_packet(data, user_addr, self.handle_incomming_data)

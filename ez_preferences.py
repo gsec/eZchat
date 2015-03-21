@@ -106,6 +106,7 @@ def init_cli_preferences():
   ccd['cli_insert'] = ('i',)
   ccd['cli_append'] = ('a',)
   ccd['cli_delete'] = ('d',)
+  ccd['cli_tab_body'] = ('tab',)
   ccd['cli_newline_low'] = ('o',)
   ccd['cli_newline_high'] = ('O',)
   ccd['cli_move_left'] = ('h', 'left')

@@ -6,7 +6,7 @@
 #  Includes  #
 #============#
 from datetime import datetime
-from Crypto.Hash import SHA # Shorter IDs than with 256
+from Crypto.Hash import SHA  # Shorter IDs than with 256
 import ez_crypto as ec
 import ez_database as ed
 
@@ -24,11 +24,12 @@ class Message(object):
   crypto_content = ['cipher', 'ciphered_key', 'iv', 'crypt_mode',
                     'ciphered_mac']
   components = ['time', 'recipient', 'UID'] + crypto_content
+
   def __init__(self, sender='', recipient='', content='',
                dtime=None, _dict=None):
 
-    if dtime == None:
-      dtime=datetime.now()
+    if dtime is None:
+      dtime = datetime.now()
 
     if _dict:
       for component in Message.components:
@@ -40,8 +41,8 @@ class Message(object):
       exact_time = dtime.isoformat(' ')
       self.recipient = recipient
       self.UID = SHA.new(sender + recipient + exact_time).hexdigest()
-      package = {'etime' : exact_time, 'sender' : sender,
-                 'recipient' : recipient, 'content' : content}
+      package = {'etime': exact_time, 'sender': sender,
+                 'recipient': recipient, 'content': content}
       crypt_dict = ec.eZ_CryptoScheme(**package).encrypt_sign()
       for crypto_component in Message.crypto_content:
         setattr(self, crypto_component, crypt_dict[crypto_component])
@@ -53,15 +54,16 @@ class Message(object):
 
   def clear_text(self):
     """ Return the decrypted text, given the private key is found on disk """
-    crypt_dict = {x : getattr(self, x) for x in Message.crypto_content}
-    crypt_dict.update({'recipient' : self.recipient})
+    crypt_dict = {x: getattr(self, x) for x in Message.crypto_content}
+    crypt_dict.update({'recipient': self.recipient})
     clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
     if clear_dict['authorized']:
       sig_symb = '✓'
     else:
       sig_symb = '✗'
+    self.sender = clear_dict['sender']
     lst = [clear_dict['sender'], "@", clear_dict['etime'], ":\n",
-        clear_dict['content'], "\n:HMAC:", "[", sig_symb, "]"]
+           clear_dict['content'], "\n:HMAC:", "[", sig_symb, "]"]
     return ' '.join(lst)
 
 #==============================================================================#

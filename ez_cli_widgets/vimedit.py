@@ -35,7 +35,7 @@ class VimEdit(urwid.Edit):
   """
   signals = ['done', 'insert_mode', 'command_mode', 'visual_mode',
              'command_line', 'status_update', 'keypress', 'return_contacts',
-             'evaluate_command']
+             'evaluate_command', 'tab_body']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, **kwargs):
@@ -51,6 +51,7 @@ class VimEdit(urwid.Edit):
                 'cli_insert': self.cmd_insert,
                 'cli_append': self.cmd_append,
                 'cli_delete': self.cmd_delete,
+                'cli_tab_body': self.cmd_tab_body,
                 'cli_newline_low': self.cmd_newline_low,
                 'cli_newline_high': self.cmd_newline_high,
                 'cli_move_left': self.cmd_move_left,
@@ -174,6 +175,9 @@ class VimEdit(urwid.Edit):
       urwid.emit_signal(self, 'status_update', contact)
     self.set_edit_text('')
 
+  def cmd_tab_body(self):
+    urwid.emit_signal(self, 'tab_body')
+
   def keypress(self, size, key):
     (self.maxcol,) = size
     self.p = self.edit_pos
@@ -212,6 +216,8 @@ class VimEdit(urwid.Edit):
       self.mode = VimEdit.command_mode
       urwid.emit_signal(self, 'command_mode', self, 'command mode')
       self.cmd_move_left(pressed=key)
-
-    elif self.mode == VimEdit.insert_mode:
-      urwid.Edit.keypress(self, size, key)
+    #elif key == 'tab':
+          #urwid.emit_signal(self, 'tab_body')
+    else:
+      if self.mode == VimEdit.insert_mode:
+        urwid.Edit.keypress(self, size, key)

@@ -118,7 +118,7 @@ class ez_cli_urwid(urwid.Frame):
 
     self.top = HorizontalBoxes()
     self.top.open_box(self.vimbox_f, 100)
-    self.top_f = urwid.Filler(self.top, 'bottom', ep.cli_msg_height +
+    self.top_f = urwid.Filler(self.top, 'top', ep.cli_msg_height +
                               ep.cli_edit_height)
 
     urwid.Frame.__init__(self, self.top_f, footer=command_and_status_attr)
@@ -134,9 +134,13 @@ class ez_cli_urwid(urwid.Frame):
     urwid.connect_signal(self.vimedit, 'evaluate_command',
                          self.evaluate_command)
 
+    urwid.connect_signal(self.vimedit, 'tab_body',
+                         self.tab_body)
+
     # msgbox signals
     urwid.connect_signal(self.vimmsgbox, 'exit_msgbox', self.exit_msgbox)
     urwid.connect_signal(self.vimmsgbox, 'keypress', self.vimedit.keypress)
+    urwid.connect_signal(self.vimmsgbox, 'status_update', self.status_update)
 
     # commandline signals
     urwid.connect_signal(self.commandline, 'command_line_exit',
@@ -165,6 +169,9 @@ class ez_cli_urwid(urwid.Frame):
     self.top.open_box(self.vimbox_f, 50)
     self.dialog.open_pop_up()
 
+  def tab_body(self):
+    self.vimmsgbox.tab_body()
+
   def evaluate_command(self, cmd):
     self.commandline.evaluate_command(cmd)
 
@@ -183,13 +190,13 @@ class ez_cli_urwid(urwid.Frame):
       # set the new foucs to the last item
       self.statusline.body.set_focus(focus)
 
-  def msg_update(self, content):
+  def msg_update(self, content, sender=None):
     # update SimpleFocusListWalker
-    self.vimmsgbox.update_content(content)
-    # get the number of item
-    focus = len(self.vimmsgbox.body) - 1
-    # set the new foucs to the last item
-    self.vimmsgbox.body.set_focus(focus)
+    if sender is None:
+      body = 'default_body'
+    else:
+      body = sender
+    self.vimmsgbox.update_content(content, body)
 
   def __close__(self, *args):
     #self.commandline.cmd_close()
@@ -241,7 +248,9 @@ class ez_cli_urwid(urwid.Frame):
             # decrypt msg and print it on the screen
             if reply.data.recipient == cl.cl.name:
               try:
-                self.msg_update((str(reply.data.clear_text())))
+                msg = str(reply.data.clear_text())
+                sender = reply.data.sender
+                self.msg_update(msg, sender)
               except Exception, e:
                 self.status_update("Error: %s" % str(e))
 
