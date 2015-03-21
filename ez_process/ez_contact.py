@@ -79,10 +79,6 @@ class ez_contact(ez_process_base):
     msg = pickle.dumps(myself)
     send_cmd = {'user_specs': (host, port), 'data': msg}
     self.enqueue('send', send_cmd)
-    try:
-      self.sockfd.sendto(msg, (host, port))
-    except IOError as e:
-      self.error(str(e))
 
   def add_contact(self, user):
     """

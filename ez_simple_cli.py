@@ -166,8 +166,8 @@ class ez_simple_cli(object):
           return
 
         data = pickle.dumps(mx)
-        cmd_data = {'user_id': user_id, 'data': data}
-        self.commandQueue.put(p2pCommand('send', cmd_data))
+        cmd_data = {'user_specs': user_id, 'data': data}
+        self.enqueue('send', cmd_data)
 
       except Exception as e:
         self.error("Syntax error in command: " + str(e))

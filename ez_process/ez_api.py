@@ -271,7 +271,7 @@ class ez_api(ez_process_base):
         return
 
       data = pickle.dumps(mx)
-      cmd_data = {'user_id': user_id, 'data': data}
+      cmd_data = {'user_specs': user_id, 'data': data}
       self.enqueue('send', cmd_data)
 
     except Exception as e:
