@@ -11,7 +11,6 @@ import errno
 import socket
 import select
 import Queue
-import types
 import threading
 import cPickle as pickle
 from ez_message import Message
@@ -108,7 +107,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
 #  client send  #
 #===============#
 
-  def send(self, user_id, data):
+  def send(self, user_specs, data):
     """
     Send data to a user.
 
@@ -118,21 +117,25 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
     :param data: The message or pickled object to be sent.
     :type  data: string
     """
-    if user_id in self.ips:
-      user_addr = self.ips[user_id]
-      #data_pickled = pickle.dumps(data)
-      if sys.getsizeof(data) > self.socket_buffsize:
-        send_packet_cmd = {'user_id': user_id, 'data': data}
-        self.enqueue('send_packet', send_packet_cmd)
+    if isinstance(user_specs, str) or isinstance(user_specs, unicode):
+      if user_specs in self.ips:
+        user_addr = self.ips[user_specs]
+      else:
+        self.error("not connected to user")
         return
+    elif type(user_specs) is tuple:
+      user_addr = user_specs
 
-      try:
-        self.sockfd.sendto(data, user_addr)
-      except IOError as e:
-        self.error(str(e))
+    if sys.getsizeof(data) > self.socket_buffsize:
+      send_packet_cmd = {'user_specs': user_specs, 'data': data}
+      self.enqueue('send_packet', send_packet_cmd)
+      return
 
-    else:
-      self.error("not connected to user")
+    try:
+      self.sockfd.sendto(data, user_addr)
+    except IOError as e:
+      self.error(str(e))
+
 
 #===================#
 #  client receive   #

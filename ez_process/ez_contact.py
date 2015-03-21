@@ -52,8 +52,8 @@ class ez_contact(ez_process_base):
 
     cmd_dct = {'user': self.myself}
     contact_request = {'contact_request_in': cmd_dct}
-    data = pickle.dumps(contact_request)
-    send_cmd = {'user_id': user_id, 'data': data}
+    msg = pickle.dumps(contact_request)
+    send_cmd = {'user_specs': user_id, 'data': msg}
     self.enqueue('send', send_cmd)
 
   def contact_request_in(self, user, host, port):
@@ -77,6 +77,8 @@ class ez_contact(ez_process_base):
     cmd_dct = {'user': self.myself}
     myself = {'add_contact': cmd_dct}
     msg = pickle.dumps(myself)
+    send_cmd = {'user_specs': (host, port), 'data': msg}
+    self.enqueue('send', send_cmd)
     try:
       self.sockfd.sendto(msg, (host, port))
     except IOError as e:

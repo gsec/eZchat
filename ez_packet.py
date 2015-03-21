@@ -248,14 +248,14 @@ class ez_packet(ez_process_base):
     # sent packets are stored allowing for being requested again.
     self.sent_packets = {}
 
-  def send_packet(self, user_id, data):
+  def send_packet(self, user_specs, data):
     try:
       #if not self.UserDatabase.in_DB(name=user_id):
         #self.error('User not in database')
         #return
 
-      if user_id not in self.ips:
-        return
+      #if user_id not in self.ips:
+        #return
 
       packets = Packets(data=data, pickle_data=False)
       self.sent_packets[packets.packets_hash] = packets
@@ -264,7 +264,7 @@ class ez_packet(ez_process_base):
         if len(data) > 2048:
           self.error("data larger than 2048 bytes")
         else:
-          cmd_dct = {'user_id': user_id, 'data': data}
+          cmd_dct = {'user_specs': user_specs, 'data': data}
         self.enqueue('send', cmd_dct)
     except Exception as e:
       self.error("Syntax error in send_packet: " + str(e))
