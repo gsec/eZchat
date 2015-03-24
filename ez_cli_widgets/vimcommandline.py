@@ -27,7 +27,7 @@ class VimCommandLine(urwid.Edit):
   """
   signals = ['command_line_exit', 'exit_ez_chat', 'status_update',
              'close_box', 'open_box', 'clear_msgbox', 'msg_update',
-             'status_update', 'open_pop_up']
+             'status_update', 'open_pop_up', 'contact_mark_update']
   insert_mode, command_mode, visual_mode = range(3)
 
   def __init__(self, vimedit, *args, **kwargs):
@@ -115,7 +115,14 @@ class VimCommandLine(urwid.Edit):
     c_list = self.contact_list()
 
     urwid.connect_signal(c_list, 'close_box', self.cmd_close_box)
+    urwid.connect_signal(c_list, 'close_box', self.contact_mark_update)
     urwid.emit_signal(self, 'open_box', c_list, 50)
+
+  def contact_mark_update(self):
+    """
+    Signaling that contacts may be marked.
+    """
+    urwid.emit_signal(self, 'contact_mark_update')
 
   def process_list(self, update=False):
     processes = cl.cl.background_processes

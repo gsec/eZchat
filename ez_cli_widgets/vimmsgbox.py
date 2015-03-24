@@ -13,7 +13,10 @@ import urwid
 #====================#
 
 class VimMsgBox(urwid.Frame):
-  """Prototype for our message box"""
+  """
+  Prototype for our message box. VimMsgBox is max unselectable. Thus no keys
+  will ever get captured directly
+  """
 
   signals = ['exit_msgbox', 'status_update', 'close_box', 'keypress']
 
@@ -25,7 +28,6 @@ class VimMsgBox(urwid.Frame):
 
 
 # TODO: JNicL No Commands needed Di 14 Okt 2014 00:03:09 CEST
-# VimMsgBox is max unselectable. Thus no keys will ever get captured directly
     self.command_dict = {'j': self.cmd_move_down,
                          'k': self.cmd_move_up,
                          #'down' : self.cmd_exit_msgbox,
@@ -99,6 +101,9 @@ class VimMsgBox(urwid.Frame):
     self.set_header(header, active=pos)
 
   def change_content(self, content_id):
+    """
+    `Tabs` from one content_id to another.
+    """
     if content_id not in self.body_contents:
       urwid.emit_signal(self, 'status_update', 'Error: Content ' +
                         str(content_id) + ' does not exist.')
@@ -119,7 +124,6 @@ class VimMsgBox(urwid.Frame):
     pos = pos % len(self.body_contents)
     self.change_content(self.body_contents.keys()[pos])
     self.set_active_tab(pos)
-    urwid.emit_signal(self, 'status_update', 'Body tabbed.')
 
   def cmd_unhandled(self, *args):
     pass
@@ -155,19 +159,34 @@ class VimMsgBox(urwid.Frame):
     if self.display_logo:
       self.cmd_exit_msgbox()
 
-    urwid.emit_signal(self, 'status_update', 'appending to ' + content_id)
-    content_attr = urwid.AttrMap(urwid.Text(content), None, 'reveal focus')
+    if content is not None:
+      content_attr = urwid.AttrMap(urwid.Text(content), None, 'reveal focus')
     if content_id not in self.body_contents:
-      self.body_contents[content_id] = [content_attr]
-      self.append_tab(content_id)
+      if content is not None:
+        self.body_contents[content_id] = [content_attr]
+      else:
+        self.body_contents[content_id] = []
+
+      if type(content_id) is tuple:
+        new_content_id = '|'.join(content_id)
+        self.append_tab(new_content_id)
+      elif type(content_id) is str:
+        self.append_tab(content_id)
+      else:
+        raise TypeError('Type: ' + type(content_id) +
+                        ' not supported in update content.')
     else:
-      self.body_contents[content_id].append(content_attr)
+      if content is not None:
+        self.body_contents[content_id].append(content_attr)
 
     if content_id == self.selected_content:
       self.redraw()
       self.update_focus()
 
   def update_focus(self):
+    """
+    Scrolls down to the most recent message.
+    """
     # get the number of item
     focus = len(self.slw) - 1
     # set the new foucs to the last item
@@ -219,7 +238,6 @@ class VimMsgBox(urwid.Frame):
 
 if __name__ == "__main__":
   msgbox = VimMsgBox()
-  #fill = msgbox, 'middle'
 
   palette = [('body', 'black', 'light gray', 'standout')]
   loop = urwid.MainLoop(msgbox, palette, pop_ups=True)

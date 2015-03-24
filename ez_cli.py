@@ -153,6 +153,8 @@ class ez_cli_urwid(urwid.Frame):
                          self.vimmsgbox.clear_msgbox)
     urwid.connect_signal(self.commandline, 'msg_update', self.msg_update)
     urwid.connect_signal(self.commandline, 'open_pop_up', self.open_pop_up)
+    urwid.connect_signal(self.commandline, 'contact_mark_update',
+                         self.contact_mark_update)
 
     signal.signal(signal.SIGINT, self.__close__)
 
@@ -176,9 +178,33 @@ class ez_cli_urwid(urwid.Frame):
     self.commandline.evaluate_command(cmd)
 
   def return_contacts(self):
-    self.vimedit.cmd_send_msg(self.commandline.get_marked_contacts())
+    """
+    Called by VimEdit. return_contacts determines the currently selected
+    contacts from the VimMsgBox and returns the result to VimEdit.
+    """
+    if self.vimmsgbox.selected_content != 'default_body':
+      if type(self.vimmsgbox.selected_content) is tuple:
+        contacts = self.vimmsgbox.selected_content
+      elif type(self.vimmsgbox.selected_content) is str:
+        contacts = [self.vimmsgbox.selected_content]
+      self.vimedit.cmd_send_msg(contacts)
+
+  def contact_mark_update(self):
+    """
+    Called by VimEdit's contact list. Marked contacts generate a new tab in the
+    VimMsgBox.
+    """
+    marked_contacts = self.commandline.get_marked_contacts()
+    if len(marked_contacts) > 1:
+      marked_contacts = tuple(marked_contacts)
+    else:
+      marked_contacts = marked_contacts[0]
+    self.vimmsgbox.update_content(None, marked_contacts)
 
   def status_update(self, content):
+    """
+    Prints `content` in the statusline.
+    """
     if self.logging:
       self.logger.write(content + '\n')
 
@@ -191,12 +217,17 @@ class ez_cli_urwid(urwid.Frame):
       self.statusline.body.set_focus(focus)
 
   def msg_update(self, content, sender=None):
-    # update SimpleFocusListWalker
+    """
+    Prints the decrypted message content.
+    """
+    # This case should never happen
     if sender is None:
       body = 'default_body'
+      self.vimmsgbox.update_content(content, body)
     else:
-      body = sender
-    self.vimmsgbox.update_content(content, body)
+      for content_id in self.vimmsgbox.body_contents:
+        if sender == content_id or sender in content_id:
+          self.vimmsgbox.update_content(content, content_id)
 
   def __close__(self, *args):
     #self.commandline.cmd_close()
