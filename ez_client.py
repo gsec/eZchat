@@ -184,7 +184,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
           execute = True
         elif self.handler_rules[command] == 'Auth':
           master = (user_addr[0], int(user_addr[1]))
-          if master in self.authentifications:
+          if master in self.authentications:
             execute = True
           else:
             execute = False
