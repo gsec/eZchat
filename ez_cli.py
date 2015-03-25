@@ -221,13 +221,16 @@ class ez_cli_urwid(urwid.Frame):
     Prints the decrypted message content.
     """
     # This case should never happen
+    message_delivered = False
     if sender is None:
-      body = 'default_body'
-      self.vimmsgbox.update_content(content, body)
+      self.vimmsgbox.update_content(content, 'default_body')
     else:
       for content_id in self.vimmsgbox.body_contents:
         if sender == content_id or sender in content_id:
+          message_delivered = True
           self.vimmsgbox.update_content(content, content_id)
+      if message_delivered is False:
+        self.vimmsgbox.update_content(content, sender)
 
   def __close__(self, *args):
     #self.commandline.cmd_close()
