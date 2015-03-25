@@ -195,11 +195,12 @@ class ez_cli_urwid(urwid.Frame):
     VimMsgBox.
     """
     marked_contacts = self.commandline.get_marked_contacts()
-    if len(marked_contacts) > 1:
-      marked_contacts = tuple(marked_contacts)
-    else:
-      marked_contacts = marked_contacts[0]
-    self.vimmsgbox.update_content(None, marked_contacts)
+    if len(marked_contacts) > 0:
+      if len(marked_contacts) > 1:
+        marked_contacts = tuple(marked_contacts)
+      elif len(marked_contacts) == 1:
+        marked_contacts = marked_contacts[0]
+      self.vimmsgbox.update_content(None, marked_contacts)
 
   def status_update(self, content):
     """
