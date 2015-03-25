@@ -85,20 +85,28 @@ class VimMsgBox(urwid.Frame):
                 for u in self.header.contents]
       self.set_header(header, active=pos)
 
-  def append_tab(self, text):
+  def append_tab(self, text, position=-1, default_pos_one=True):
     """
     Appends a new tab to the header.
     """
     # check if a specific tab is selected
     if self.selected_content:
-      pos = self.body_contents.keys().index(self.selected_content)
+      active = self.body_contents.keys().index(self.selected_content)
     else:
-      pos = -1
+      active = -1
 
     header = [u[0].original_widget.get_text()[0]
               for u in self.header.contents]
-    header.append(text)
-    self.set_header(header, active=pos)
+    if position >= 0 and position <= len(header):
+      if default_pos_one and position == 0:
+        header = [header[0], text] + header[1:]
+      else:
+        header = header[:position] + [text] + header[position:]
+    else:
+      raise Exception('Tab position not in possible range. '
+                      'Header length: ' + str(len(header)) + ' ' +
+                      'Position: '  + str(position))
+    self.set_header(header, active=active)
 
   def change_content(self, content_id):
     """
@@ -112,16 +120,19 @@ class VimMsgBox(urwid.Frame):
     self.slw[:] = content
     self.selected_content = content_id
 
-  def tab_body(self, dir=1):
+  def tab_body(self, dir=1, default_pos_one=True):
     """
     Changes which body is currently in use and highlights the associated item
     in the header.
     """
     assert(dir == 1 or dir == -1)
     pos = self.body_contents.keys().index(self.selected_content)
-    # -1%i = i-1 :D
     pos += 1*dir
     pos = pos % len(self.body_contents)
+
+    # after tabbing do not land on position 0 if not allowed
+    if default_pos_one is True and pos == 0:
+      pos = 1
     self.change_content(self.body_contents.keys()[pos])
     self.set_active_tab(pos)
 
@@ -167,11 +178,12 @@ class VimMsgBox(urwid.Frame):
       else:
         self.body_contents[content_id] = []
 
+      tab_position = self.body_contents.keys().index(content_id)
       if type(content_id) is tuple:
         new_content_id = '|'.join(content_id)
-        self.append_tab(new_content_id)
+        self.append_tab(new_content_id, tab_position)
       elif type(content_id) is str:
-        self.append_tab(content_id)
+        self.append_tab(content_id, tab_position)
       else:
         raise TypeError('Type: ' + type(content_id) +
                         ' not supported in update content.')

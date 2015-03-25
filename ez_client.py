@@ -75,7 +75,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       self.set_acception_rules(**acception_rules)
     else:
       acception_rules = kwargs['acception_rules']
-      acception_rules = {'global_rule': 'Allow'}
+      #acception_rules = {'global_rule': 'Allow'}
       self.set_acception_rules(**acception_rules)
 
     self.timeout = CLIENT_TIMEOUT
@@ -177,23 +177,23 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       for command in data:
         try:
           assert(command in self.handler_rules)
-          if self.handler_rules[command] == 'Allow':
-            execute = True
-          elif self.handler_rules[command] == 'Auth':
-            master = (user_addr[0], int(user_addr[1]))
-            if master in self.authentifications:
-              execute = True
-            else:
-              execute = False
-          else:
-            execute = False
-          if execute:
-            cmd_dct = data[command]
-            cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
-            self.enqueue(command, cmd_dct)
-
         except:
           self.error('No acception rule set for command ' + command + '.')
+          return
+        if self.handler_rules[command] == 'Allow':
+          execute = True
+        elif self.handler_rules[command] == 'Auth':
+          master = (user_addr[0], int(user_addr[1]))
+          if master in self.authentifications:
+            execute = True
+          else:
+            execute = False
+        else:
+          execute = False
+        if execute:
+          cmd_dct = data[command]
+          cmd_dct.update({'host': user_addr[0], 'port': user_addr[1]})
+          self.enqueue(command, cmd_dct)
 
     elif isinstance(data, Message):
       self.success("received msg")
