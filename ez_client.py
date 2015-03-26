@@ -199,7 +199,12 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       self.success("received msg")
       self.MsgDatabase.add_entry(data)
       if self.enableCLI:
-        print "data.clear_text():", data.clear_text()
+        msg = data.clear_text()
+        print "msg:", msg
+        msg = 'server response: \n' + msg + '\n' + 'end'
+        sender = data.sender
+        cmd_dct = {'user_id': sender, 'msg': msg}
+        self.enqueue('cmd_send_msg', cmd_dct)
       else:
         self.msg(data)
 
