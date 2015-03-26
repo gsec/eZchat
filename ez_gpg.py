@@ -114,7 +114,7 @@ class ez_gpg(object):
 
   @classmethod
   def encrypt_msg(self, nickname, msg):
-    cipher = self.gpg.encrypt(msg, nickname)
+    cipher = self.gpg.encrypt(msg, nickname, always_trust=True)
     status = cipher.status
     if status != 'encryption ok':
       if status == 'invalid recipient':
@@ -128,7 +128,7 @@ class ez_gpg(object):
 
   @classmethod
   def decrypt_msg(self, cipher):
-    msg = self.gpg.decrypt(cipher.data)
+    msg = self.gpg.decrypt(cipher.data, always_trust=True)
     return msg
 
   @classmethod
@@ -184,13 +184,13 @@ if __name__ == '__main__':
 
   #stream = open("example.txt", "rb")
 
-  #import ez_message as em
-  sender = 'jean'
+  import ez_message as em
+  sender = 'jlang'
   recipient = u'jlang'
   msg = 'hi'
   #print ez_gpg.gpg.list_keys()
-  cipher = ez_gpg.decrypt_msg(ez_gpg.encrypt_msg(recipient, msg))
-  print cipher
+  #cipher = ez_gpg.decrypt_msg(ez_gpg.encrypt_msg(recipient, msg))
+  #print cipher
   #import sys
   #import cPickle as pickle
   #print "cipher.status:", cipher.status
@@ -199,7 +199,8 @@ if __name__ == '__main__':
   #print sys.getsizeof(ccipher)
 
   #print ez_gpg.gpg.list_keys()
-  #mx = em.Message(sender, recipient, msg)
+  mx = em.Message(sender, recipient, msg)
+  print "mx:", mx.clear_text()
   #print "mx.__dict__:", mx.__dict__
 
   #signed_data = ez_gpg.gpg.sign(data)
