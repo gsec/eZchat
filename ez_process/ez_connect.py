@@ -60,7 +60,7 @@ class ez_connect(ez_process_base):
     :type  master: (string, int)
     """
 
-    cmd_dct = {'user_id': self.name}
+    cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     conn_request = {'connection_request': cmd_dct}
     msg = pickle.dumps(conn_request)
     try:
@@ -72,7 +72,7 @@ class ez_connect(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def connection_request(self, user_id, host, port):
+  def connection_request(self, user_id, fingerprint, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -86,13 +86,16 @@ class ez_connect(ez_process_base):
     :param user_id: User nickname
     :type  user_id: string
 
+    :param fingerprint: The fingerprint of the users gpg key pair
+    :type  fingerprint: string
+
     :param user_addr: Endpoint of a Server/Client (Ip, Port)
     :type  user_addr: (string, int)
     """
     user_addr = (host, port)
     process_id = ('connection_request', user_addr)
     if process_id not in self.background_processes:
-      cmd_dct = {'user_id': self.name}
+      cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
       con_holepunch = {'connection_nat_traversal': cmd_dct}
       msg = pickle.dumps(con_holepunch)
       try:
@@ -116,7 +119,7 @@ class ez_connect(ez_process_base):
     else:
       self.error("cannot connect again, still waiting for response")
 
-  def connection_nat_traversal(self, user_id, host, port):
+  def connection_nat_traversal(self, user_id, fingerprint, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -126,23 +129,27 @@ class ez_connect(ez_process_base):
     :param user_id: User nickname
     :type  user_id: string
 
+    :param fingerprint: The fingerprint of the users gpg key pair
+    :type  fingerprint: string
+
     :param user_addr: Endpoint of a Server/Client (Ip, Port)
     :type  user_addr: (string, int)
     """
 
-    cmd_dct = {'user_id': self.name}
+    cmd_dct = {'user_id': self.name, 'fingerprint': fingerprint}
     con_success = {'connection_success': cmd_dct}
     msg = pickle.dumps(con_success)
 
     user_addr = (host, port)
     cmd = self.success("nat traversal succeded: " + str(user_addr))
-    cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
+    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint,
+               'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
 
     self.replyQueue.put(cmd)
     self.sockfd.sendto(msg, user_addr)
 
-  def connection_success(self, user_id, host, port):
+  def connection_success(self, user_id, fingerprint, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -151,6 +158,9 @@ class ez_connect(ez_process_base):
 
     :param user_id: User nickname
     :type  user_id: string
+
+    :param fingerprint: The fingerprint of the users gpg key pair
+    :type  fingerprint: string
 
     :param host: Ip of a Server/Client
     :type  host: string
@@ -170,7 +180,8 @@ class ez_connect(ez_process_base):
     self.success("user: " + str(user_addr) + " with id: " +
                  user_id + " has connected")
 
-    cmd_dct = {'user_id': user_id, 'host': user_addr[0], 'port': user_addr[1]}
+    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint,
+               'host': user_addr[0], 'port': user_addr[1]}
     self.add_client(**cmd_dct)
 
     if hasattr(self, 'server'):

@@ -44,7 +44,7 @@ class ez_server_client(ez_process_base):
     """
 
     master = (host, port)
-    cmd_dct = {'user_id': self.name}
+    cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
     self.success('Started authentication.')
@@ -76,7 +76,7 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def authentication_in(self, user_id, host, port):
+  def authentication_in(self, user_id, fingerprint, host, port):
     """
     A client requests a proposes an authentication.
 
@@ -84,6 +84,9 @@ class ez_server_client(ez_process_base):
 
     :param user_id: id specifying the username
     :type  user_id: string
+
+    :param fingerprint: The fingerprint of the users gpg key pair
+    :type  fingerprint: string
 
     :param host: hosts IP
     :type  host: string
@@ -96,10 +99,11 @@ class ez_server_client(ez_process_base):
 
     # The message to-be signed is a random float between 0 and 1
     msg = str(random.random())
-    self.authentication_words[user_id] = msg
+    self.authentication_words[(user_id, fingerprint)] = msg
 
     master = (host, port)
-    cmd_dct = {'msg': msg, 'user_id': self.name}
+    #cmd_dct = {'msg': msg, 'user_id': self.name, 'fingerprint': fingerprint}
+    cmd_dct = {'msg': msg}
     auth_out = {'authentication_out': cmd_dct}
     msg = pickle.dumps(auth_out)
     try:
@@ -147,7 +151,8 @@ class ez_server_client(ez_process_base):
       return
 
     master = (host, port)
-    cmd_dct = {'reply_msg': sig, 'user_id': self.name}
+    cmd_dct = {'reply_msg': sig, 'user_id': self.name,
+               'fingerprint': self.fingerprint}
     auth_vfy = {'authentication_verify': cmd_dct}
     msg = pickle.dumps(auth_vfy)
 
@@ -175,7 +180,7 @@ class ez_server_client(ez_process_base):
     except IOError as e:
       self.error(str(e))
 
-  def authentication_verify(self, reply_msg, user_id, host, port):
+  def authentication_verify(self, reply_msg, user_id, fingerprint, host, port):
     """
     Validates the signature and the returned message.
 
@@ -185,6 +190,9 @@ class ez_server_client(ez_process_base):
 
     :param user_id: id specifying the username
     :type  user_id: string
+
+    :param fingerprint: The fingerprint of the users gpg key pair
+    :type  fingerprint: string
 
     :param host: hosts IP
     :type  host: string
@@ -199,7 +207,7 @@ class ez_server_client(ez_process_base):
       verified, fingerprint = ez_gpg.verify_signed_msg(reply_msg)
       if verified:
         auth_msg = ez_gpg.separate_msg_signature(reply_msg)
-        if auth_msg == self.authentication_words[user_id]:
+        if auth_msg == self.authentication_words[(user_id, fingerprint)]:
           cmd_dct = {'user_id': user_id, 'host': host, 'port': port,
                      'fingerprint': fingerprint}
           self.add_client(**cmd_dct)

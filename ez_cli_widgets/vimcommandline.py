@@ -103,10 +103,10 @@ class VimCommandLine(urwid.Edit):
       contacts = []
 
     # append all users online
-    #if len(cl.cl.ips.keys()) > 0:
-      #for user in cl.cl.ips.keys():
-        #if not (user in contacts or user == cl.cl.name):
-          #contacts.append(user)
+    if len(cl.cl.ips.keys()) > 0:
+      for username, fingerprint in cl.cl.ips.keys():
+        if not (username in contacts or username == cl.cl.name):
+          contacts.append(username)
     # construct user/online list
     if len(contacts) > 0:
       contacts = [(contact, contact in cl.cl.ips) for contact in contacts]

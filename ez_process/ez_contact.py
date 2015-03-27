@@ -30,7 +30,8 @@ class ez_contact(ez_process_base):
     """
     try:
       user_id = kwargs['user_id']
-      self.ips[user_id] = (kwargs['host'], int(kwargs['port']))
+      fingerprint = kwargs['fingerprint']
+      self.ips[(user_id, fingerprint)] = (kwargs['host'], int(kwargs['port']))
     except:
       print "user_id/host/port not properly specified in add_client"
     self.success('Client ' + user_id + 'added.')

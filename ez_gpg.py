@@ -162,6 +162,7 @@ class ez_gpg(object):
 ################################################################################
 
 if __name__ == '__main__':
+  pass
   #ez_gpg.generate_key('yolo')
   #data = 'randomdata'
   #import ez_user as eu
