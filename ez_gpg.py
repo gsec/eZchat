@@ -22,12 +22,12 @@ class ez_gpg(object):
   gpg.encoding = gpg_params['encoding']
 
   @classmethod
-  def find_key(self, nickname=None):
+  def find_key(self, nickname=None, secret=False):
     if nickname is None:
       raise ValueError('No nickname given')
 
     thatkey = [(any(nickname in u for u in key['uids']))
-               for key in self.gpg.list_keys()]
+               for key in self.gpg.list_keys(secret)]
 
     if not any(thatkey):
       raise Exception('Key not found')
@@ -139,11 +139,13 @@ class ez_gpg(object):
   @classmethod
   def verify_signed_msg(self, signed_msg):
     verified = self.gpg.verify(signed_msg.data)
+
     if(verified.trust_level is not None and
        verified.trust_level >= verified.TRUST_FULLY):
-      return True
+      fingerprint = verified.__dict__['pubkey_fingerprint']
+      return True, fingerprint
     else:
-      return False
+      return False, None
 
   @classmethod
   def separate_msg_signature(self, signed_msg):
@@ -161,8 +163,17 @@ class ez_gpg(object):
 
 if __name__ == '__main__':
   #ez_gpg.generate_key('yolo')
-  data = 'randomdata'
-  #print ez_gpg.gpg.list_keys()
+  #data = 'randomdata'
+  #import ez_user as eu
+  #for key in ez_gpg.gpg.list_keys():
+    #name = key['uids'][0].split()[0]
+    #fingerprint = key['fingerprint']
+    #if not eu.user_database.in_DB(UID=fingerprint):
+      #new_user = eu.User(UID=fingerprint, name=name)
+      #eu.user_database.add_entry(new_user)
+
+    #print "uid:", uid
+    #print "fingerprint:", fingerprint
 
   #with open('ez.pub', 'r') as f:
     #ez_key = f.read()
@@ -180,15 +191,15 @@ if __name__ == '__main__':
     #print(e)
 
   #signed_data = ez_gpg.gpg.sign(data.data)
-  #verified = ez_gpg.gpg.verify(signed_data)
 
   #stream = open("example.txt", "rb")
 
-  import ez_message as em
-  sender = 'jlang'
-  recipient = u'jlang'
-  msg = 'hi'
-  #print ez_gpg.gpg.list_keys()
+  #import ez_message as em
+  #sender = 'jlang'
+  #recipient = u'jlang'
+  #msg = 'hi'
+  #print ez_gpg.gpg.list_keys(True)
+  #print ez_gpg.find_key(nickname='jlang', secret=True)
   #cipher = ez_gpg.decrypt_msg(ez_gpg.encrypt_msg(recipient, msg))
   #print cipher
   #import sys
@@ -199,9 +210,9 @@ if __name__ == '__main__':
   #print sys.getsizeof(ccipher)
 
   #print ez_gpg.gpg.list_keys()
-  mx = em.Message(sender, recipient, msg)
-  print "mx:", mx.clear_text()
-  #print "mx.__dict__:", mx.__dict__
+  #mx = em.Message(sender, recipient, msg)
+  #print "mx:", mx.clear_text()
+  ##print "mx.__dict__:", mx.__dict__
 
   #signed_data = ez_gpg.gpg.sign(data)
   #print "signed_data:", signed_data.data
@@ -211,7 +222,7 @@ if __name__ == '__main__':
   #print "msg.groups():", msg.groups()[0]
   #print "signed_data.data:", signed_data.data
   #verified = ez_gpg.gpg.verify(signed_data.data)
-  #print "verified:", verified.__dict__
+  #print "verified:", verified.__dict__['pubkey_fingerprint']
   #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
     #print('Trust level: %s' % verified.trust_text)
 

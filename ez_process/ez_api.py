@@ -68,12 +68,24 @@ class ez_api(ez_process_base):
     #self.UserDatabase = eu.UserDatabase(localdb=user_db_name)
     self.UserDatabase = eu.user_database
     self.MsgDatabase = em.MessageDatabase(localdb=msg_db_name)
+    for key in ez_gpg.gpg.list_keys():
+      name = key['uids'][0].split()[0]
+      fingerprint = key['fingerprint']
+      if not eu.user_database.in_DB(UID=fingerprint):
+        new_user = eu.User(UID=fingerprint, name=name)
+        self.UserDatabase.add_entry(new_user)
 
-    if not self.UserDatabase.in_DB(name=self.name):
-      self.myself = eu.User(name=self.name, current_ip='127.0.0.1:222')
-      self.UserDatabase.add_entry(self.myself)
-    else:
-      self.myself = self.UserDatabase.get_entry(name=self.name)
+    try:
+      fingerprint = ez_gpg.find_key(nickname=self.name, secret=True)
+      if not self.UserDatabase.in_DB(UID=fingerprint):
+        raise Exception('Impossible to find identify ' + str(self.name) +
+                        ' in key ring')
+        #self.myself = eu.User(name=self.name)
+        #self.UserDatabase.add_entry(self.myself)
+      #else:
+      self.myself = self.UserDatabase.get_entry(UID=fingerprint)
+    except Exception, e:
+      raise
 
   def cmd_close(self):
     """ Client shutdown """

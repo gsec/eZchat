@@ -24,9 +24,9 @@ class User(object):
   - db-entry for with all msg-ids as recipient
   """
   # TODO: (bcn 2014-08-01) will we remove IP again ?
-  components = ['UID', 'name', 'public_key', 'IP', 'last_IPs']
+  components = ['UID', 'name', 'public_key']
 
-  def __init__(self, name='', current_ip='', public_key=None, _dict=None):
+  def __init__(self, UID=None, name='', public_key=None, _dict=None):
     """
     This method will create a new user of the network.
     IP is a string of the form 123.123.123.123:12345.
@@ -35,6 +35,8 @@ class User(object):
       for x in User.components:
         setattr(self, x, _dict[x])
     else:
+      if UID is None:
+        raise Exception('UID must be passed.')
       self.name = name
       if public_key:
         self.public_key = public_key
@@ -46,11 +48,12 @@ class User(object):
           # We could allow the user to generate a key at this stage
           raise
 
-      self.UID = SHA.new(self.name + self.public_key).hexdigest()
+      #self.UID = SHA.new(self.name + self.public_key).hexdigest()
+      self.UID = UID
 
-      self.IP = current_ip
+      #self.IP = current_ip
       # The database doesn't like lists. We can join them with some char though
-      self.last_IPs = ' '
+      #self.last_IPs = ' '
 
   def current_ip_and_port(self):
     lst = self.IP.split(':')

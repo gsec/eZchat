@@ -196,10 +196,12 @@ class ez_server_client(ez_process_base):
     self.success('started authentication_verify')
     try:
       # check that the decripted message matches the original message.
-      if ez_gpg.verify_signed_msg(reply_msg):
+      verified, fingerprint = ez_gpg.verify_signed_msg(reply_msg)
+      if verified:
         auth_msg = ez_gpg.separate_msg_signature(reply_msg)
         if auth_msg == self.authentication_words[user_id]:
-          cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
+          cmd_dct = {'user_id': user_id, 'host': host, 'port': port,
+                     'fingerprint': fingerprint}
           self.add_client(**cmd_dct)
           self.client_authenticated(**cmd_dct)
 
@@ -237,7 +239,8 @@ class ez_server_client(ez_process_base):
     try:
       user_id = kwargs['user_id']
       master = (kwargs['host'], int(kwargs['port']))
-      self.authentications[master] = user_id
+      fingerprint = kwargs['fingerprint']
+      self.authentications[master] = (user_id, fingerprint)
     except:
       self.error('user_id, host, port not properly ' +
                  'specified in authentication_success')
