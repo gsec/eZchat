@@ -70,7 +70,7 @@ class ez_connect(ez_process_base):
         self.sockfd.sendto(msg, master)
         self.success("start connection with " + str(master))
     except IOError as e:
-      self.error(str(e))
+      self.error('error in connect: ' + str(e))
 
   def connection_request(self, user_id, fingerprint, host, port):
     """
@@ -102,7 +102,8 @@ class ez_connect(ez_process_base):
         self.sockfd.sendto(msg, user_addr)
 
         def connection_failed_func(self_timer):
-          self.error("connection failed with: " + str(user_addr))
+          self.error('error in connection_request: connection failed with: ' +
+                     str(user_addr))
           del self.background_processes[process_id]
 
         bgp = p2pCommand('start_background_process',
@@ -114,10 +115,10 @@ class ez_connect(ez_process_base):
                      str(user_addr) + " with id: " + user_id)
 
       except IOError as e:
-        self.error(str(e))
+        self.error('error in connection_request: ' + str(e))
         self.error("connection unsuccessful")
     else:
-      self.error("cannot connect again, still waiting for response")
+      self.error('cannot connect again, still waiting for response')
 
   def connection_nat_traversal(self, user_id, fingerprint, host, port):
     """

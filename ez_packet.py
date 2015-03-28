@@ -270,7 +270,7 @@ class ez_packet(ez_process_base):
         if sys.getsizeof(data) > self.socket_buffsize:
           self.error("data larger than buffersize.")
         else:
-          cmd_dct = {'user_id': user_id, 'data': data}
+          cmd_dct = {'user_specs': user_id, 'data': data}
           self.enqueue('send', cmd_dct)
       else:
         self.error("packet_id not in sent_packets")

@@ -80,9 +80,6 @@ class ez_api(ez_process_base):
       if not self.UserDatabase.in_DB(UID=self.fingerprint):
         raise Exception('Impossible to find identify ' + str(self.name) +
                         ' in key ring')
-        #self.myself = eu.User(name=self.name)
-        #self.UserDatabase.add_entry(self.myself)
-      #else:
       self.myself = self.UserDatabase.get_entry(UID=self.fingerprint)
     except Exception, e:
       raise
@@ -149,7 +146,7 @@ class ez_api(ez_process_base):
 
   def cmd_authenticate(self, host, port):
     """
-    Connect to a server with authentication.
+    Connect to the eZchat server with authentication.
 
     A connection to a server enables the use of
     :py:meth:`ez_process.ez_api.ez_api.cmd_ips`.
@@ -163,7 +160,11 @@ class ez_api(ez_process_base):
     cmd_dct = {'host': host, 'port': int(port)}
     try:
       self.enqueue('authentication_request', cmd_dct)
-      cmd_dct['user_id'] = 'server'
+      eZchat = 'ez'
+      fingerprint = ez_gpg.find_key(nickname=eZchat)
+      cmd_dct['user_id'] = eZchat
+      cmd_dct['fingerprint'] = fingerprint
+
       self.add_client(**cmd_dct)
       self.success("Started cmd_authenticate")
     except:
@@ -231,7 +232,7 @@ class ez_api(ez_process_base):
     try:
       master = self.get_master(user_id=user_id)
     except Exception as e:
-      self.error(str(e))
+      self.error('error in cmd_ips: ' + str(e))
       return
 
     cmd_dct = {'master': master}
@@ -262,7 +263,6 @@ class ez_api(ez_process_base):
     :param msg: message
     :type  msg: string
     """
-
     try:
       if not self.UserDatabase.in_DB(name=user_id):
         # raise error instead

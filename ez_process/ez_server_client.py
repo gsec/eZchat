@@ -47,7 +47,7 @@ class ez_server_client(ez_process_base):
     cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
-    self.success('Started authentication.' + str(self.fingerprint))
+    self.success('Started authentication.')
 
     def authentication_failed_func(self_timer, host, port, user_id):
       self.error("Authentication with server failed, retrying.")
@@ -56,7 +56,7 @@ class ez_server_client(ez_process_base):
       try:
         self.sockfd.sendto(msg, master)
       except IOError as e:
-        self.error(str(e))
+        self.error('error in authentication_request: ' + str(e))
 
       process_id = ('authentication', (host, port))
       if process_id in self.background_processes:
@@ -74,7 +74,7 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.error(str(e))
+      self.error('error in authentication_request: ' + str(e))
 
   def authentication_in(self, user_id, fingerprint, host, port):
     """
@@ -109,7 +109,7 @@ class ez_server_client(ez_process_base):
     try:
       self.sockfd.sendto(msg, master)
     except IOError as e:
-      self.error(str(e))
+      self.error('error in authentication_in: ' + str(e))
 
   def authentication_out(self, msg, host, port):
     """
@@ -147,7 +147,7 @@ class ez_server_client(ez_process_base):
     try:
       sig = ez_gpg.sign_msg(str(msg))
     except:
-      self.error('Failed to sign message.')
+      self.error('error in authentication_iout: failed to sign message.')
       return
 
     master = (host, port)
@@ -251,7 +251,7 @@ class ez_server_client(ez_process_base):
       self.authentications[master] = (user_id, fingerprint)
     except:
       self.error('user_id, host, port not properly ' +
-                 'specified in authentication_success')
+                 'specified in client_authenticated')
 
 #==================#
 #  connect_server  #
@@ -307,5 +307,3 @@ class ez_server_client(ez_process_base):
     if self.sockfd is not None:
       self.sockfd.close()
     self.alive.clear()
-
-

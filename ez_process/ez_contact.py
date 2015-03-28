@@ -29,9 +29,9 @@ class ez_contact(ez_process_base):
       fingerprint = kwargs['fingerprint']
       master = (kwargs['host'], int(kwargs['port']))
       self.ips[master] = (user_id, fingerprint)
-    except Exception as e:
-      self.error(str(e))
-      return
+    except:
+      raise
+
     self.success('Client ' + user_id + ' added.')
 
   def remove_client(self, user_id):
@@ -43,7 +43,7 @@ class ez_contact(ez_process_base):
     try:
       master = self.get_master(user_id=user_id)
     except Exception as e:
-      self.error(str(e))
+      self.error('error in remove_client: ' + str(e))
       return
 
     del self.ips[master]

@@ -151,10 +151,12 @@ class ez_process_base(object):
       if len(case) != 1:
         raise TypeError('One and only one of the kwargs:' + ','.join(cases) +
                         'must be given')
+      case = case[0]
     except TypeError as e:
       self.error(str(e))
     except:
       raise
+
     case_val = kwargs[case]
     key = {'user_id': (u for u in self.ips if self.ips[u][0] == case_val),
            'fingerprint': (u for u in self.ips if self.ips[u][1] == case_val),
