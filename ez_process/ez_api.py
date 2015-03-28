@@ -76,14 +76,14 @@ class ez_api(ez_process_base):
         self.UserDatabase.add_entry(new_user)
 
     try:
-      fingerprint = ez_gpg.find_key(nickname=self.name, secret=True)
-      if not self.UserDatabase.in_DB(UID=fingerprint):
+      self.fingerprint = ez_gpg.find_key(nickname=self.name)
+      if not self.UserDatabase.in_DB(UID=self.fingerprint):
         raise Exception('Impossible to find identify ' + str(self.name) +
                         ' in key ring')
         #self.myself = eu.User(name=self.name)
         #self.UserDatabase.add_entry(self.myself)
       #else:
-      self.myself = self.UserDatabase.get_entry(UID=fingerprint)
+      self.myself = self.UserDatabase.get_entry(UID=self.fingerprint)
     except Exception, e:
       raise
 
@@ -91,10 +91,6 @@ class ez_api(ez_process_base):
     """ Client shutdown """
     self.enableCLI = False
     self.enqueue('shutdown')
-
-  #def cmd_get_online_users(self):
-    ##return [(user, self.ips[user]) for user in self.ips]
-    #print [(user, self.ips[user]) for user in self.ips]
 
   def cmd_get_contact_names(self):
     UIDs = self.UserDatabase.UID_list()
@@ -233,11 +229,13 @@ class ez_api(ez_process_base):
     :type  user_id: string
     """
     try:
-      assert(user_id in self.ips)
-      cmd_dct = {'user_id': user_id}
-      self.enqueue('ips_request', cmd_dct)
-    except:
-      self.error("User_id not in known Ips")
+      master = self.get_master(user_id=user_id)
+    except Exception as e:
+      self.error(str(e))
+      return
+
+    cmd_dct = {'master': master}
+    self.enqueue('ips_request', cmd_dct)
 
   def cmd_key(self, user_id):
     """
@@ -278,8 +276,10 @@ class ez_api(ez_process_base):
       self.success('Put UID: ' + str(mx.UID) + ' to the msg database')
       self.MsgDatabase.add_entry(mx)
 
-      if user_id not in self.ips:
+      try:
         # Strategy: send msg to random guys
+        self.get_master(user_id=user_id)
+      except:
         return
 
       data = pickle.dumps(mx)

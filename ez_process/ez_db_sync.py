@@ -26,7 +26,6 @@ class ez_db_sync(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_db_sync, self).__init__(*args, **kwargs)
 
-  @command_args
   def db_sync_request_out(self, user_id):
     """
     Start a message database sync request with the specified user.
@@ -45,7 +44,6 @@ class ez_db_sync(ez_process_base):
       except IOError as e:
         self.error(str(e))
 
-  @command_args
   def db_sync_request_in(self, user_id, UID_list):
     """
     Answer to a db_sync_request_out. Do not call.
@@ -67,7 +65,6 @@ class ez_db_sync(ez_process_base):
           cmd_dct = {'user_id': user_id, 'data': data}
           self.commandQueue.put(p2pCommand('send', cmd_dct))
 
-  @command_args
   def db_sync_background(self):
     process_id = ('db_sync_request_out', 'all')
 

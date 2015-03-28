@@ -17,10 +17,6 @@ import cPickle as pickle
 
 class ez_contact(ez_process_base):
 
-  # online users are stored in the ips dict
-  # ips = {user_id: (user_host, user_port)}
-  ips = {}
-
   def __init__(self, *args, **kwargs):
     super(ez_contact, self).__init__(*args, **kwargs)
 
@@ -31,17 +27,27 @@ class ez_contact(ez_process_base):
     try:
       user_id = kwargs['user_id']
       fingerprint = kwargs['fingerprint']
-      self.ips[(user_id, fingerprint)] = (kwargs['host'], int(kwargs['port']))
-    except:
-      print "user_id/host/port not properly specified in add_client"
-    self.success('Client ' + user_id + 'added.')
+      master = (kwargs['host'], int(kwargs['port']))
+      self.ips[master] = (user_id, fingerprint)
+    except Exception as e:
+      self.error(str(e))
+      return
+    self.success('Client ' + user_id + ' added.')
 
   def remove_client(self, user_id):
-    if user_id in self.ips:
-      del self.ips[user_id]
-      self.success('removed user: ' + user_id)
-    else:
-      self.error('"user not found/removed": ' + user_id)
+    """
+    Removes a client from the ips dict.
+
+    :user_id: username as string
+    """
+    try:
+      master = self.get_master(user_id=user_id)
+    except Exception as e:
+      self.error(str(e))
+      return
+
+    del self.ips[master]
+    self.success('removed user: ' + str(user_id))
 
   def contact_request_out(self, user_id):
     """

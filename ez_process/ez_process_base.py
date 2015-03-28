@@ -79,6 +79,10 @@ class ez_process_base(object):
 
   socket_buffsize = 2024
 
+  # online users are stored in the ips dict
+  # ips = {(user_host, user_port): (user_id, fingerpring)}
+  ips = {}
+
   @classmethod
   def get_handler(self):
     handler = {}
@@ -135,6 +139,32 @@ class ez_process_base(object):
 
   def enqueue(self, funcStr, data=None):
     self.commandQueue.put(p2pCommand(funcStr, data))
+
+  def get_master(self, **kwargs):
+    """
+    Returns the master (host, port tuple) given one of the following keywords
+    `user_id`, `fingerprint`, `master`.
+    """
+    try:
+      cases = ['user_id', 'fingerprint', 'master']
+      case = [u for u in cases if u in kwargs]
+      if len(case) != 1:
+        raise TypeError('One and only one of the kwargs:' + ','.join(cases) +
+                        'must be given')
+    except TypeError as e:
+      self.error(str(e))
+    except:
+      raise
+    case_val = kwargs[case]
+    key = {'user_id': (u for u in self.ips if self.ips[u][0] == case_val),
+           'fingerprint': (u for u in self.ips if self.ips[u][1] == case_val),
+           'master': (u for u in self.ips if u == case_val)}
+    key_val = [u for u in key[case]]
+    if len(key_val) != 1:
+      raise Exception('User not found/removed: ' + str(case_val))
+    else:
+      master = key_val[0]
+      return master
 
 #==============================================================================#
 #                                 command_args                                 #

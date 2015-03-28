@@ -61,17 +61,16 @@ class ez_ping(ez_process_base):
             cmd = self.error("ping failed: " + user_id)
             self.replyQueue.put(cmd)
           try:
-            del self.ips[user_id]
+            master = self.get_master(user_id=user_id)
+            del self.ips[master]
             if not epp.silent_ping:
               self.success('Removed user : ' + user_id + ' from ips')
           except:
             self.error('Failed to remove user : ' + user_id + ' from ips.')
           del self.background_processes[process_id]
 
-      if user_id not in self.ips:
-        self.error("user not in client list")
-      else:
-        master = self.ips[user_id]
+      try:
+        master = self.get_master(user_id=user_id)
         cmd_dct = {'user_id': user_id}
         ping = {'ping_reply': cmd_dct}
         msg = pickle.dumps(ping)
@@ -84,10 +83,11 @@ class ez_ping(ez_process_base):
           self.commandQueue.put(bgp)
 
         except IOError as e:
-          self.error(str(e))
-          self.error("ping unsuccessful")
+          self.error('ping unsuccessful: ' + str(e))
+      except Exception as e:
+        self.error('ping unsuccessful: ' + str(e))
     else:
-      self.error("cannot ping again, still waiting for response")
+      self.error('cannot ping again, still waiting for response')
 
   def ping_reply(self, user_id, host, port):
     """
@@ -135,8 +135,8 @@ class ez_ping(ez_process_base):
     """
 
     user_addr = (host, port)
-    if user_id in self.ips:
-      if(self.ips[user_id] == user_addr or
+    if user_addr in self.ips:
+      if(self.ips[user_addr][0] == user_id or
          socket.gethostbyname('ez') == user_addr[0]):
         process_id = ('ping_reply', user_id)
         pr = self.background_processes[process_id]
@@ -151,10 +151,6 @@ class ez_ping(ez_process_base):
             self.success("ping success: " + user_id)
         return True
 
-    #if socket.gethostbyname('ez') == user_addr[0]:
-      #self.replyQueue.put(self.success("ping success: " + user_id))
-      #return True
-    #else:
     self.error("Received ping_success, source unknown: " + str(user_addr))
     return False
 
@@ -165,7 +161,7 @@ class ez_ping(ez_process_base):
     # ping_background_func calls itself resulting in an endless ping chain.
     def ping_background_func(self_timer, queue, user_ips):
       # ping all users
-      user_ids = user_ips.keys()
+      user_ids = [u[0] for u in user_ips.values()]
 
       # custom success_callback - just for demonstration purpose
       def success_ping_all():

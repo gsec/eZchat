@@ -308,7 +308,7 @@ class ez_packet(ez_process_base):
     """
     packets_hash = data.packets_hash
     # packages are dropped if not associated to a known user_id
-    if user_addr in self.ips.values():
+    if user_addr in self.ips:
       key = (user_addr, packets_hash)
       if key not in self.stored_packets:
         self.stored_packets[key] = Packets()

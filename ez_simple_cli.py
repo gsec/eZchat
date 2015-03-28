@@ -50,7 +50,7 @@ class ez_simple_cli(object):
     elif str(data[:-1]) == "users":
       print "online users"
       for user in self.ips:
-        print "user:", user, self.ips[user]
+        print "user:", self.ips[user], user
       print "contacts"
       UIDs = self.UserDatabase.UID_list()
       for entry in self.UserDatabase.get_entries(UIDs):
@@ -116,7 +116,8 @@ class ez_simple_cli(object):
             cmd_dct = {'user_id': user_id}
             self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
         else:
-          for user_id in self.ips:
+          for master in self.ips:
+            user_id = self.ips[master][0]
             cmd_dct = {'user_id': user_id}
             self.commandQueue.put(p2pCommand('ips_request', cmd_dct))
 

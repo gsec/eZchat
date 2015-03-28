@@ -118,10 +118,10 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
     :type  data: string
     """
     if isinstance(user_specs, str) or isinstance(user_specs, unicode):
-      if user_specs in self.ips:
-        user_addr = self.ips[user_specs]
-      else:
-        self.error("not connected to user")
+      try:
+        user_addr = self.get_master(user_id=user_specs)
+      except Exception as e:
+        self.error(str(e))
         return
     elif type(user_specs) is tuple:
       user_addr = user_specs

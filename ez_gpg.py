@@ -142,7 +142,7 @@ class ez_gpg(object):
 
     if(verified.trust_level is not None and
        verified.trust_level >= verified.TRUST_FULLY):
-      fingerprint = verified.__dict__['pubkey_fingerprint']
+      fingerprint = verified.__dict__['fingerprint']
       return True, fingerprint
     else:
       return False, None
@@ -164,7 +164,7 @@ class ez_gpg(object):
 if __name__ == '__main__':
   pass
   #ez_gpg.generate_key('yolo')
-  #data = 'randomdata'
+  data = 'randomdata'
   #import ez_user as eu
   #for key in ez_gpg.gpg.list_keys():
     #name = key['uids'][0].split()[0]
@@ -215,15 +215,16 @@ if __name__ == '__main__':
   #print "mx:", mx.clear_text()
   ##print "mx.__dict__:", mx.__dict__
 
-  #signed_data = ez_gpg.gpg.sign(data)
+  signed_data = ez_gpg.gpg.sign(data)
   #print "signed_data:", signed_data.data
   #import re
   #pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
   #msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
   #print "msg.groups():", msg.groups()[0]
   #print "signed_data.data:", signed_data.data
-  #verified = ez_gpg.gpg.verify(signed_data.data)
-  #print "verified:", verified.__dict__['pubkey_fingerprint']
+  verified = ez_gpg.gpg.verify(signed_data.data)
+  print "verified:", verified.__dict__
+  print ez_gpg.find_key(nickname='jlang')
   #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
     #print('Trust level: %s' % verified.trust_text)
 

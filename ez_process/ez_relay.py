@@ -26,35 +26,32 @@ class ez_relay(ez_process_base):
 
     super(ez_relay, self).__init__(*args, **kwargs)
 
-  def ips_request(self, user_id):
+  def ips_request(self, master):
     """
     Request connection with other clients.
 
-    :param user_id: User nickname
-    :type  user_id: string
+    :param master:  User host and port tuple (host, port)
+    :type  master: (string, int)
     """
 
-    if user_id not in self.ips:
-      print "self.ips:", self.ips
-    else:
-      master = self.ips[user_id]
-      cmd_dct = {'user_id': user_id}
-      ping = {'distributeIPs': cmd_dct}
-      msg = pickle.dumps(ping)
-      try:
-        self.sockfd.sendto(msg, master)
+    try:
+      assert(master in self.ips)
+    except:
+      self.error('Master ' + str(master) + ' not in known ips')
 
-      except IOError as e:
-        self.error(str(e))
-        self.error("ips_request unsuccessful")
+    ping = {'distributeIPs': {}}
+    msg = pickle.dumps(ping)
+    try:
+      self.sockfd.sendto(msg, master)
 
-  def distributeIPs(self, user_id, host, port):
+    except IOError as e:
+      self.error(str(e))
+      self.error("ips_request unsuccessful")
+
+  def distributeIPs(self, host, port):
     """
-    Starts the connection process between the user specified by user_id, host,
+    Starts the connection process between the user specified by host,
     port and all other users simultaneously.
-
-    :param user_id: User nickname
-    :type  user_id: string
 
     :param host: Ip of a Server/Client
     :type  host: string
@@ -64,8 +61,8 @@ class ez_relay(ez_process_base):
     """
 
     master = (host, port)
-    other_users = {u_id: self.ips[u_id] for u_id in self.ips
-                   if self.ips[u_id] != master}
+    other_users = {self.ips[u_id]: u_id for u_id in self.ips
+                   if u_id != master}
 
     for other_id in other_users:
       cmd_dct_A = {'master': other_users[other_id]}

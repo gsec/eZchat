@@ -47,7 +47,7 @@ class ez_server_client(ez_process_base):
     cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
-    self.success('Started authentication.')
+    self.success('Started authentication.' + str(self.fingerprint))
 
     def authentication_failed_func(self_timer, host, port, user_id):
       self.error("Authentication with server failed, retrying.")
