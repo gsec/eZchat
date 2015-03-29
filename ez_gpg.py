@@ -138,7 +138,7 @@ class ez_gpg(object):
 
   @classmethod
   def verify_signed_msg(self, signed_msg):
-    verified = self.gpg.verify(signed_msg)
+    verified = self.gpg.verify(signed_msg.data)
 
     if(verified.trust_level is not None and
        verified.trust_level >= verified.TRUST_FULLY):
