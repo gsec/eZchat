@@ -16,7 +16,7 @@ if __name__ == "__main__":
   acception_rules['ping_reply'] = 'Allow'
 
   prefs = {'acception_rules': acception_rules}
-  cl = client(name="eZchat", **prefs)
+  cl = client(name="ez", **prefs)
 
   cl.enableCLI = True
   cl.enqueue('servermode', cmd_dct)

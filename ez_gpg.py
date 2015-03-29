@@ -133,7 +133,7 @@ class ez_gpg(object):
 
   @classmethod
   def sign_msg(self, msg):
-    signed_msg = self.gpg.sign(msg).data
+    signed_msg = self.gpg.sign(msg)
     return signed_msg
 
   @classmethod
