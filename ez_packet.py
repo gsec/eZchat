@@ -252,10 +252,11 @@ class ez_packet(ez_process_base):
     try:
       packets = Packets(data=data, pickle_data=False)
       self.sent_packets[packets.packets_hash] = packets
+      self.success('To: ' + str(user_specs))
       for packet_id in packets.packets:
         data = pickle.dumps(packets.packets[packet_id])
-        if len(data) > 2048:
-          self.error("data larger than 2048 bytes")
+        if len(data) > self.socket_buffsize:
+          self.error("data larger than buggersize")
         else:
           cmd_dct = {'user_specs': user_specs, 'data': data}
         self.enqueue('send', cmd_dct)
@@ -266,9 +267,10 @@ class ez_packet(ez_process_base):
     packets_hash, packet_id = packet_info
     if packets_hash in self.sent_packets:
       if packet_id in self.sent_packets[packets_hash].packets:
+        data = self.sent_packets[packets_hash].packets[packet_id].data
         data = pickle.dumps(self.sent_packets[packets_hash].packets[packet_id])
-        if sys.getsizeof(data) > self.socket_buffsize:
-          self.error("data larger than buffersize.")
+        if len(data) > self.socket_buffsize:
+          self.error("data larger than buggersize")
         else:
           cmd_dct = {'user_specs': user_id, 'data': data}
           self.enqueue('send', cmd_dct)

@@ -69,10 +69,10 @@ class eZ_CryptoScheme(CryptoBaseClass):
 
     # encode AES-key and HMAC with public RSA key:
     import cPickle as pickle
-    ciphered_key = pickle.dumps(ez_gpg.encrypt_msg(self.recipient, self.key))
-    self.ciphered_key = ciphered_key
-    ciphered_mac = pickle.dumps(ez_gpg.encrypt_msg(self.recipient, self.hmac))
-    self.ciphered_mac = ciphered_mac
+    ciphered_key = ez_gpg.encrypt_msg(self.recipient, self.key)
+    self.ciphered_key = pickle.dumps(ciphered_key.data)
+    ciphered_mac = ez_gpg.encrypt_msg(self.recipient, self.hmac)
+    self.ciphered_mac = pickle.dumps(ciphered_mac.data)
 
     return self.return_dict(encrypt_items)
 

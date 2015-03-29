@@ -128,17 +128,17 @@ class ez_gpg(object):
 
   @classmethod
   def decrypt_msg(self, cipher):
-    msg = self.gpg.decrypt(cipher.data, always_trust=True)
+    msg = self.gpg.decrypt(cipher, always_trust=True)
     return msg
 
   @classmethod
   def sign_msg(self, msg):
-    signed_msg = self.gpg.sign(msg)
+    signed_msg = self.gpg.sign(msg).data
     return signed_msg
 
   @classmethod
   def verify_signed_msg(self, signed_msg):
-    verified = self.gpg.verify(signed_msg.data)
+    verified = self.gpg.verify(signed_msg)
 
     if(verified.trust_level is not None and
        verified.trust_level >= verified.TRUST_FULLY):

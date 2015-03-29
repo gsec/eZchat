@@ -132,8 +132,9 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       return
 
     try:
+      self.success('sendto: ' + str(user_addr) +  ' ' + str(data))
       self.sockfd.sendto(data, user_addr)
-    except IOError as e:
+    except Exception as e:
       self.error(str(e))
 
 
