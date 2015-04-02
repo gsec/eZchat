@@ -175,6 +175,22 @@ def command_args(process_func):
   Decorator which extracts the arguments from the p2pCommand instance cmd
   (:py:class:`ez_process.ez_process_base.p2pCommand`) and passes them to the
   function.
+
+  >>> def func(self, a, b=None): return a, b
+  >>> args = {'a': 1}
+  >>> cmd = p2pCommand('test', args)
+  >>> command_args(func)(None, cmd)
+  (1, None)
+  >>> args = {'a': 1, 'b': 2}
+  >>> cmd = p2pCommand('test', args)
+  >>> command_args(func)(None, cmd)
+  (1, 2)
+  >>> args = {'b': 3}
+  >>> cmd = p2pCommand('test', args)
+  >>> command_args(func)(None, cmd)
+  Traceback (most recent call last):
+    ...
+  Exception: Missing argument: a in function: func
   """
   def assign_args(self, cmd):
     try:
@@ -187,10 +203,10 @@ def command_args(process_func):
     fargs = {}
 
     # the number of arguments the function has
-    n_args = process_func.func_code.co_argcount
+    n_args = process_func.func_code.co_argcount-len(process_func.func_defaults)
 
     # co_flags bitmap: 1=optimized | 2=newlocals | 4=*arg | 8=**arg
-    additional_kwargs = process_func.func_code.co_flags & 8
+    additional_kwargs = process_func.func_code.co_flags ^ 8
 
     # self is not considered as argument
     args = (arg for arg in process_func.func_code.co_varnames[:n_args]
@@ -213,3 +229,10 @@ def command_args(process_func):
       fargs.update(kwargs)
     return process_func(self, **fargs)
   return assign_args
+
+
+if __name__ == '__main__':
+  import doctest
+  doctest.testmod()
+
+
