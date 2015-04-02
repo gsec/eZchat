@@ -26,7 +26,10 @@ class ez_contact(ez_process_base):
     """
     try:
       user_id = kwargs['user_id']
-      fingerprint = kwargs['fingerprint']
+      if 'fingerprint' in kwargs:
+        fingerprint = kwargs['fingerprint']
+      else:
+        fingerprint = None
       master = (kwargs['host'], int(kwargs['port']))
       self.ips[master] = (user_id, fingerprint)
     except:

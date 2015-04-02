@@ -171,7 +171,12 @@ class VimEdit(urwid.Edit):
   def cmd_send_msg(self, contacts):
     msg = self.get_edit_text()
     for contact in contacts:
-      cl.cl.cmd_send_msg(contact, msg)
+      try:
+        cl.cl.cmd_send_msg(msg, user_id=contact[0], fingerprint=contact[1])
+      except Exception as e:
+        urwid.emit_signal(self, 'status_update', str(e))
+        return
+
       urwid.emit_signal(self, 'status_update', contact)
     self.set_edit_text('')
 

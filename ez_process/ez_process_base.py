@@ -152,8 +152,6 @@ class ez_process_base(object):
         raise TypeError('One and only one of the kwargs:' + ','.join(cases) +
                         'must be given')
       case = case[0]
-    except TypeError as e:
-      self.error(str(e))
     except:
       raise
 

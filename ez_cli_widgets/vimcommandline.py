@@ -71,23 +71,27 @@ class VimCommandLine(urwid.Edit):
 
   def get_marked_contacts(self):
     if hasattr(self, 'contact_checkbox'):
-      return [u for u in self.contact_checkbox if
-              self.contact_checkbox[u].state]
+      return [self.contacts[pos][0] for pos, u in
+              enumerate(self.contact_checkbox)
+              if u.state]
     else:
       return []
 
   def contact_list(self):
     shadowline = urwid.AttrMap(urwid.Text(('border', ' ')), 'shadow')
     contacts = [shadowline, urwid.Text(('bold', 'Contacts:'))]
-    self.contact_checkbox = {}
-    for user in self.contacts:
-      user_id = user[0]
+    online_users = cl.cl.ips.values()
+    self.contact_checkbox = []
+    for user_fingerprint, status in self.contacts:
+      user, fingerprint = user_fingerprint
+      user_id = user
       on = urwid.Text(("online", u"ON"))
       off = urwid.Text(("offline", u"OFF"))
-      status = on if user[1] else off
+
+      status = on if status else off
       checkbox = urwid.CheckBox(user_id)
 
-      self.contact_checkbox[user_id] = checkbox
+      self.contact_checkbox.append(checkbox)
       contacts += [urwid.Columns([checkbox, status])]
     return VimListBox(urwid.SimpleListWalker(contacts))
 
@@ -96,18 +100,19 @@ class VimCommandLine(urwid.Edit):
 
     UIDs = cl.cl.UserDatabase.UID_list()
     if len(UIDs) > 0:
-      contacts = [str(entry.name) for entry in
+      contacts = [(str(entry.name), entry.UID) for entry in
                   cl.cl.UserDatabase.get_entries(UIDs) if not cl.cl.name ==
                   entry.name]
     else:
       contacts = []
 
     # append all users online
-    if len(cl.cl.ips.keys()) > 0:
-      for master in cl.cl.ips:
-        username, _ = cl.cl.ips[master]
-        if not (username in contacts or username == cl.cl.name):
-          contacts.append(username)
+    #if len(cl.cl.ips.keys()) > 0:
+      #for master in cl.cl.ips:
+        #username, _ = cl.cl.ips[master]
+        #if not (username in contacts or username == cl.cl.name):
+          #contacts.append(username)
+
     # construct user/online list
     if len(contacts) > 0:
       users_online = [u[0] for u in cl.cl.ips.values()]

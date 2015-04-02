@@ -195,7 +195,10 @@ if __name__ == '__main__':
 
   #stream = open("example.txt", "rb")
 
-  #import ez_message as em
+  import ez_message as em
+
+  recipient = ez_gpg.find_key('Uli')
+  em.Message(sender='me', recipient=recipient, content='hi')
   #sender = 'jlang'
   #recipient = u'jlang'
   #msg = 'hi'
@@ -222,9 +225,9 @@ if __name__ == '__main__':
   #msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
   #print "msg.groups():", msg.groups()[0]
   #print "signed_data.data:", signed_data.data
-  verified = ez_gpg.gpg.verify(signed_data.data)
-  print "verified:", verified.__dict__
-  print ez_gpg.find_key(nickname='jlang')
+  #verified = ez_gpg.gpg.verify(signed_data.data)
+  #print "verified:", verified.__dict__
+  #print ez_gpg.find_key(nickname='jlang')
   #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
     #print('Trust level: %s' % verified.trust_text)
 

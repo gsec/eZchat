@@ -187,20 +187,29 @@ class ez_cli_urwid(urwid.Frame):
         contacts = self.vimmsgbox.selected_content
       elif type(self.vimmsgbox.selected_content) is str:
         contacts = [self.vimmsgbox.selected_content]
-      self.vimedit.cmd_send_msg(contacts)
+      contacts_fingerprints = []
+      # get fingerprints
+      fps = self.vimmsgbox.body_hidden_contents[self.vimmsgbox.selected_content]
+      self.status_update(str(fps))
+      #contacts_fingerprints.append(contact_fingerprint)
+
+      self.vimedit.cmd_send_msg(fps)
 
   def contact_mark_update(self):
     """
     Called by VimEdit's contact list. Marked contacts generate a new tab in the
     VimMsgBox.
     """
-    marked_contacts = self.commandline.get_marked_contacts()
-    if len(marked_contacts) > 0:
-      if len(marked_contacts) > 1:
-        marked_contacts = tuple(marked_contacts)
-      elif len(marked_contacts) == 1:
-        marked_contacts = marked_contacts[0]
-      self.vimmsgbox.update_content(None, marked_contacts)
+    # only take the contact names (u[0]) in tabs.
+    names_fingerprints = [u for u in self.commandline.get_marked_contacts()]
+    names = [u[0] for u in names_fingerprints]
+    if len(names) > 0:
+      if len(names) > 1:
+        names = tuple(names)
+      elif len(names) == 1:
+        names = names[0]
+      self.vimmsgbox.update_content(None, content_id=names,
+                                    hidden=names_fingerprints)
 
   def status_update(self, content):
     """

@@ -119,8 +119,8 @@ class ez_api(ez_process_base):
       cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
       self.add_client(**cmd_dct)
       self.enqueue('ping_request', cmd_dct)
-    except:
-      self.error("Syntax error in user")
+    except Exception as e:
+      self.error("Error in cmd_add: " + str(e))
 
   def cmd_servermode(self, host, port):
     """
@@ -251,7 +251,7 @@ class ez_api(ez_process_base):
     except:
       self.error("Syntax error in key")
 
-  def cmd_send_msg(self, user_id, msg):
+  def cmd_send_msg(self, msg, user_id=None, fingerprint=None):
     """ Sends an encrypted message.
 
     The method requires the target client to be online. The encryption can only
@@ -264,26 +264,28 @@ class ez_api(ez_process_base):
     :type  msg: string
     """
     try:
-      if not self.UserDatabase.in_DB(name=user_id):
+      if not self.UserDatabase.in_DB(UID=fingerprint):
         # raise error instead
         self.error("User not in DB")
         return
 
       # store msg in db
-      # TODO: nick Sa 04 Okt 2014 15:06:36 CEST
-      # apparently crypto does not allow unicode
-      mx = em.Message(self.name, user_id, str(msg))
-      self.success('Put UID: ' + str(mx.UID) + ' to the msg database')
+      try:
+        mx = em.Message(self.name, fingerprint, str(msg))
+        self.success('Put UID: ' + str(mx.UID) + ' to the msg database')
+      except Exception as e:
+        self.error('In cmd_send_msg: ' + str(e))
+        return
       self.MsgDatabase.add_entry(mx)
 
       try:
-        # Strategy: send msg to random guys
-        self.get_master(user_id=user_id)
-      except:
+        master = self.get_master(fingerprint=fingerprint)
+      except Exception as e:
+        self.error('Message was not delivered: ' + str(e))
         return
 
       data = pickle.dumps(mx)
-      cmd_data = {'user_specs': user_id, 'data': data}
+      cmd_data = {'user_specs': master, 'data': data}
       self.enqueue('send', cmd_data)
 
     except Exception as e:

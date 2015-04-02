@@ -21,6 +21,7 @@ class VimMsgBox(urwid.Frame):
   signals = ['exit_msgbox', 'status_update', 'close_box', 'keypress']
 
   body_contents = {}
+  body_hidden_contents = {}
   selected_content = None
 
   def __init__(self, logo_file=None, divider=True, *args, **kwargs):
@@ -54,7 +55,7 @@ class VimMsgBox(urwid.Frame):
     self.selected_content = content_id
     self.set_header([''])
 
-  def construct_walker(self, content, content_id='', divider=True):
+  def construct_walker(self, content, hidden=None, content_id='', divider=True):
     """
     Constructs a new body for vimmsgbox where the messages are displayed as
     plain text. Different bodys are identified via the header message and can be
@@ -75,6 +76,7 @@ class VimMsgBox(urwid.Frame):
         slw.extend([urwid.Text(item)])
     slw.append(urwid.Text(content[-1]))
     self.body_contents[content_id] = slw
+    self.body_hidden_contents[content_id] = hidden
     slw = urwid.SimpleFocusListWalker([urwid.AttrMap(w,
                                        None, 'reveal focus') for w in slw])
     return slw
@@ -105,7 +107,7 @@ class VimMsgBox(urwid.Frame):
     else:
       raise Exception('Tab position not in possible range. '
                       'Header length: ' + str(len(header)) + ' ' +
-                      'Position: '  + str(position))
+                      'Position: ' + str(position))
     self.set_header(header, active=active)
 
   def change_content(self, content_id):
@@ -125,6 +127,8 @@ class VimMsgBox(urwid.Frame):
     Changes which body is currently in use and highlights the associated item
     in the header.
     """
+    if len(self.body_contents) == 1:
+      return
     assert(dir == 1 or dir == -1)
     pos = self.body_contents.keys().index(self.selected_content)
     pos += 1*dir
@@ -159,7 +163,7 @@ class VimMsgBox(urwid.Frame):
   def redraw(self):
     self.slw[:] = self.body_contents[self.selected_content]
 
-  def update_content(self, content, content_id='default_body'):
+  def update_content(self, content, content_id='default_body', hidden=None):
     """
     Update the content of the message box.
 
@@ -172,11 +176,13 @@ class VimMsgBox(urwid.Frame):
 
     if content is not None:
       content_attr = urwid.AttrMap(urwid.Text(content), None, 'reveal focus')
+
     if content_id not in self.body_contents:
       if content is not None:
         self.body_contents[content_id] = [content_attr]
       else:
         self.body_contents[content_id] = []
+      self.body_hidden_contents[content_id] = hidden
 
       tab_position = self.body_contents.keys().index(content_id)
       if type(content_id) is tuple:
