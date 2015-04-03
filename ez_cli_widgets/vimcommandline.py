@@ -115,7 +115,7 @@ class VimCommandLine(urwid.Edit):
 
     # construct user/online list
     if len(contacts) > 0:
-      users_online = [u[0] for u in cl.cl.ips.values()]
+      users_online = cl.cl.ips.values()
       contacts = [(contact, contact in users_online) for contact in contacts]
 
     self.contacts = contacts

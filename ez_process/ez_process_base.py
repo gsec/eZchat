@@ -229,7 +229,7 @@ def command_args(process_func):
         raise Exception(err_msg)
 
     # add kwargs if the function accepts it
-    if additional_kwargs:
+    if additional_kwargs and cmd.data is not None:
       kwargs = {u: cmd.data[u] for u in cmd.data if u not in fargs}
       fargs.update(kwargs)
     return process_func(self, **fargs)
