@@ -203,7 +203,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
         print "msg:", msg
         msg = 'server response: \n' + msg + '\n' + 'end'
         sender = data.sender
-        cmd_dct = {'user_id': sender, 'msg': msg}
+        cmd_dct = {'fingerprint': sender, 'msg': msg}
         self.enqueue('cmd_send_msg', cmd_dct)
       else:
         self.msg(data)
