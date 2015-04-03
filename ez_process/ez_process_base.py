@@ -203,7 +203,12 @@ def command_args(process_func):
     fargs = {}
 
     # the number of arguments the function has
-    n_args = process_func.func_code.co_argcount-len(process_func.func_defaults)
+    if process_func.func_defaults is not None:
+      n_defaults = len(process_func.func_defaults)
+    else:
+      n_defaults = 0
+
+    n_args = process_func.func_code.co_argcount - n_defaults
 
     # co_flags bitmap: 1=optimized | 2=newlocals | 4=*arg | 8=**arg
     additional_kwargs = process_func.func_code.co_flags ^ 8
