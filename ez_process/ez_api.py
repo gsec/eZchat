@@ -273,7 +273,8 @@ class ez_api(ez_process_base):
 
       # store msg in db
       try:
-        mx = em.Message(self.name, fingerprint, str(msg))
+        self.success(str(self.fingerprint))
+        mx = em.Message(str(self.fingerprint), fingerprint, str(msg))
         self.success('Put UID: ' + str(mx.UID) + ' to the msg database')
       except Exception as e:
         self.error('In cmd_send_msg: ' + str(e))
@@ -281,7 +282,7 @@ class ez_api(ez_process_base):
       self.MsgDatabase.add_entry(mx)
 
       try:
-        master = self.get_master(fingerprint=fingerprint)
+        master = self.get_master(fingerprint=unicode(fingerprint))
       except Exception as e:
         self.error('Message was not delivered: ' + str(e))
         return
