@@ -102,7 +102,7 @@ class ez_api(ez_process_base):
     except:
       self.error("Syntax error in ping")
 
-  def cmd_add(self, user_id, host, port):
+  def cmd_add(self, user_id, host, port, fingerprint=None):
     """
     Add user IP to clients IP list.
 
@@ -117,6 +117,8 @@ class ez_api(ez_process_base):
     """
     try:
       cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
+      if fingerprint is not None:
+        cmd_dct['fingerprint'] = fingerprint
       self.add_client(**cmd_dct)
       self.enqueue('ping_request', cmd_dct)
     except Exception as e:
