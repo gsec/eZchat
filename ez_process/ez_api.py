@@ -282,14 +282,18 @@ class ez_api(ez_process_base):
       self.MsgDatabase.add_entry(mx)
 
       try:
-        master = self.get_master(fingerprint=unicode(fingerprint))
+        masters = [self.get_master(fingerprint=unicode(fingerprint))]
+      except ez_process_base.AmbiguousMaster as am:
+        masters = am
+        # TODO: (nick 2015-04-06) start to ping
       except Exception as e:
         self.error('Message was not delivered: ' + str(e))
         return
 
-      data = pickle.dumps(mx)
-      cmd_data = {'user_specs': master, 'data': data}
-      self.enqueue('send', cmd_data)
+      for master in masters:
+        data = pickle.dumps(mx)
+        cmd_data = {'user_specs': master, 'data': data}
+        self.enqueue('send', cmd_data)
 
     except Exception as e:
       self.error("Syntax error in command: " + str(e))

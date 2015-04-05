@@ -47,6 +47,13 @@ class p2pCommand(object):
     self.data = data
 
 #==============================================================================#
+#                               AmbiguousMaster                                #
+#==============================================================================#
+
+class AmbiguousMaster(Exception):
+  pass
+
+#==============================================================================#
 #                                class p2pReply                                #
 #==============================================================================#
 
@@ -160,8 +167,10 @@ class ez_process_base(object):
            'fingerprint': (u for u in self.ips if self.ips[u][1] == case_val),
            'master': (u for u in self.ips if u == case_val)}
     key_val = [u for u in key[case]]
-    if len(key_val) != 1:
+    if len(key_val) == 0:
       raise Exception('User not found/removed: ' + str(case_val))
+    elif len(key_val) > 1:
+      raise AmbiguousMaster(key_val)
     else:
       master = key_val[0]
       return master
