@@ -236,13 +236,13 @@ class ez_cli_urwid(urwid.Frame):
       self.vimmsgbox.update_content(content, 'default_body')
     else:
       for content_id in self.vimmsgbox.body_contents:
+        if content_id == 'default_body':
+          continue
         fingerprints = [u[1] for u in self.vimmsgbox.
                         body_hidden_contents[content_id]]
         if sender in fingerprints:
           message_delivered = True
           self.vimmsgbox.update_content(content, content_id)
-      #if message_delivered is False:
-        #self.vimmsgbox.update_content(content, sender)
 
   def __close__(self, *args):
     #self.commandline.cmd_close()
@@ -292,10 +292,11 @@ class ez_cli_urwid(urwid.Frame):
             self.status_update(('Client reply %s: %s' % (status, reply.data)))
           elif reply.replyType == p2pReply.msg:
             # decrypt msg and print it on the screen
-            if reply.data.recipient == cl.cl.name:
+            if reply.data.recipient == cl.cl.fingerprint:
               try:
                 msg = str(reply.data.clear_text())
                 sender = reply.data.sender
+                self.status_update('here')
                 self.msg_update(msg, sender)
               except Exception, e:
                 self.status_update("Error: %s" % str(e))
