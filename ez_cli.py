@@ -296,7 +296,6 @@ class ez_cli_urwid(urwid.Frame):
               try:
                 msg = str(reply.data.clear_text())
                 sender = reply.data.sender
-                self.status_update('here')
                 self.msg_update(msg, sender)
               except Exception, e:
                 self.status_update("Error: %s" % str(e))
