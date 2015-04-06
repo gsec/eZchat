@@ -7,7 +7,7 @@
 #============#
 
 import cPickle as pickle
-from ez_process_base import ez_process_base, p2pCommand
+from ez_process_base import ez_process_base, p2pCommand, AmbiguousMaster
 
 # adding the eZchat path to search directory
 import sys
@@ -283,7 +283,7 @@ class ez_api(ez_process_base):
 
       try:
         masters = [self.get_master(fingerprint=unicode(fingerprint))]
-      except ez_process_base.AmbiguousMaster as am:
+      except AmbiguousMaster as am:
         masters = am
         # TODO: (nick 2015-04-06) start to ping
       except Exception as e:

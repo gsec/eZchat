@@ -39,15 +39,16 @@ class ez_ping(ez_process_base):
 #  ping methods  #
 #================#
 
-  def ping_request(self, user_id, **kwargs):
+  def ping_request(self, master, **kwargs):
     """
     Starts a ping request. Client A must be connected to Client B, i.e. they
     must be both in clients user database, otherwise the ping process fails. To
     enforce the precondition the argument requires the user_id. The user_addr is
     retrieved from the user db.
     """
-
-    process_id = ('ping_reply', user_id)
+    if master not in self.ips:
+      raise Exception('Master ' + str(master) + ' not in registered ips')
+    process_id = ('ping_reply', str(master))
     if process_id not in self.background_processes:
 
       if 'success_callback' in kwargs:
@@ -58,19 +59,22 @@ class ez_ping(ez_process_base):
       else:
         def error_callback(self_timer):
           if not epp.silent_ping:
-            cmd = self.error("ping failed: " + user_id)
+            cmd = self.error("ping failed: " + str(master))
             self.replyQueue.put(cmd)
           try:
-            master = self.get_master(user_id=user_id)
-            del self.ips[master]
-            if not epp.silent_ping:
-              self.success('Removed user : ' + user_id + ' from ips')
+            #master = self.get_master(user_id=user_id)
+            if master in self.ips:
+              user_id, _ = self.ips[master]
+              del self.ips[master]
+              if not epp.silent_ping:
+                self.success('Removed user : ' + user_id + ' from ips')
           except:
             self.error('Failed to remove user : ' + user_id + ' from ips.')
           del self.background_processes[process_id]
 
       try:
-        master = self.get_master(user_id=user_id)
+        #master = self.get_master(user_id=user_id)
+        user_id, _ = self.ips[master]
         cmd_dct = {'user_id': user_id}
         ping = {'ping_reply': cmd_dct}
         msg = pickle.dumps(ping)
