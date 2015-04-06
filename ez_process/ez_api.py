@@ -282,10 +282,11 @@ class ez_api(ez_process_base):
       self.MsgDatabase.add_entry(mx)
 
       try:
-        masters = [self.get_master(fingerprint=unicode(fingerprint))]
-      except AmbiguousMaster as am:
-        masters = am
-        # TODO: (nick 2015-04-06) start to ping
+        masters = (self.get_master(fingerprint=unicode(fingerprint)),)
+      except AmbiguousMaster as e:
+        masters = e.masters
+        for master in masters:
+          self.enqueue('ping_request', {'master': master})
       except Exception as e:
         self.error('Message was not delivered: ' + str(e))
         return

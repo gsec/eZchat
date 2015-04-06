@@ -51,7 +51,8 @@ class p2pCommand(object):
 #==============================================================================#
 
 class AmbiguousMaster(Exception):
-  pass
+  def __init__(self, masters):
+    self.masters = masters
 
 #==============================================================================#
 #                                class p2pReply                                #
@@ -175,6 +176,82 @@ class ez_process_base(object):
       master = key_val[0]
       return master
 
+
+def user_arguments(process_func):
+  """
+  Decorator for a function only accepting master as input. The decorator allows
+  the function call with alternative arguments such as fingerprint, user_id.
+  The function determines the master and passes the result to the function.
+  Ambiguities in masters are treated pointwise.
+
+  Example:
+
+  We define a function only accepting master
+  >>> def func(self, master): return master
+  >>> args = {'master': 1234}
+  >>> self = ez_process_base(); self.ips = {1234: ('Bob', '4DE5'),\
+                                            4321: ('Bob', '4DE6')}
+
+  The  normal functionality is preserved and we can pass master
+  >>> user_arguments(func)(self, **args)
+  1234
+
+  The master can be obtained from the fingerprint
+  >>> args = {'fingerprint': '4DE5'}
+  >>> user_arguments(func)(self, **args)
+  1234
+
+  If the master is ambiguous the function is applied to all possible masters
+  >>> args = {'user_id': 'Bob'}
+  >>> user_arguments(func)(self, **args)
+  (4321, 1234)
+  """
+  # the number of arguments the function has
+  if process_func.func_defaults is not None:
+    n_defaults = len(process_func.func_defaults)
+  else:
+    n_defaults = 0
+  n_args = process_func.func_code.co_argcount - n_defaults
+  args = [arg for arg in process_func.func_code.co_varnames[:n_args]
+          if arg != 'self']
+  if 'master' not in args:
+    raise Exception('The function ' + str(process_func.__name__) +
+                    ' cannot be decorated with user_arguments. ' +
+                    'The function must have `master` as argument')
+
+  def assign_args(self, *args, **kwargs):
+    if 'master' in kwargs:
+      return process_func(self, *args, **kwargs)
+
+    cases = ['fingerprint', 'user_id']
+    selected = None
+    for case in cases:
+      if selected is None:
+        selected = case if case in kwargs else None
+    if case is None:
+      raise Exception('If `master` is not given, one of the following ' +
+                      ', '.join(cases) + ' must be given for the function ' +
+                      str(process_func.__name__))
+
+    try:
+      master = self.get_master(**{selected: kwargs[selected]})
+      kwargs['master'] = master
+      del kwargs[selected]
+      return process_func(self, *args, **kwargs)
+    except AmbiguousMaster as e:
+      masters = e.masters
+
+      del kwargs[selected]
+      ret = []
+      for master in masters:
+        kwargs['master'] = master
+        res = process_func(self, *args, **kwargs)
+        ret.append(res)
+      return tuple(ret)
+
+  return assign_args
+
+
 #==============================================================================#
 #                                 command_args                                 #
 #==============================================================================#
@@ -248,5 +325,3 @@ def command_args(process_func):
 if __name__ == '__main__':
   import doctest
   doctest.testmod()
-
-

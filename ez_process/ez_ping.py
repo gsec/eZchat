@@ -7,7 +7,7 @@
 #============#
 
 import socket
-from ez_process_base import ez_process_base, p2pCommand
+from ez_process_base import ez_process_base, p2pCommand, user_arguments
 import cPickle as pickle
 import ez_process_preferences as epp
 
@@ -39,6 +39,7 @@ class ez_ping(ez_process_base):
 #  ping methods  #
 #================#
 
+  @user_arguments
   def ping_request(self, master, **kwargs):
     """
     Starts a ping request. Client A must be connected to Client B, i.e. they
@@ -48,7 +49,7 @@ class ez_ping(ez_process_base):
     """
     if master not in self.ips:
       raise Exception('Master ' + str(master) + ' not in registered ips')
-    process_id = ('ping_reply', str(master))
+    process_id = ('ping_reply', master)
     if process_id not in self.background_processes:
 
       if 'success_callback' in kwargs:
@@ -62,7 +63,6 @@ class ez_ping(ez_process_base):
             cmd = self.error("ping failed: " + str(master))
             self.replyQueue.put(cmd)
           try:
-            #master = self.get_master(user_id=user_id)
             if master in self.ips:
               user_id, _ = self.ips[master]
               del self.ips[master]
@@ -73,7 +73,6 @@ class ez_ping(ez_process_base):
           del self.background_processes[process_id]
 
       try:
-        #master = self.get_master(user_id=user_id)
         user_id, _ = self.ips[master]
         cmd_dct = {'user_id': user_id}
         ping = {'ping_reply': cmd_dct}
@@ -142,7 +141,7 @@ class ez_ping(ez_process_base):
     if user_addr in self.ips:
       if(self.ips[user_addr][0] == user_id or
          socket.gethostbyname('ez') == user_addr[0]):
-        process_id = ('ping_reply', user_id)
+        process_id = ('ping_reply', (host, port))
         pr = self.background_processes[process_id]
         pr.finished.set()
         pr.cancel()
