@@ -14,6 +14,7 @@ if __name__ == "__main__":
   acception_rules['authentication_in'] = 'Allow'
   acception_rules['authentication_verify'] = 'Allow'
   acception_rules['ping_reply'] = 'Allow'
+  acception_rules['ping_success'] = 'Allow'
 
   prefs = {'acception_rules': acception_rules}
   cl = client(name="ez", **prefs)

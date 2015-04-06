@@ -253,8 +253,9 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
       if self.enableCLI:
         try:
           reply = self.replyQueue.get(block=False)
-          status = "success" if reply.replyType == p2pReply.success else "ERROR"
-          print ('Client reply %s: %s' % (status, reply.data))
+          if reply:
+            status = "success" if reply.replyType == p2pReply.success else "ERROR"
+            print ('Client reply %s: %s' % (status, reply.data))
         except Queue.Empty:
           pass
 

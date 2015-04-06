@@ -117,6 +117,7 @@ class ez_ping(ez_process_base):
     ping = {'ping_success': cmd_dct}
     msg = pickle.dumps(ping)
     try:
+      self.success('send pingrpely')
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
       self.error(str(e))
@@ -139,20 +140,20 @@ class ez_ping(ez_process_base):
 
     user_addr = (host, port)
     if user_addr in self.ips:
-      if(self.ips[user_addr][0] == user_id or
-         socket.gethostbyname('ez') == user_addr[0]):
-        process_id = ('ping_reply', (host, port))
-        pr = self.background_processes[process_id]
-        pr.finished.set()
-        pr.cancel()
-        del self.background_processes[process_id]
-        if process_id in self.success_callback:
-          self.success_callback[process_id]()
-          del self.success_callback[process_id]
-        else:
-          if not epp.silent_ping:
-            self.success("ping success: " + user_id)
-        return True
+      #if(self.ips[user_addr][0] == user_id or
+        #socket.gethostbyname('ez') == user_addr[0]):
+      process_id = ('ping_reply', (host, port))
+      pr = self.background_processes[process_id]
+      pr.finished.set()
+      pr.cancel()
+      del self.background_processes[process_id]
+      if process_id in self.success_callback:
+        self.success_callback[process_id]()
+        del self.success_callback[process_id]
+      else:
+        if not epp.silent_ping:
+          self.success("ping success: " + user_id)
+      return True
 
     self.error("Received ping_success, source unknown: " + str(user_addr))
     return False
