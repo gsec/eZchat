@@ -117,7 +117,6 @@ class ez_ping(ez_process_base):
     ping = {'ping_success': cmd_dct}
     msg = pickle.dumps(ping)
     try:
-      self.success('send pingrpely')
       self.sockfd.sendto(msg, user_addr)
     except IOError as e:
       self.error(str(e))
