@@ -21,6 +21,7 @@ class VimMsgBox(urwid.Frame):
   signals = ['exit_msgbox', 'status_update', 'close_box', 'keypress']
 
   body_contents = {}
+  header_contents = {}
   body_hidden_contents = {}
   selected_content = None
 
@@ -82,10 +83,10 @@ class VimMsgBox(urwid.Frame):
     return slw
 
   def set_active_tab(self, pos):
-    if hasattr(self, 'header'):
-      header = [u[0].original_widget.get_text()[0]
-                for u in self.header.contents]
-      self.set_header(header, active=pos)
+    header = [''] + [str(self.header_contents[u])
+                     for u in self.body_contents.keys()
+                     if u != 'default_body' and u in self.header_contents]
+    self.set_header(header, active=pos)
 
   def append_tab(self, text, position=-1, default_pos_one=True):
     """
@@ -97,18 +98,8 @@ class VimMsgBox(urwid.Frame):
     else:
       active = -1
 
-    header = [u[0].original_widget.get_text()[0]
-              for u in self.header.contents]
-    if position >= 0 and position <= len(header):
-      if default_pos_one and position == 0:
-        header = [header[0], text] + header[1:]
-      else:
-        header = header[:position] + [text] + header[position:]
-    else:
-      raise Exception('Tab position not in possible range. '
-                      'Header length: ' + str(len(header)) + ' ' +
-                      'Position: ' + str(position))
-    self.set_header(header, active=active)
+    self.set_active_tab(active)
+    return
 
   def change_content(self, content_id):
     """
@@ -122,22 +113,35 @@ class VimMsgBox(urwid.Frame):
     self.slw[:] = content
     self.selected_content = content_id
 
-  def tab_body(self, dir=1, default_pos_one=True):
+  def tab_body(self, dir=1, to_content_id=None, default_pos_one=True):
     """
     Changes which body is currently in use and highlights the associated item
     in the header.
     """
-    if len(self.body_contents) == 1:
-      return
-    assert(dir == 1 or dir == -1)
-    pos = self.body_contents.keys().index(self.selected_content)
-    pos += 1*dir
-    pos = pos % len(self.body_contents)
+    if to_content_id is None:
+      if len(self.body_contents) == 1:
+        return
+      assert(dir == 1 or dir == -1)
+      pos = self.body_contents.keys().index(self.selected_content)
+      pos += 1*dir
+      pos = pos % len(self.body_contents)
 
-    # after tabbing do not land on position 0 if not allowed
-    if default_pos_one is True and pos == 0:
-      pos = 1
-    self.change_content(self.body_contents.keys()[pos])
+      # correct header
+      # after tabbing do not land on position 0 if not allowed
+      if default_pos_one is True and pos == 0:
+        pos = 1
+      content_id = self.body_contents.keys()[pos]
+
+      # correct contend_id
+      if content_id == 'default_body':
+        content_id = self.body_contents.keys()[pos-1]
+    else:
+      pos = self.body_contents.keys().index(to_content_id)
+      if default_pos_one is True and pos == 0:
+        pos = 1
+      content_id = to_content_id
+
+    self.change_content(content_id)
     self.set_active_tab(pos)
 
   def cmd_unhandled(self, *args):
@@ -187,12 +191,17 @@ class VimMsgBox(urwid.Frame):
       tab_position = self.body_contents.keys().index(content_id)
       if type(content_id) is tuple:
         new_content_id = '|'.join(content_id)
+
+        self.header_contents[content_id] = new_content_id
         self.append_tab(new_content_id, tab_position)
       elif type(content_id) is str:
+        self.header_contents[content_id] = content_id
         self.append_tab(content_id, tab_position)
       else:
         raise TypeError('Type: ' + type(content_id) +
                         ' not supported in update content.')
+      if content is None:
+        self.tab_body(to_content_id=content_id)
     else:
       if content is not None:
         self.body_contents[content_id].append(content_attr)
