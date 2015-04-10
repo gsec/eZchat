@@ -253,7 +253,7 @@ class ez_api(ez_process_base):
     except:
       self.error("Syntax error in key")
 
-  def cmd_send_msg(self, msg, user_id=None, fingerprint=None):
+  def cmd_send_msg(self, msg, fingerprint=None):
     """ Sends an encrypted message.
 
     The method requires the target client to be online. The encryption can only
