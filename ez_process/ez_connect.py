@@ -48,7 +48,7 @@ class ez_connect(ez_process_base):
 #  UDP-Holepunching methods  #
 #============================#
 
-  def connect(self, master):
+  def connect(self, master, host, port):
     """
     Not to be called by the user, but automatically invoked.
 
@@ -137,7 +137,7 @@ class ez_connect(ez_process_base):
     :type  user_addr: (string, int)
     """
 
-    cmd_dct = {'user_id': self.name, 'fingerprint': fingerprint}
+    cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     con_success = {'connection_success': cmd_dct}
     msg = pickle.dumps(con_success)
 
