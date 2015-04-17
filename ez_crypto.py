@@ -90,6 +90,10 @@ class eZ_CryptoScheme(CryptoBaseClass):
     # type(key_crypto) = Crypt.
     key_crypto = ez_gpg.decrypt_msg(pickle.loads(self.ciphered_key))
     self.key = key_crypto.data
+
+    # todo: replace self.sender by key_crypto.sender?! in case the user fakes
+    # their fingerprint
+
     hmac_crypto = ez_gpg.decrypt_msg(pickle.loads(self.ciphered_mac))
     self.hmac = hmac_crypto.data
 

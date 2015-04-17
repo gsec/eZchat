@@ -294,9 +294,24 @@ class ez_cli_urwid(urwid.Frame):
             # decrypt msg and print it on the screen
             if reply.data.recipient == cl.cl.fingerprint:
               try:
-                msg = str(reply.data.clear_text())
-                sender = reply.data.sender
-                self.msg_update(msg, sender)
+                msg_dct = reply.data.clear_message()
+                # if target is set and the recipient is the user himself the
+                # message is put to the target
+                if(reply.data.target is not None and
+                   reply.data.recipient == cl.cl.fingerprint):
+                  sender = reply.data.target
+                else:
+                  sender = reply.data.sender
+
+                # try to reconstruct the username given the fingerprint
+                sender_name = cl.cl.get_user(msg_dct['sender'])
+                if not sender_name:
+                  sender_name = msg_dct['sender']
+                sender_str = ' '.join([sender_name, "@",
+                                       msg_dct['time'], ":\n"])
+
+                msg_str = msg_dct['content']
+                self.msg_update((sender_str, msg_str), sender)
               except Exception, e:
                 self.status_update("Error: %s" % str(e))
 

@@ -84,6 +84,11 @@ class ez_api(ez_process_base):
     except Exception, e:
       raise
 
+  def get_user(self, fingerprint):
+    for key in ez_gpg.gpg.list_keys():
+      if key['fingerprint'] == fingerprint:
+        return key['uids'][0].split()[0]
+
   def cmd_close(self):
     """ Client shutdown """
     self.enableCLI = False
@@ -271,15 +276,26 @@ class ez_api(ez_process_base):
         self.error("User not in DB")
         return
 
-      # store msg in db
+      # Generated encrypted msg
       try:
         self.success(str(self.fingerprint))
-        mx = em.Message(str(self.fingerprint), fingerprint, str(msg))
+        mx = em.Message(sender=str(self.fingerprint), recipient=fingerprint,
+                        content=str(msg))
+        mx_self = em.Message(sender=str(self.fingerprint),
+                             recipient=str(self.fingerprint),
+                             content=str(msg),
+                             target=fingerprint)
         self.success('Put UID: ' + str(mx.UID) + ' to the msg database')
       except Exception as e:
         self.error('In cmd_send_msg: ' + str(e))
         return
+
+      # Store the msg in the database
       self.MsgDatabase.add_entry(mx)
+      self.MsgDatabase.add_entry(mx_self)
+
+      # place the msg send in the reply queue (reply to oneself)
+      self.msg(mx_self)
 
       try:
         masters = (self.get_master(fingerprint=unicode(fingerprint)),)

@@ -25,9 +25,18 @@ class Message(object):
                     'ciphered_mac']
   components = ['time', 'recipient', 'UID'] + crypto_content
 
-  def __init__(self, sender='', recipient='', content='',
+  def __init__(self, sender='', recipient='', content='', target=None,
                dtime=None, _dict=None):
+    """
+    Generates an encrypted message instance.
 
+    :param recipient: Fingerprint associated to a public key
+    :type  recipient: str
+
+    :param target: Can be used to encrypt messages for oneself while remembering
+                   who the actual `target` is.
+    :type  target: str
+    """
     if dtime is None:
       dtime = datetime.now()
 
@@ -35,11 +44,10 @@ class Message(object):
       for component in Message.components:
         setattr(self, component, _dict[component])
     else:
-      # todo: (bcn 2014-07-06) Isoformat is at least localization independent
-      # but timezone information is still missing !
       self.time = str(dtime.year) + '-' + str(dtime.month)
       exact_time = dtime.isoformat(' ')
       self.recipient = recipient
+      self.target = target
       self.UID = SHA.new(sender + recipient + exact_time).hexdigest()
       package = {'etime': exact_time, 'sender': sender,
                  'recipient': recipient, 'content': content}
@@ -65,6 +73,22 @@ class Message(object):
     lst = [clear_dict['sender'], "@", clear_dict['etime'], ":\n",
            clear_dict['content'], "\n:HMAC:", "[", sig_symb, "]"]
     return ' '.join(lst)
+
+  def clear_message(self):
+    """ Return the decrypted text, given the private key is found on disk """
+    crypt_dict = {x: getattr(self, x) for x in Message.crypto_content}
+    crypt_dict.update({'recipient': self.recipient})
+    clear_dict = ec.eZ_CryptoScheme(**crypt_dict).decrypt_verify()
+    if clear_dict['authorized']:
+      sig_symb = '✓'
+    else:
+      sig_symb = '✗'
+    self.sender = clear_dict['sender']
+    lst = {'sender': clear_dict['sender'],
+           'time': clear_dict['etime'],
+           'content': clear_dict['content'],
+           'HMAC': sig_symb}
+    return lst
 
 #==============================================================================#
 #                            class MessageDatabase                             #

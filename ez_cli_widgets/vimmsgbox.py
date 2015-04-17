@@ -179,7 +179,13 @@ class VimMsgBox(urwid.Frame):
       self.cmd_exit_msgbox()
 
     if content is not None:
-      content_attr = urwid.AttrMap(urwid.Text(content), None, 'reveal focus')
+      if type(content) is tuple and len(content) == 2:
+        urwid_text = urwid.Text([('bold', content[0]), content[1]])
+      elif type(content) is str:
+        urwid_text = urwid.Text(content)
+      else:
+        raise TypeError('content must be string or tuple of strings')
+      content_attr = urwid.AttrMap(urwid_text, None, 'reveal focus')
 
     if content_id not in self.body_contents:
       if content is not None:
