@@ -307,6 +307,7 @@ class ez_cli_urwid(urwid.Frame):
                 sender_name = cl.cl.get_user(msg_dct['sender'])
                 if not sender_name:
                   sender_name = msg_dct['sender']
+
                 sender_str = ' '.join([sender_name, "@",
                                        msg_dct['time'], ":\n"])
 

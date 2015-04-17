@@ -87,7 +87,7 @@ class ez_api(ez_process_base):
   def get_user(self, fingerprint):
     for key in ez_gpg.gpg.list_keys():
       if key['fingerprint'] == fingerprint:
-        return key['uids'][0].split()[0]
+        return str(key['uids'][0].split()[0])
 
   def cmd_close(self):
     """ Client shutdown """
