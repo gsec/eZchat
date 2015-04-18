@@ -305,7 +305,11 @@ class ez_api(ez_process_base):
           self.enqueue('ping_request', {'master': master})
       except Exception as e:
         self.error('Message was not delivered: ' + str(e))
-        return
+        if len(self.ips) > 0:
+          import random
+          masters = [random.choice(self.ips.keys())]
+        else:
+          return
 
       for master in masters:
         data = pickle.dumps(mx)
