@@ -88,13 +88,14 @@ class eZ_CryptoScheme(CryptoBaseClass):
     # Decrypt AES key and HMAC:
     import cPickle as pickle
     # type(key_crypto) = Crypt.
-    key_crypto = ez_gpg.decrypt_msg(pickle.loads(self.ciphered_key))
+
+    key_crypto = ez_gpg.decrypt_msg(pickle.loads(str(self.ciphered_key)))
     self.key = key_crypto.data
 
     # todo: replace self.sender by key_crypto.sender?! in case the user fakes
     # their fingerprint
 
-    hmac_crypto = ez_gpg.decrypt_msg(pickle.loads(self.ciphered_mac))
+    hmac_crypto = ez_gpg.decrypt_msg(pickle.loads(str(self.ciphered_mac)))
     self.hmac = hmac_crypto.data
 
     # Decrypt cipher block (and HMAC check inside AES class):
