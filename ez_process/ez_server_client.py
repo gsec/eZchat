@@ -49,10 +49,12 @@ class ez_server_client(ez_process_base):
     msg = pickle.dumps(auth_in)
     self.success('Started authentication.')
 
-    def authentication_failed_func(self_timer, host, port, user_id):
+    def authentication_failed_func(self_timer, host, port,
+                                   user_id, fingerprint):
       self.error("Authentication with server failed, retrying.")
-      conn_success = {'authentication_in': {'user_id': user_id}}
-      msg = pickle.dumps(conn_success)
+      auth_cmd = {'authentication_in': {'user_id': user_id,
+                                        'fingerprint': fingerprint}}
+      msg = pickle.dumps(auth_cmd)
       try:
         self.sockfd.sendto(msg, master)
       except IOError as e:
@@ -68,7 +70,8 @@ class ez_server_client(ez_process_base):
                      {'process_id': process_id,
                       'callback': authentication_failed_func,
                       'interval': 5,
-                      'callback_args': (host, port, self.name)})
+                      'callback_args': (host, port, self.name,
+                                        self.fingerprint)})
     self.commandQueue.put(bgp)
 
     try:
