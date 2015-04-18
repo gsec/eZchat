@@ -244,6 +244,16 @@ class ez_cli_urwid(urwid.Frame):
           message_delivered = True
           self.vimmsgbox.update_content(content, content_id)
 
+      # no tab is opened -> open the tab
+      if not message_delivered:
+        try:
+          sender_name = cl.cl.get_user(sender)
+        except:
+          sender_name = sender
+        self.vimmsgbox.update_content(None, content_id=sender_name,
+                                      hidden=[(sender_name, sender)])
+        self.vimmsgbox.update_content(content, sender_name)
+
   def __close__(self, *args):
     #self.commandline.cmd_close()
     self.exit()
