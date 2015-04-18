@@ -75,7 +75,7 @@ class ez_db_sync(ez_process_base):
 
       user_addr = random.choice(ips)
       cmd_dct = {'master': user_addr}
-      client.queue.put(p2pCommand('db_sync_request_out', cmd_dct))
+      client.enqueue('db_sync_request_out', cmd_dct)
 
       if process_id in self.background_processes:
         self.reset_background_process(process_id)
