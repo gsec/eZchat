@@ -226,10 +226,12 @@ class ez_cli_urwid(urwid.Frame):
       # set the new foucs to the last item
       self.statusline.body.set_focus(focus)
 
-  def msg_update(self, content, sender=None):
+  def msg_update(self, content, sender=None, open_tab=False):
     """
     Prints the decrypted message content.
     """
+
+    self.status_update('called msg_pdate: ' + str(open_tab))
     # This case should never happen
     message_delivered = False
     if sender is None:
@@ -245,7 +247,7 @@ class ez_cli_urwid(urwid.Frame):
           self.vimmsgbox.update_content(content, content_id)
 
       # no tab is opened -> open the tab
-      if not message_delivered:
+      if (not message_delivered) and open_tab:
         try:
           sender_name = cl.cl.get_user(sender)
         except:

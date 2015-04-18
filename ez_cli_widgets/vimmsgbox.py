@@ -52,7 +52,8 @@ class VimMsgBox(urwid.Frame):
     content_id = 'default_body'
     self.slw = self.construct_walker(content, content_id=content_id,
                                      divider=divider)
-    super(VimMsgBox, self).__init__(urwid.ListBox(self.slw))
+    self.listbox = urwid.ListBox(self.slw)
+    super(VimMsgBox, self).__init__(self.listbox)
     self.selected_content = content_id
     self.set_header([''])
 
@@ -167,6 +168,14 @@ class VimMsgBox(urwid.Frame):
   def redraw(self):
     self.slw[:] = self.body_contents[self.selected_content]
 
+  def clear_tab(self, content_id):
+    if content_id in self.body_contents:
+      self.body_contents = []
+
+  def clear_tabs(self):
+    for content_id in self.body_contents:
+      self.clear_tab(content_id)
+
   def update_content(self, content, content_id='default_body', hidden=None):
     """
     Update the content of the message box.
@@ -267,7 +276,7 @@ class VimMsgBox(urwid.Frame):
     try:
       return self.command_dict[key](size)
     except KeyError:
-      return urwid.ListBox.keypress(self, size, key)
+      return urwid.ListBox.keypress(self.listbox, size, key)
 
 if __name__ == "__main__":
   msgbox = VimMsgBox()

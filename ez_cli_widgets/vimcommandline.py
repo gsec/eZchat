@@ -223,15 +223,34 @@ class VimCommandLine(urwid.Edit):
       self.open_packets()
     elif args[0] == 'messages':
       UIDs = cl.cl.MsgDatabase.UID_list()
-      msgs = cl.cl.MsgDatabase.get_entries(UIDs)
+      msgs = sorted(cl.cl.MsgDatabase.get_entries(UIDs), key=lambda u: u.time)
 
-      urwid.emit_signal(self, 'clear_msgbox')
+      #urwid.emit_signal(self, 'clear_msgbox')
       for msg in msgs:
-        if msg.recipient == cl.cl.name:
-          try:
-            urwid.emit_signal(self, 'msg_update', str(msg.clear_text()))
-          except Exception, e:
-            urwid.emit_signal(self, 'status_update', "Error: %s" % str(e))
+        try:
+          msg_dct = msg.clear_message()
+          urwid.emit_signal(self, 'status_update','here')
+          if (hasattr(msg, 'target') and msg.target is not None and
+              msg.recipient == cl.cl.fingerprint):
+            sender = msg.target
+          else:
+            sender = msg.sender
+
+          sender_name = cl.cl.get_user(msg_dct['sender'])
+          if not sender_name:
+            sender_name = msg_dct['sender']
+
+          sender_str = ' '.join([sender_name, "@",
+                                 msg_dct['time'], ":\n"])
+
+          msg_str = msg_dct['content']
+          #urwid.emit_signal(self, 'status_update', str((sender_str, msg_str), sender))
+          urwid.emit_signal(self, 'msg_update', (sender_str, msg_str), sender,
+                            False)
+        except Exception as e:
+          urwid.emit_signal(self, 'status_update', str(e))
+          pass
+
     elif args[0] == 'popup':
       urwid.emit_signal(self, 'open_pop_up')
 
