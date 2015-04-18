@@ -65,17 +65,17 @@ class ez_db_sync(ez_process_base):
   def db_sync_background(self):
     process_id = ('db_sync_request_out', 'all')
 
-    def db_sync_func(self_timer, queue, user_ips, user_ips_gen):
+    def db_sync_func(self_timer, client):
       # get the next user with whom to sync
-      try:
-        user_addr = user_ips_gen.next()
-      except:
-        user_ips_gen = (u for u in user_ips)
-        user_addr = user_ips_gen.next()
+      import random
+      ips = client.ips.keys()
+      if len(ips) == 0:
+        self.error('No ips for sync available.')
+        return
 
-      #for user_addr in user_ips:
+      user_addr = random.choice(ips)
       cmd_dct = {'master': user_addr}
-      queue.put(p2pCommand('db_sync_request_out', cmd_dct))
+      client.queue.put(p2pCommand('db_sync_request_out', cmd_dct))
 
       if process_id in self.background_processes:
         self.reset_background_process(process_id)
@@ -83,5 +83,5 @@ class ez_db_sync(ez_process_base):
     bgp = {'process_id': process_id,
            'callback': db_sync_func,
            'interval': epp.db_bgsync_timeout,
-           'callback_args': (self.commandQueue, self.ips, None, )}
+           'callback_args': (self, )}
     self.enqueue('start_background_process', bgp)
