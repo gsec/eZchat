@@ -36,6 +36,13 @@ class ez_gpg(object):
     return thatkey['fingerprint']
 
   @classmethod
+  def get_active_fingerprint(cls):
+    data = 'random'
+
+    signed_data = cls.gpg.sign(data)
+    return signed_data.fingerprint
+
+  @classmethod
   def export_key(self, fingerprint=None, nickname=None):
     if fingerprint:
       return self.gpg.export_keys(fingerprint)
@@ -219,7 +226,7 @@ if __name__ == '__main__':
   ##print "mx.__dict__:", mx.__dict__
 
   signed_data = ez_gpg.gpg.sign(data)
-  #print "signed_data:", signed_data.data
+  print "signed_data:", signed_data.__dict__
   #import re
   #pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
   #msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)

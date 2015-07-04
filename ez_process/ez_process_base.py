@@ -7,6 +7,7 @@
 #============#
 
 import os
+import vim
 import types
 import Queue
 
@@ -112,18 +113,32 @@ class ez_process_base(object):
     return handler
 
   def __init__(self, **kwargs):
-    if 'write_to_pipe' in kwargs:
+    if 'write_to_pipe' in kwargs or 'event_callback' in kwargs:
       class RQueue(Queue.Queue):
-        def __init__(self, write_to_pipe=False, *args, **kwargs):
+        def __init__(self, write_to_pipe=False, event_callback=None,
+                     *args, **kwargs):
           Queue.Queue.__init__(self, *args, **kwargs)
           self.write_to_pipe = write_to_pipe
+          self.event_callback = event_callback
 
         def put(self, cmd):
           Queue.Queue.put(self, cmd)
           if self.write_to_pipe:
-            os.write(pipe.pipe, 'status')
+            os.write(self.write_to_pipe, 'status')
+          if self.event_callback:
+            self.event_callback()
+            from time import sleep
+            sleep(0.1)
 
-      self.replyQueue = RQueue(write_to_pipe=kwargs['write_to_pipe'])
+      if 'write_to_pipe' in kwargs and 'event_callback' in kwargs:
+        self.replyQueue = RQueue(write_to_pipe=kwargs['write_to_pipe'],
+                                 event_callback=kwargs['event_callback'])
+      elif 'write_to_pipe' in kwargs:
+        self.replyQueue = RQueue(write_to_pipe=kwargs['write_to_pipe'])
+
+      else:
+        self.replyQueue = RQueue(event_callback=kwargs['event_callback'])
+
     else:
       self.replyQueue = Queue.Queue()
 

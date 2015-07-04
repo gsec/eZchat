@@ -76,9 +76,10 @@ class ez_api(ez_process_base):
         self.UserDatabase.add_entry(new_user)
 
     try:
-      self.fingerprint = ez_gpg.find_key(nickname=self.name)
+      #self.fingerprint = ez_gpg.find_key(nickname=self.name)
+      self.fingerprint = ez_gpg.get_active_fingerprint()
       if not self.UserDatabase.in_DB(UID=self.fingerprint):
-        raise Exception('Impossible to find identify ' + str(self.name) +
+        raise Exception('Impossible to find identity ' + str(self.name) +
                         ' in key ring')
       self.myself = self.UserDatabase.get_entry(UID=self.fingerprint)
     except Exception, e:

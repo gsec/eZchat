@@ -37,11 +37,14 @@ class ez_db_sync(ez_process_base):
     """
     cmd_dct = {'UID_list': self.MsgDatabase.UID_list()}
     db_sync_request = {'db_sync_request_in': cmd_dct}
-    msg = pickle.dumps(db_sync_request)
-    try:
-      self.sockfd.sendto(msg, master)
-    except IOError as e:
-        self.error(str(e))
+    data = pickle.dumps(db_sync_request)
+    cmd_data = {'user_specs': master, 'data': data}
+    self.enqueue('send', cmd_data)
+
+    #try:
+      #self.sockfd.sendto(msg, master)
+    #except IOError as e:
+        #self.error(str(e))
 
   def db_sync_request_in(self, host, port, UID_list):
     """ Answer to a db_sync_request_out. Do not call.  """

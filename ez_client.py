@@ -261,7 +261,7 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
 
 def init_client(name, **kwargs):
   global cl
-  cl = client(name=name, write_to_pipe=True, **kwargs)
+  cl = client(name=name, **kwargs)
   cl.start()
 
 if __name__ == "__main__":
