@@ -13,6 +13,7 @@ appropriate
 
 from os import path
 from os import makedirs
+from os import getenv
 from sys import exit
 
 #==============================================================================#
@@ -155,8 +156,8 @@ The existence is ensured by join()
 format:
   VAR           = ('SUBDIR', "DESCRIPTION")
 """
-# TODO: (bcn 2014-10-18) This should become ~/.local/share/ezchat/
-local_path = 'local'
+home_path = getenv('HOME')
+local_path = home_path + '/.local/share/ezchat/'
 
 location = {}
 location['key'] = ('keys', "private key files")
