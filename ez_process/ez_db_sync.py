@@ -7,7 +7,7 @@
 #============#
 
 from ez_process_base import (ez_process_base, p2pCommand, p2pReply,
-                             command_args, user_arguments)
+                             master_required)
 import cPickle as pickle
 import ez_process_preferences as epp
 
@@ -27,7 +27,7 @@ class ez_db_sync(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_db_sync, self).__init__(*args, **kwargs)
 
-  @user_arguments
+  @master_required
   def db_sync_request_out(self, master):
     """
     Start a message database sync request with the specified user.

@@ -7,7 +7,7 @@
 #============#
 
 import socket
-from ez_process_base import ez_process_base, p2pCommand, user_arguments
+from ez_process_base import ez_process_base, p2pCommand, master_required
 import cPickle as pickle
 import ez_process_preferences as epp
 
@@ -39,7 +39,7 @@ class ez_ping(ez_process_base):
 #  ping methods  #
 #================#
 
-  @user_arguments
+  @master_required
   def ping_request(self, master, **kwargs):
     """
     Starts a ping request. Client A must be connected to Client B, i.e. they

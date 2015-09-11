@@ -29,7 +29,7 @@ class ez_server_client(ez_process_base):
 #  authentication process  #
 #============================#
 
-  def authentication_request(self, host, port):
+  def authentication_request(self, host, port, **kwargs):
     """
     Start an authentication process.
 

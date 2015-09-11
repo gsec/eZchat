@@ -192,7 +192,7 @@ class ez_process_base(object):
       return master
 
 
-def user_arguments(process_func):
+def master_required(process_func):
   """
   Decorator for a function only accepting master as input. The decorator allows
   the function call with alternative arguments such as fingerprint, user_id.
@@ -208,17 +208,17 @@ def user_arguments(process_func):
                                             4321: ('Bob', '4DE6')}
 
   The  normal functionality is preserved and we can pass master
-  >>> user_arguments(func)(self, **args)
+  >>> master_required(func)(self, **args)
   1234
 
   The master can be obtained from the fingerprint
   >>> args = {'fingerprint': '4DE5'}
-  >>> user_arguments(func)(self, **args)
+  >>> master_required(func)(self, **args)
   1234
 
   If the master is ambiguous the function is applied to all possible masters
   >>> args = {'user_id': 'Bob'}
-  >>> user_arguments(func)(self, **args)
+  >>> master_required(func)(self, **args)
   (4321, 1234)
   """
   # the number of arguments the function has
@@ -231,7 +231,7 @@ def user_arguments(process_func):
           if arg != 'self']
   if 'master' not in args:
     raise Exception('The function ' + str(process_func.__name__) +
-                    ' cannot be decorated with user_arguments. ' +
+                    ' cannot be decorated with master_required. ' +
                     'The function must have `master` as argument')
 
   def assign_args(self, *args, **kwargs):
