@@ -16,6 +16,9 @@ from os import makedirs
 from os import getenv
 from sys import exit
 
+home_path = getenv('HOME')
+local_path = home_path + '/.local/share/ezchat/'
+
 #==============================================================================#
 #                                  FUNCTIONS                                   #
 #==============================================================================#
@@ -156,8 +159,6 @@ The existence is ensured by join()
 format:
   VAR           = ('SUBDIR', "DESCRIPTION")
 """
-home_path = getenv('HOME')
-local_path = home_path + '/.local/share/ezchat/'
 
 location = {}
 location['key'] = ('keys', "private key files")
