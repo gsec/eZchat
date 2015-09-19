@@ -245,6 +245,9 @@ class ez_server_client(ez_process_base):
       del self.background_processes[process_id]
 
     self.success("Authentication with server established")
+    cmd_dct = {'master': (host, port)}
+    self.success("Requesting ips ...")
+    self.enqueue('ips_request',  cmd_dct)
 
   def client_authenticated(self, **kwargs):
     try:
