@@ -1,18 +1,24 @@
-#!/usr/bin/env python
-#encoding: utf-8
+#==============================================================================#
+#                                  ez_gpg.py                                   #
+#==============================================================================#
+
+#===========#
+#  Imports  #
+#===========#
+
 import re
 import os
 import gnupg
 import ez_preferences as ep
 
-###############
-#  functions  #
-###############
+#==============================================================================#
+#                                 class ez_gpg                                 #
+#==============================================================================#
 
 class ez_gpg(object):
+  """ Wrapper for python-gnupg to eZchat """
 
-  """Docstring for ez_gpg. """
-  # ep.join(ep.location['gpg'], fname)
+  # setup some default values.
   gpg_path = os.path.join(os.environ['HOME'], '.gnupg')
   gpg_params = {'encoding': "utf-8",
                 'init': {'gnupghome': gpg_path},
@@ -38,9 +44,15 @@ class ez_gpg(object):
   @classmethod
   def get_active_fingerprint(cls):
     data = 'random'
-
     signed_data = cls.gpg.sign(data)
     return signed_data.fingerprint
+
+  @classmethod
+  def get_name(cls, fingerprint):
+    for key in ez_gpg.gpg.list_keys():
+      if key['fingerprint'] == fingerprint:
+        name = key['uids'][0].split()[0]
+        return name
 
   @classmethod
   def export_key(self, fingerprint=None, nickname=None):
@@ -63,9 +75,6 @@ class ez_gpg(object):
 
     If provided with a key ID, first checks locally, then remotely for the key.
     Without arguments it just return all local keys.
-
-    @param: key_id
-    @type:  string
     """
 
     local_list = self.gpg.list_keys()
@@ -81,43 +90,6 @@ class ez_gpg(object):
       if remote_list:
         return remote_list
     raise NameError('Key with ID \'' + key_id + '\' not found')
-
-  @classmethod
-  def generate_key(self, user=None, params=None, secret=True):
-    """ Generates a gpg-key object and exports it to a file.
-
-    The `params` dictionary contains various options, see
-    gpg_params['key_params'] for required fields.
-
-    @param: user
-    @type:  string
-
-    @param: params
-    @type:  dict
-
-    @param: secret
-    @type:  bool
-    """
-
-    if params is None:
-      key_params = {'key_type': "RSA",
-                    'key_length': 4096,
-                    'name_real': os.environ['USER'],
-                    'name_comment': "eZchat communication key"}
-      params = self.gpg.gen_key_input(**key_params)
-
-    new_key = self.gpg.gen_key(params)
-
-    if user:
-      if secret:
-        ext = 'sec'
-      else:
-        ext = 'pub'
-      uname = '.'.join((user, ext))
-      with open(self.gpg_path(fname=uname), 'w') as f:
-        f.write(new_key.gpg.export_keys(new_key.fingerprint, secret))
-    else:
-      return new_key
 
   @classmethod
   def encrypt_msg(self, nickname, msg):
@@ -163,81 +135,3 @@ class ez_gpg(object):
       raise Exception('Failed to extract the message.')
 
     return msg
-
-################################################################################
-#                                     main                                     #
-################################################################################
-
-if __name__ == '__main__':
-  pass
-  #ez_gpg.generate_key('yolo')
-  data = 'randomdata'
-  #import ez_user as eu
-  #for key in ez_gpg.gpg.list_keys():
-    #name = key['uids'][0].split()[0]
-    #fingerprint = key['fingerprint']
-    #if not eu.user_database.in_DB(UID=fingerprint):
-      #new_user = eu.User(UID=fingerprint, name=name)
-      #eu.user_database.add_entry(new_user)
-
-    #print "uid:", uid
-    #print "fingerprint:", fingerprint
-
-  #with open('ez.pub', 'r') as f:
-    #ez_key = f.read()
-    #ez_gpg.gpg.import_keys(ez_key)
-
-    #f.write(ez_gpg.gpg.export_keys(u'8D38E2A7CC1D9602'))
-  #print(gpg.list_keys())
-  #print find_key('gsec')
-  #fp = find_key('gsec')
-  #print  gpg.import_keys(fp)
-  #print gpg.encrypt(data, fp)
-  #try:
-    #print ez_gpg.encrypt_msg('yolo', data)
-  #except Exception as e:
-    #print(e)
-
-  #signed_data = ez_gpg.gpg.sign(data.data)
-
-  #stream = open("example.txt", "rb")
-
-  import ez_message as em
-
-  recipient = ez_gpg.find_key('Uli')
-  em.Message(sender='me', recipient=recipient, content='hi')
-  #sender = 'jlang'
-  #recipient = u'jlang'
-  #msg = 'hi'
-  #print ez_gpg.gpg.list_keys(True)
-  #print ez_gpg.find_key(nickname='jlang', secret=True)
-  #cipher = ez_gpg.decrypt_msg(ez_gpg.encrypt_msg(recipient, msg))
-  #print cipher
-  #import sys
-  #import cPickle as pickle
-  #print "cipher.status:", cipher.status
-  #ccipher = pickle.dumps(cipher)
-
-  #print sys.getsizeof(ccipher)
-
-  #print ez_gpg.gpg.list_keys()
-  #mx = em.Message(sender, recipient, msg)
-  #print "mx:", mx.clear_text()
-  ##print "mx.__dict__:", mx.__dict__
-
-  signed_data = ez_gpg.gpg.sign(data)
-  print "signed_data:", signed_data.__dict__
-  #import re
-  #pat = re.compile('Version: [ \t\r\f\v]*\n(.*)\n(?=-----BEGIN PGP SIGNATURE-----)+?')
-  #msg = re.search('[ \t\r\n\f\v]+(.*?)(?=\n-----BEGIN PGP SIGNATURE-----)', signed_data.data, re.MULTILINE)
-  #print "msg.groups():", msg.groups()[0]
-  #print "signed_data.data:", signed_data.data
-  #verified = ez_gpg.gpg.verify(signed_data.data)
-  #print "verified:", verified.__dict__
-  #print ez_gpg.find_key(nickname='jlang')
-  #if verified.trust_level is not None and verified.trust_level >= verified.TRUST_FULLY:
-    #print('Trust level: %s' % verified.trust_text)
-
-  #print "Verified" if verified else "Unverified"
-
-  #print ez_gpg.export_key(nickname='eZchat')

@@ -259,9 +259,9 @@ class client(ez_process, ez_packet, ez_simple_cli, threading.Thread):
         except Queue.Empty:
           pass
 
-def init_client(name, **kwargs):
+def init_client(**kwargs):
   global cl
-  cl = client(name=name, **kwargs)
+  cl = client(**kwargs)
   cl.start()
 
 if __name__ == "__main__":

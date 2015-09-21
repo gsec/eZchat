@@ -46,8 +46,8 @@ class ez_api(ez_process_base):
   """
   def __init__(self, **kwargs):
     super(ez_api, self).__init__(**kwargs)
-    assert('name' in kwargs)
-    self.name = kwargs['name']
+    #assert('name' in kwargs)
+    #self.name = kwargs['name']
 
     # TODO: (bcn 2014-10-19) @JNicL:
     # This would give every client a fresh database.
@@ -78,6 +78,7 @@ class ez_api(ez_process_base):
     try:
       #self.fingerprint = ez_gpg.find_key(nickname=self.name)
       self.fingerprint = ez_gpg.get_active_fingerprint()
+      self.name = ez_gpg.get_name(self.fingerprint)
       if not self.UserDatabase.in_DB(UID=self.fingerprint):
         raise Exception('Impossible to find identity ' + str(self.name) +
                         ' in key ring')
