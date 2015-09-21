@@ -135,6 +135,8 @@ def init_cli_preferences():
   process_preferences['ping_bg_timeout'] = 10
   # pingreply waittime
   process_preferences['ping_reply_timeout'] = 4
+  # how often (+1) a ping process is repeated until the user is removed from ips
+  process_preferences['ping_retries'] = 2
   process_preferences['silent_ping'] = False
 
   #===================#

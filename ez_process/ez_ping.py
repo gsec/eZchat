@@ -32,6 +32,8 @@ import ez_process_preferences as epp
 
 class ez_ping(ez_process_base):
 
+  ping_retries = {}
+
   def __init__(self, *args, **kwargs):
     super(ez_ping, self).__init__(*args, **kwargs)
 
@@ -64,11 +66,22 @@ class ez_ping(ez_process_base):
             self.replyQueue.put(cmd)
           try:
             if master in self.ips:
-              user_id, _ = self.ips[master]
-              del self.ips[master]
-              if not epp.silent_ping:
-                self.success('Removed user : ' + user_id + ' from ips')
+              if master not in ez_ping.ping_retries:
+                ez_ping.ping_retries[master] = 1
+              else:
+                ez_ping.ping_retries[master] += 1
+
+              if ez_ping.ping_retries[master] > epp.ping_retries:
+                user_id, _ = self.ips[master]
+                del self.ips[master]
+                del ez_ping.ping_retries[master]
+                if not epp.silent_ping:
+                  self.success('Removed user : ' + user_id + ' from ips')
+              else:
+                user_id, _ = self.ips[master]
+                self.success('Ping retry on ' + user_id)
           except:
+            user_id, _ = self.ips[master]
             self.error('Failed to remove user : ' + user_id + ' from ips.')
           del self.background_processes[process_id]
 
@@ -152,6 +165,9 @@ class ez_ping(ez_process_base):
       else:
         if not epp.silent_ping:
           self.success("ping success: " + user_id)
+
+      if user_addr in ez_ping.ping_retries:
+        del ez_ping.ping_retries[user_addr]
       return True
 
     self.error("Received ping_success, source unknown: " + str(user_addr))
@@ -162,14 +178,13 @@ class ez_ping(ez_process_base):
 
     # define the function called by the timer after the countdown
     # ping_background_func calls itself resulting in an endless ping chain.
-    def ping_background_func(self_timer, queue, user_ips):
+    def ping_background_func(self_timer, queue, client):
       # ping all users
-      user_ids = [u[0] for u in user_ips.values()]
+      user_ids = [u[0] for u in client.ips.values()]
 
       # custom success_callback - just for demonstration purpose
       def success_ping_all():
         pass
-        #print "background ping successful"
 
       for user_id in user_ids:
         cmd_dct = {'user_id': user_id, 'success_callback': success_ping_all}
@@ -182,8 +197,9 @@ class ez_ping(ez_process_base):
         self.reset_background_process(process_id)
 
     bgp = p2pCommand('start_background_process',
-                     {'process_id': process_id,
-                      'callback': ping_background_func,
-                      'interval': epp.ping_bg_timeout,
-                      'callback_args': (self.commandQueue, self.ips, )})
-    self.commandQueue.put(bgp)
+                     )
+    ping_bg_cmd = {'process_id': process_id,
+                   'callback': ping_background_func,
+                   'interval': epp.ping_bg_timeout,
+                   'callback_args': (self.commandQueue, self, )}
+    self.enqueue('start_background_process', ping_bg_cmd)
