@@ -13,9 +13,13 @@ from ez_process.ez_process_base import ez_process_base
 from types import ListType
 from ez_message import Message
 
+import ez_process.ez_process_preferences as epp
+
 import os
 import tempfile
 from contextlib import contextmanager
+
+import ez_preferences as epp
 
 # creates a temporary file object used in doctest
 @contextmanager
@@ -31,10 +35,8 @@ def tempinput(data):
 #==============================================================================#
 
 class Packet(object):
-  """
-  The Packet type is used to make UDP sends reliable. See Packets for
-  functionality.
-  """
+  """ The Packet type is used to make UDP sends reliable. See Packets for
+  functionality.  """
   def __init__(self, data="", packet_number=1, max_packets=1,
                packets_hash="", **kwargs):
     self.data = data
@@ -58,11 +60,10 @@ class Packet(object):
 #==============================================================================#
 
 class Packets(object):
-  """
-  A collection of Packet instances. To make a UDP transmission reliable create a
-  Packets instance of the data to-be send. The data is chunked and for each
-  Packet a hash is computed allowing the recipient to check whether the sent
-  package is corrupted.
+  """ A collection of Packet instances. To make a UDP transmission reliable
+  create a Packets instance of the data to-be send. The data is chunked and for
+  each Packet a hash is computed allowing the recipient to check whether the
+  sent package is corrupted.
 
   :param data: python objects or filepath
   :type  data: anything which can be pickled or filepath
@@ -146,8 +147,7 @@ class Packets(object):
       self.packets[i] = Packet(**packet_args)
 
   def reconstruct_data(self, filepath=None):
-    """
-    Reconstructs the data from the Packets instance and performs checksum
+    """ Reconstructs the data from the Packets instance and performs checksum
     checks.
 
     :param return: returns a tuple where the first entry is True if the
@@ -238,9 +238,10 @@ class Packets(object):
 #==============================================================================#
 
 class ez_packet(ez_process_base):
-  """
-  Provides client methods for handling packets.
-  """
+  """ Provides client methods for handling packets.  """
+
+  reconstruction_retries = {}
+
   def __init__(self, *args, **kwargs):
     super(ez_packet, self).__init__(*args, **kwargs)
     # packets are stored until complete
@@ -289,8 +290,7 @@ class ez_packet(ez_process_base):
       self.error(str(e))
 
   def handle_packet(self, data, user_addr, handler):
-    """
-    Handles incoming packets. A `packet session` is started and received
+    """ Handles incoming packets. A `packet session` is started and received
     packages are stored in *stored_packets*. A background process is started
     tracking the status of the session. If packages are missing or corrupted,
     the method :py:meth:`ez_packet.ez_packet.packet_request`is invoked
@@ -329,7 +329,6 @@ class ez_packet(ez_process_base):
 
       self.success("Received package")
 
-      #pr_key = ('receive', user_id)
       pr_key = key
 
       def update_and_reconstruct(*args):
@@ -343,14 +342,26 @@ class ez_packet(ez_process_base):
             pr.finished.set()
             pr.cancel()
             del self.background_processes[pr_key]
+          if key in ez_packet.reconstruction_retries:
+            del ez_packet.reconstruction_retries[key]
         else:
           self.error('Packet reconstruction failed')
-          for packet_number in result:
-            cmd_dct = {'packet_info': (packets.packets_hash, packet_number),
-                       'user_addr': user_addr}
-            self.enqueue('packet_request', cmd_dct)
+          if epp.packet_reconstruction_bgp:
+            if key not in ez_packet.reconstruction_retries:
+              ez_packet.reconstruction_retries[key] = 0
+            else:
+              ez_packet.reconstruction_retries[key] += 1
 
-          self.reset_background_process(pr_key)
+            if(ez_packet.reconstruction_retries[key] <
+               epp.packet_reconstruction_retries):
+              for packet_number in result:
+                cmd_dct = {'packet_info': (packets.packets_hash, packet_number),
+                           'user_addr': user_addr}
+                self.enqueue('packet_request', cmd_dct)
+
+              self.reset_background_process(pr_key)
+            else:
+              del ez_packet.reconstruction_retries[key]
 
       if packets.max_packets == len(packets.packets):
         update_and_reconstruct()

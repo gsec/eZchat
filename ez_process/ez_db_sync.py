@@ -62,8 +62,8 @@ class ez_db_sync(ez_process_base):
                    user_id)
       for msg in msges:
         data = pickle.dumps(msg)
-        cmd_dct = {'user_specs': master, 'data': data}
-        self.send(cmd_dct)
+        #cmd_dct = {'user_specs': master, 'data': data}
+        self.send(master, data)
 
   def db_sync_background(self):
     process_id = ('db_sync_request_out', 'all')

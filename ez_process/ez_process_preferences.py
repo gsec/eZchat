@@ -36,3 +36,17 @@ def init_process_preferences(**kwargs):
   else:
     silent_ping = kwargs['silent_ping']
 
+  # Set True if the system should try to reconstruct packages which are corrupt
+  global packet_reconstruction_bgp
+  if 'packet_reconstruction_bgp' not in kwargs:
+    packet_reconstruction_bgp = True
+  else:
+    packet_reconstruction_bgp = kwargs['packet_reconstruction_bgp']
+
+  # Number of retries
+  global packet_reconstruction_retries
+  if 'packet_reconstruction_retries' not in kwargs:
+    packet_reconstruction_retries = 3
+  else:
+    packet_reconstruction_retries = kwargs['packet_reconstruction_retries']
+

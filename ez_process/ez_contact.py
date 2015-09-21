@@ -87,8 +87,7 @@ class ez_contact(ez_process_base):
     cmd_dct = {'user': self.myself}
     myself = {'add_contact': cmd_dct}
     msg = pickle.dumps(myself)
-    send_cmd = {'user_specs': (host, port), 'data': msg}
-    self.enqueue('send', send_cmd)
+    self.send((host, port), msg)
 
   def add_contact(self, user):
     """
