@@ -104,7 +104,10 @@ class ez_connect(ez_process_base):
         def connection_failed_func(self_timer):
           self.error('error in connection_request: connection failed with: ' +
                      str(user_addr))
-          del self.background_processes[process_id]
+          try:
+            del self.background_processes[process_id]
+          except:
+            pass
 
         bgp = p2pCommand('start_background_process',
                          {'process_id': process_id,
@@ -173,10 +176,13 @@ class ez_connect(ez_process_base):
     user_addr = (host, port)
     process_id = ('connection_request', user_addr)
     if process_id in self.background_processes:
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
+      try:
+        pr = self.background_processes[process_id]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[process_id]
+      except:
+        pass
 
     self.success("user: " + str(user_addr) + " with id: " +
                  user_id + " has connected")
@@ -208,9 +214,12 @@ class ez_connect(ez_process_base):
     user_addr = (host, port)
     process_id = 'connect_server'
     if process_id in self.background_processes:
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
+      try:
+        pr = self.background_processes[process_id]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[process_id]
+      except:
+        pass
 
     self.success("Connection with server established")

@@ -109,7 +109,7 @@ class ez_api(ez_process_base):
     except:
       self.error("Syntax error in ping")
 
-  def cmd_add(self, user_id, host, port, fingerprint=None):
+  def cmd_add(self, user_id, host, port, fingerprint):
     """
     Add user IP to clients IP list.
 
@@ -122,14 +122,10 @@ class ez_api(ez_process_base):
     :param port: hosts port
     :type  port: integer
     """
-    try:
-      cmd_dct = {'user_id': user_id, 'host': host, 'port': port}
-      if fingerprint is not None:
-        cmd_dct['fingerprint'] = fingerprint
-      self.add_client(**cmd_dct)
-      self.enqueue('ping_request', cmd_dct)
-    except Exception as e:
-      self.error("Error in cmd_add: " + str(e))
+    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint,
+               'master': (host, port)}
+    self.add_client(**cmd_dct)
+    self.enqueue('ping_request', cmd_dct)
 
   def cmd_servermode(self, host, port):
     """
@@ -166,7 +162,7 @@ class ez_api(ez_process_base):
     :param port: server port
     :type  port: integer
     """
-    cmd_dct = {'host': host, 'port': int(port)}
+    cmd_dct = {'master': (host, int(port))}
     try:
       self.enqueue('authentication_request', cmd_dct)
       eZchat = 'ez'
@@ -192,11 +188,13 @@ class ez_api(ez_process_base):
     :param port: server port
     :type  port: integer
     """
-    #master = (host, int(port))
-    cmd_dct = {'host': host, 'port': int(port)}
+    cmd_dct = {'master': (host, int(port))}
     try:
       self.enqueue('connect_server', cmd_dct)
-      cmd_dct['user_id'] = 'server'
+      eZchat = 'ez'
+      cmd_dct['user_id'] = eZchat
+      fingerprint = ez_gpg.find_key(nickname=eZchat)
+      cmd_dct['fingerprint'] = '-'
       self.add_client(**cmd_dct)
     except:
       self.error("Syntax error in connect")

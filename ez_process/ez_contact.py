@@ -20,22 +20,10 @@ class ez_contact(ez_process_base):
   def __init__(self, *args, **kwargs):
     super(ez_contact, self).__init__(*args, **kwargs)
 
-  def add_client(self, **kwargs):
-    """
-    Adds a new client to the clients ip base.
-    """
-    try:
-      user_id = kwargs['user_id']
-      if 'fingerprint' in kwargs:
-        fingerprint = kwargs['fingerprint']
-      else:
-        fingerprint = None
-      master = (kwargs['host'], int(kwargs['port']))
-      self.ips[master] = (user_id, fingerprint)
-    except:
-      raise
-
-    self.success('Client ' + user_id + ' added.')
+  def add_client(self, master, user_id, fingerprint):
+    """ Adds a new client to the clients ip base.  """
+    self.ips[master] = (user_id, fingerprint)
+    self.success('Client ' + user_id + '(' + str(fingerprint) + ') added.')
 
   def remove_client(self, user_id):
     """

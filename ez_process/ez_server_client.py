@@ -29,7 +29,7 @@ class ez_server_client(ez_process_base):
 #  authentication process  #
 #============================#
 
-  def authentication_request(self, host, port, **kwargs):
+  def authentication_request(self, master, **kwargs):
     """
     Start an authentication process.
 
@@ -43,7 +43,7 @@ class ez_server_client(ez_process_base):
     commands.
     """
 
-    master = (host, port)
+    (host, port) = master
     cmd_dct = {'user_id': self.name, 'fingerprint': self.fingerprint}
     auth_in = {'authentication_in': cmd_dct}
     msg = pickle.dumps(auth_in)
@@ -133,10 +133,13 @@ class ez_server_client(ez_process_base):
 
     process_id = ('authentication', (host, port))
     if process_id in self.background_processes:
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
+      try:
+        pr = self.background_processes[process_id]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[process_id]
+      except:
+        pass
 
     isdigit = re.search('^(0\.\d+)$', msg)
     try:
@@ -165,10 +168,13 @@ class ez_server_client(ez_process_base):
 
       process_id = ('authentication_verify', (host, port))
       if process_id in self.background_processes:
-        pr = self.background_processes[process_id]
-        pr.finished.set()
-        pr.cancel()
-        del self.background_processes[process_id]
+        try:
+          pr = self.background_processes[process_id]
+          pr.finished.set()
+          pr.cancel()
+          del self.background_processes[process_id]
+        except:
+          pass
 
     process_id = ('authentication_verify', (host, port))
     bgp = p2pCommand('start_background_process',
@@ -239,10 +245,13 @@ class ez_server_client(ez_process_base):
 
     process_id = ('authentication_verify', (host, port))
     if process_id in self.background_processes:
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
+      try:
+        pr = self.background_processes[process_id]
+        pr.finished.set()
+        pr.cancel()
+        del self.background_processes[process_id]
+      except:
+        pass
 
     self.success("Authentication with server established")
     cmd_dct = {'master': (host, port)}

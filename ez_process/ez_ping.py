@@ -83,7 +83,10 @@ class ez_ping(ez_process_base):
           except:
             user_id, _ = self.ips[master]
             self.error('Failed to remove user : ' + user_id + ' from ips.')
-          del self.background_processes[process_id]
+          try:
+            del self.background_processes[process_id]
+          except:
+            pass
 
       try:
         user_id, _ = self.ips[master]
@@ -155,10 +158,14 @@ class ez_ping(ez_process_base):
       #if(self.ips[user_addr][0] == user_id or
         #socket.gethostbyname('ez') == user_addr[0]):
       process_id = ('ping_reply', (host, port))
-      pr = self.background_processes[process_id]
-      pr.finished.set()
-      pr.cancel()
-      del self.background_processes[process_id]
+      if process_id in self.background_processes:
+        try:
+          pr = self.background_processes[process_id]
+          pr.finished.set()
+          pr.cancel()
+          del self.background_processes[process_id]
+        except:
+          pass
       if process_id in self.success_callback:
         self.success_callback[process_id]()
         del self.success_callback[process_id]
