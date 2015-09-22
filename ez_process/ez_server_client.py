@@ -261,7 +261,7 @@ class ez_server_client(ez_process_base):
   def client_authenticated(self, **kwargs):
     try:
       user_id = kwargs['user_id']
-      master = (kwargs['host'], int(kwargs['port']))
+      master = kwargs['master']
       fingerprint = kwargs['fingerprint']
       self.authentications[master] = (user_id, fingerprint)
     except:
