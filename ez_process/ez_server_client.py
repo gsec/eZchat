@@ -217,7 +217,7 @@ class ez_server_client(ez_process_base):
       if verified:
         auth_msg = ez_gpg.separate_msg_signature(reply_msg)
         if auth_msg == self.authentication_words[(user_id, fingerprint)]:
-          cmd_dct = {'user_id': user_id, 'host': host, 'port': port,
+          cmd_dct = {'user_id': user_id, 'master': (host, port),
                      'fingerprint': fingerprint}
           self.add_client(**cmd_dct)
           self.client_authenticated(**cmd_dct)
