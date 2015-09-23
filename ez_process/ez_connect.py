@@ -144,14 +144,13 @@ class ez_connect(ez_process_base):
     con_success = {'connection_success': cmd_dct}
     msg = pickle.dumps(con_success)
 
-    user_addr = (host, port)
-    cmd = self.success("nat traversal succeded: " + str(user_addr))
-    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint,
-               'host': user_addr[0], 'port': user_addr[1]}
+    master = (host, port)
+    cmd = self.success("nat traversal succeded: " + str(master))
+    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint, 'master': master}
     self.add_client(**cmd_dct)
 
     self.replyQueue.put(cmd)
-    self.sockfd.sendto(msg, user_addr)
+    self.sockfd.sendto(msg, master)
 
   def connection_success(self, user_id, fingerprint, host, port):
     """
@@ -173,8 +172,8 @@ class ez_connect(ez_process_base):
     :type  port: int
     """
 
-    user_addr = (host, port)
-    process_id = ('connection_request', user_addr)
+    master = (host, port)
+    process_id = ('connection_request', master)
     if process_id in self.background_processes:
       try:
         pr = self.background_processes[process_id]
@@ -184,18 +183,17 @@ class ez_connect(ez_process_base):
       except:
         pass
 
-    self.success("user: " + str(user_addr) + " with id: " +
+    self.success("user: " + str(master) + " with id: " +
                  user_id + " has connected")
 
-    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint,
-               'host': user_addr[0], 'port': user_addr[1]}
+    cmd_dct = {'user_id': user_id, 'fingerprint': fingerprint, 'master': master}
     self.add_client(**cmd_dct)
 
     if hasattr(self, 'server'):
       con_success = {'connection_server_success': {}}
       msg = pickle.dumps(con_success)
 
-      self.sockfd.sendto(msg, user_addr)
+      self.sockfd.sendto(msg, master)
 
   def connection_server_success(self, host, port):
     """
